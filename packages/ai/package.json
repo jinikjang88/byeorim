@@ -1,0 +1,15 @@
+{
+  "name": "@beoreum/ai",
+  "version": "0.1.0",
+  "description": "모델 무관 AI 어댑터. Claude, GPT, Gemini",
+  "type": "module",
+  "license": "MIT",
+  "main": "index.js",
+  "exports": "./index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@beoreum/core": "0.1.0"
+  }
+}

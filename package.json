@@ -1,0 +1,27 @@
+{
+  "name": "beoreum",
+  "version": "0.1.0",
+  "description": "AI로 자신의 서비스를 만들고 싶은 사람을 돕는 협업 프로토콜",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "bin": {
+    "beoreum": "bin/beoreum.js"
+  },
+  "scripts": {
+    "test": "node --test tests/unit tests/integration",
+    "test:e2e": "node --test tests/e2e",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "author": "DevSmith"
+}

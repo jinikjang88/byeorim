@@ -1,0 +1,12 @@
+{
+  "name": "@beoreum/core",
+  "version": "0.1.0",
+  "description": "벼름 핵심 도메인. World, Bundle, Block, Dependency, CascadeRule",
+  "type": "module",
+  "license": "MIT",
+  "main": "index.js",
+  "exports": "./index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

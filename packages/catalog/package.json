@@ -1,0 +1,15 @@
+{
+  "name": "@beoreum/catalog",
+  "version": "0.1.0",
+  "description": "카탈로그 로더, 검증기, 의존성 해결기",
+  "type": "module",
+  "license": "MIT",
+  "main": "index.js",
+  "exports": "./index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@beoreum/core": "0.1.0"
+  }
+}
