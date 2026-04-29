@@ -26,6 +26,32 @@ npm install
 node bin/beoreum.js --help
 ```
 
+## AI 어댑터 설정
+
+`prospect`와 `forge` 단계는 AI 어댑터를 부른다. 기본은 `mock`이라 네트워크 호출도 비용도 없다. 흐름만 따라가 보고 싶다면 환경 변수를 건드리지 않아도 된다.
+
+실제 LLM을 쓰려면 환경 변수를 둔다.
+
+| 환경 변수 | 값 | 설명 |
+| --- | --- | --- |
+| `BEOREUM_AI_ADAPTER` | `mock` (기본) 또는 `claude` | 어떤 어댑터를 쓸지 |
+| `ANTHROPIC_API_KEY` | `sk-ant-...` | `claude` 어댑터를 쓸 때 필요. https://console.anthropic.com 에서 발급 |
+| `BEOREUM_AI_MODEL` | `claude-opus-4-7` (기본) 등 | 모델을 바꾸고 싶을 때만. 예: `claude-sonnet-4-6`, `claude-haiku-4-5` |
+
+```bash
+# mock 그대로 (기본)
+node bin/beoreum.js prospect "온라인 책방"
+
+# Claude로 전환
+export BEOREUM_AI_ADAPTER=claude
+export ANTHROPIC_API_KEY=sk-ant-...
+node bin/beoreum.js prospect "온라인 책방"
+```
+
+키가 없는데 `claude`를 켜면 한국어 안내 메시지로 멈춘다. 비용 걱정이 있으면 `BEOREUM_AI_ADAPTER`를 지우거나 `mock`으로 두면 된다.
+
+배경은 [ADR 0024](docs/decisions/0024-claude-llm-adapter.md)에 정리되어 있다.
+
 ## 누구를 위한 것인가
 
 우선순위 순이다.

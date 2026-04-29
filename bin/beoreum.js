@@ -27,6 +27,22 @@ program
   .description('AI로 자신의 서비스를 만들고 싶은 사람을 위한 협업 프로토콜')
   .version('0.1.0');
 
+program.addHelpText(
+  'after',
+  `
+환경 변수
+  BEOREUM_AI_ADAPTER   사용할 AI 어댑터. mock(기본) 또는 claude
+  ANTHROPIC_API_KEY    claude 어댑터를 쓸 때 필요한 Anthropic API 키
+  BEOREUM_AI_MODEL     사용할 모델 (기본 claude-opus-4-7)
+
+예시
+  $ beoreum prospect "온라인 책방"                       # mock 어댑터로 흐름만 확인
+  $ BEOREUM_AI_ADAPTER=claude ANTHROPIC_API_KEY=sk-... beoreum prospect "온라인 책방"
+
+자세한 안내는 README.md의 "AI 어댑터 설정" 절을 보세요.
+`,
+);
+
 program
   .command('init')
   .description('현재 디렉토리에 .beoreum/ 작업 공간을 만든다')
