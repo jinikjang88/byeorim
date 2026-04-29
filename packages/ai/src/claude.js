@@ -153,15 +153,21 @@ function buildRequest({ model, system, userText, outputSchema }) {
 // Claude AI 어댑터를 만든다.
 //
 // 입력:
-//   apiKey - Anthropic API 키. 미지정 시 ANTHROPIC_API_KEY 환경 변수에서 읽힘
-//   model  - 사용할 모델 ID (기본 claude-opus-4-7). BEOREUM_AI_MODEL 환경 변수가 우선시됨
-//   client - 옵셔널 SDK 인스턴스(테스트 주입용). 없으면 new Anthropic({ apiKey })로 만든다
+//   apiKey  - Anthropic API 키. 미지정 시 ANTHROPIC_API_KEY 환경 변수에서 읽힘
+//   model   - 사용할 모델 ID (기본 claude-opus-4-7). BEOREUM_AI_MODEL 환경 변수가 우선시됨
+//   client  - 옵셔널 SDK 인스턴스(테스트 주입용). 없으면 new Anthropic({ apiKey, baseURL })로 만든다
+//   baseURL - 옵셔널. 외부 브릿지 서버 URL. 주어지면 SDK가 그쪽으로 호출(ADR 0025).
+//             client가 명시적으로 주입되면 무시됨
 //
 // @returns {import('./adapter.js').AiAdapter}
-export function createClaudeAdapter({ apiKey, model, client } = {}) {
+export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
   const resolvedModel = model || process.env.BEOREUM_AI_MODEL || DEFAULT_MODEL;
   const resolvedClient =
-    client || new Anthropic({ apiKey: apiKey || process.env.ANTHROPIC_API_KEY });
+    client ||
+    new Anthropic({
+      apiKey: apiKey || process.env.ANTHROPIC_API_KEY,
+      ...(baseURL ? { baseURL } : {}),
+    });
 
   async function callParse(request) {
     try {
