@@ -1,0 +1,12 @@
+node_modules
+package-lock.json
+.beoreum
+coverage
+
+# 카탈로그 YAML은 수동 정렬과 주석을 보존한다
+*.yml
+*.yaml
+
+# 한국어 본문의 줄 끊기와 호흡을 prettier가 깨지 않도록 markdown은 무시한다
+# (CLAUDE.md 섹션 10 글쓰기 원칙)
+*.md

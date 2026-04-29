@@ -1,0 +1,253 @@
+// runSmelt 단위 테스트. init → prospect → smelt 흐름 위에서 ADR 0010 형식과 동행 톤을 본다.
+
+import { test } from 'node:test';
+import { strict as assert } from 'node:assert';
+import { mkdtempSync, existsSync, readFileSync, rmSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import yaml from 'js-yaml';
+import { runInit, runProspect, runSmelt, interactiveSmelt } from '../../packages/cli/index.js';
+import { createMockAdapter } from '../../packages/ai/index.js';
+
+function makeTempCwd() {
+  return mkdtempSync(join(tmpdir(), 'beoreum-smelt-'));
+}
+
+// 비동기 fn이 끝난 뒤 임시 디렉토리를 청소한다. await로 finally가 fn 완료 후에 도는 것을 보장.
+async function withTempCwd(fn) {
+  const cwd = makeTempCwd();
+  try {
+    return await fn(cwd);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+}
+
+// init → prospect까지 한 번에 끝낸 자리를 만든다. smelt 단계에 들어와 있는 상태.
+async function setupReadyForSmelt(cwd, userInput = '쇼핑몰 만들어줘') {
+  runInit({ cwd });
+  await runProspect({ cwd, userInput, adapter: createMockAdapter() });
+}
+
+test('정상 흐름: init → prospect → smelt가 두 산출물을 만들고 단계가 shape로 넘어간다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: 쇼핑몰로 prospect까지 끝낸 자리
+    await setupReadyForSmelt(cwd);
+    const fixedNow = new Date('2026-04-28T12:00:00.000Z');
+    // When: 한 블럭(commerce 카탈로그에서 추론한 ID)으로 smelt
+    const result = await runSmelt({ cwd, blockIds: ['order'], now: fixedNow });
+    // Then: 두 산출물이 자리에 있고 다음 단계는 shape
+    assert.equal(existsSync(result.selectedBlocksFile), true);
+    assert.equal(existsSync(result.decisionsFile), true);
+    assert.equal(result.nextStage, 'shape');
+  });
+});
+
+test('selected-blocks.yml 형식이 ADR 0010 결정 1을 따른다(다섯 필드)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    const fixedNow = new Date('2026-04-28T12:00:00.000Z');
+    // When: smelt
+    await runSmelt({ cwd, blockIds: ['order'], now: fixedNow });
+    // Then: selected-blocks.yml의 다섯 필드가 ADR 형식을 따른다
+    const file = join(cwd, '.beoreum', 'project', 'selected-blocks.yml');
+    const doc = yaml.load(readFileSync(file, 'utf8'));
+    assert.equal(doc.schema_version, 1);
+    assert.equal(doc.created_at, '2026-04-28T12:00:00.000Z');
+    assert.deepEqual(doc.selected, ['order']);
+    assert.ok(Array.isArray(doc.auto_added));
+    assert.ok(Array.isArray(doc.affected));
+    assert.ok(Array.isArray(doc.prerequisites));
+  });
+});
+
+test('decisions.yml은 각 질문에 빈 answer와 null answered_at을 미리 둔다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    // When: cascade가 걸린 블럭을 선택해 smelt 실행.
+    //       이 단언은 commerce 카탈로그 데이터(coupon에 두 cascade 질문)에 의존한다(CLAUDE.md 섹션 8 데이터 무관성 노트).
+    await runSmelt({ cwd, blockIds: ['coupon'] });
+    // Then: decisions.yml에 답 자리가 비어있는 항목이 들어있다
+    const file = join(cwd, '.beoreum', 'project', 'decisions.yml');
+    const doc = yaml.load(readFileSync(file, 'utf8'));
+    assert.ok(doc.decisions.length >= 1, 'cascade 결정이 한 개 이상 수집되어야 한다');
+    for (const d of doc.decisions) {
+      assert.equal(typeof d.question, 'string');
+      assert.ok(Array.isArray(d.options));
+      assert.equal(d.answer, '', 'answer는 빈 문자열로 시작해야 한다(동행 톤)');
+      assert.equal(d.answered_at, null, 'answered_at은 null로 시작해야 한다');
+    }
+  });
+});
+
+test('requires 의존성으로 끌려온 블럭이 auto_added에 들어간다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    // When: requires 체인을 가진 블럭 선택.
+    //       commerce 카탈로그 데이터 의존: refund requires payment, cancel-return.
+    await runSmelt({ cwd, blockIds: ['refund'] });
+    // Then: auto_added에 끌려온 블럭이 보인다
+    const doc = yaml.load(
+      readFileSync(join(cwd, '.beoreum', 'project', 'selected-blocks.yml'), 'utf8'),
+    );
+    assert.equal(doc.auto_added.includes('payment'), true);
+    assert.equal(doc.auto_added.includes('cancel-return'), true);
+  });
+});
+
+test('prerequisites가 객체 전체로 직렬화된다(ADR 0010 결정 4)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    // When: prereq를 부르는 블럭 선택.
+    //       commerce 카탈로그 데이터 의존: payment를 enables하는 prereq가 둘.
+    await runSmelt({ cwd, blockIds: ['payment'] });
+    // Then: prerequisites 항목이 ID뿐 아니라 name과 enables 등을 가진다
+    const doc = yaml.load(
+      readFileSync(join(cwd, '.beoreum', 'project', 'selected-blocks.yml'), 'utf8'),
+    );
+    assert.ok(doc.prerequisites.length >= 1);
+    for (const p of doc.prerequisites) {
+      assert.equal(typeof p.id, 'string');
+      assert.equal(typeof p.name, 'string');
+      assert.ok(Array.isArray(p.enables));
+    }
+  });
+});
+
+test('state.yml이 smelt 완료를 반영한다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    // When: smelt
+    await runSmelt({ cwd, blockIds: ['order'] });
+    // Then: current_stage가 shape로, completed_stages에 prospect와 smelt가 모두 들어간다
+    const state = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    assert.equal(state.current_stage, 'shape');
+    assert.deepEqual(state.completed_stages, ['prospect', 'smelt']);
+  });
+});
+
+test('카탈로그에 없는 블럭 ID는 한국어 메시지로 거부한다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    // When/Then: 가상 ID
+    await assert.rejects(
+      runSmelt({ cwd, blockIds: ['ghost-block', 'order'] }),
+      /카탈로그에 없는 블럭 ID가 있습니다.*ghost-block/s,
+    );
+  });
+});
+
+test('현재 단계가 smelt가 아니면 한국어 메시지로 거부한다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: init만 한 자리(current_stage = prospect)
+    runInit({ cwd });
+    // When/Then: smelt 호출은 단계 불일치
+    await assert.rejects(runSmelt({ cwd, blockIds: ['order'] }), /현재 단계가 smelt가 아닙니다/);
+  });
+});
+
+test('intent.yml이 누락되면 prospect 안내 메시지로 거부한다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료한 뒤 intent.yml만 삭제
+    await setupReadyForSmelt(cwd);
+    unlinkSync(join(cwd, '.beoreum', 'project', 'intent.yml'));
+    // When/Then: 누락 메시지 + prospect 안내
+    await assert.rejects(runSmelt({ cwd, blockIds: ['order'] }), /beoreum prospect를 실행해주세요/);
+  });
+});
+
+test('필수 인자 누락은 한국어로 거부한다', async () => {
+  // cwd 누락
+  await assert.rejects(runSmelt({}), /cwd.*필요합니다/);
+  // blockIds 누락
+  await assert.rejects(runSmelt({ cwd: '/tmp' }), /blockIds.*필요합니다/);
+  // blockIds 빈 배열
+  await assert.rejects(runSmelt({ cwd: '/tmp', blockIds: [] }), /blockIds.*필요합니다/);
+});
+
+// ── interactiveSmelt: ADR 0011 picker 의존성 주입 ─────────────────────────
+
+test('interactiveSmelt: picker가 고른 블럭으로 smelt가 끝까지 동작한다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    // mock picker는 카탈로그를 받아 고정된 블럭 ID 한 개를 돌려준다
+    const pickBlocks = async (catalog) => {
+      assert.ok(Array.isArray(catalog.blocks), 'picker는 카탈로그를 받아야 한다');
+      return ['order'];
+    };
+    // When: 인자 없이 인터랙티브 흐름
+    const result = await interactiveSmelt({ cwd, pickBlocks });
+    // Then: runSmelt와 같은 결과 형태
+    assert.deepEqual(result.selected, ['order']);
+    assert.equal(result.nextStage, 'shape');
+  });
+});
+
+test('interactiveSmelt: picker가 카탈로그 전체를 받아 선택지에 ID와 이름이 모두 들어있다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    let receivedCatalog = null;
+    const pickBlocks = async (catalog) => {
+      receivedCatalog = catalog;
+      return [catalog.blocks[0].id];
+    };
+    // When
+    await interactiveSmelt({ cwd, pickBlocks });
+    // Then: 카탈로그가 그대로 전달됐고, 첫 블럭이 id와 name을 모두 가진다
+    //       (ADR 0011 결정 4: 식별자 보존 + 사람이 읽는 이름 함께)
+    assert.ok(receivedCatalog.blocks.length > 0);
+    assert.equal(typeof receivedCatalog.blocks[0].id, 'string');
+    assert.equal(typeof receivedCatalog.blocks[0].name, 'string');
+  });
+});
+
+test('interactiveSmelt: picker가 빈 배열을 돌려주면 한국어 메시지로 거부한다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    const pickBlocks = async () => [];
+    // When/Then: 한 개 이상 골라 달라는 안내
+    await assert.rejects(interactiveSmelt({ cwd, pickBlocks }), /한 개 이상의 블럭을 골라주세요/);
+  });
+});
+
+test('interactiveSmelt: picker가 카탈로그에 없는 ID를 돌려줘도 runSmelt가 거부한다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: prospect까지 완료
+    await setupReadyForSmelt(cwd);
+    const pickBlocks = async () => ['ghost-block'];
+    // When/Then: 가상 ID는 검증에 걸린다(picker가 신뢰할 수 없는 자리에서도 안전망)
+    await assert.rejects(
+      interactiveSmelt({ cwd, pickBlocks }),
+      /카탈로그에 없는 블럭 ID가 있습니다/,
+    );
+  });
+});
+
+test('interactiveSmelt: 단계 검증이 picker 호출 전에 일어난다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: init만 한 자리(current_stage = prospect)
+    runInit({ cwd });
+    let pickerCalled = false;
+    const pickBlocks = async () => {
+      pickerCalled = true;
+      return ['order'];
+    };
+    // When/Then: 단계 불일치로 거부되고 picker는 호출되지 않는다.
+    //           사용자가 블럭을 고른 뒤 거부당하는 일을 막는 자리
+    await assert.rejects(interactiveSmelt({ cwd, pickBlocks }), /현재 단계가 smelt가 아닙니다/);
+    assert.equal(pickerCalled, false, 'picker는 단계 검증 통과 후에만 호출되어야 한다');
+  });
+});
+
+test('interactiveSmelt: cwd 누락은 한국어로 거부한다', async () => {
+  await assert.rejects(interactiveSmelt({}), /cwd.*필요합니다/);
+});

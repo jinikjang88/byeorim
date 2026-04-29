@@ -77,6 +77,8 @@ ADR 0001에서 프로젝트 이름을 Beoreum으로 결정한 직후, 두 가지
 - 4번. 다듬 (temper, tmr): 자동 검증과 Given-When-Then 테스트
 - 5번. 비춤 (inspect, ins): 다관점 리뷰
 
+> 갱신 (2026-04-28, ADR 0006): 다듬과 비춤 사이에 세움(set, set)이 추가되어 7단계가 됐다. 세움은 계약과 테스트 의도로부터 실제 코드를 생성하고 컴파일·테스트로 자립을 확인한다. 본 ADR의 6단계 결정은 그 시점의 결정이고, 현행 표준은 ADR 0006이다.
+
 ### 결정 2: 영문 메타포 표준, 한국어 한글은 문서·UI 병기 (옵션 A 기반)
 
 CLI 명령어, 함수명, 코드 어휘는 영문 메타포(prospect, smelt, shape, forge, temper, inspect)를 표준으로 한다. 한국어 영문표기(jeryeon 등)는 별칭으로도 지원하지 않는다.
@@ -110,10 +112,10 @@ Reality Check 6영역(시장 포화, 진입 비용, 양면 시장, 법적 리스
 - 6단계 명령어 이름(prospect, smelt, shape, forge, temper, inspect)은 표준이다. 다른 단어로 변경하려면 별도 ADR로 결정한다
 - 별칭은 3글자 영문 단축형(prs, sml, shp, frg, tmr, ins)으로 고정한다. 다른 길이나 다른 글자 조합은 채택하지 않는다
 - 한국어 영문표기 명령어(jeryeon, bitda 등)는 향후에도 지원하지 않는다. 도입하려면 ADR로 결정한다
-- 새 단계를 추가하거나 기존 단계를 분할하려면 별도 ADR로 결정한다
+- 새 단계를 추가하거나 기존 단계를 분할하려면 별도 ADR로 결정한다 (이 조항이 ADR 0006으로 처음 호출됐다)
 
 ## 링크
 - 이전 결정: ADR 0001 (왜 벼름인가)
-- 후속 결정: ADR 0003 예정 (Reality Check 6영역 상세)
+- 후속 결정: ADR 0003 (Reality Check 6영역 상세), ADR 0006 (세움 단계 추가로 7단계 확장)
 - 관련 메모리: 6단계 프로세스 정의, Prospect의 2부 구조, 작업 어휘 정책
 - 마이그레이션 영향: 기존 forge-protocol 레포의 lib/meta-smelt.js를 lib/prospect.js로 리네임 필요
