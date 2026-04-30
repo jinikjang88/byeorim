@@ -7,6 +7,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const templates = {
   commerce: resolve(here, 'commerce', 'catalog.yml'),
   'job-aggregator': resolve(here, 'job-aggregator', 'catalog.yml'),
+  reservation: resolve(here, 'reservation', 'catalog.yml'),
 };
 
 export function templatePath(name) {

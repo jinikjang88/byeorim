@@ -289,3 +289,20 @@ test('명시적 model 인자는 환경 변수가 없을 때 사용된다', async
     if (original !== undefined) process.env.BEOREUM_AI_MODEL = original;
   }
 });
+
+test('baseURL 인자는 client가 명시 주입되면 무시된다 (ADR 0025, ADR 0024 결정 7)', async () => {
+  // Given: client를 명시 주입하면 SDK 인스턴스를 새로 만들지 않는다.
+  // baseURL이 인자로 들어와도 사용자가 제어하는 client가 우선이다.
+  const client = makeFakeClient(() =>
+    intentResponse({ what: '', who: '', why: '', suggested_template: null }),
+  );
+  const adapter = createClaudeAdapter({
+    apiKey: 'sk-test',
+    baseURL: 'http://localhost:3000',
+    client,
+  });
+  // When
+  await adapter.extractIntent('x');
+  // Then: 주입된 fake client가 그대로 호출된다(인스턴스가 다른 것으로 바뀌지 않는다)
+  assert.equal(client.captured.length, 1);
+});

@@ -24,6 +24,15 @@ test('job-aggregator 템플릿이 카탈로그 스키마와 참조 무결성을 
   assert.ok(Array.isArray(catalog.blocks));
 });
 
+test('reservation 템플릿이 카탈로그 스키마와 참조 무결성을 통과한다', () => {
+  // Given: 실제 packages/templates/reservation/catalog.yml
+  // When: 로더 호출
+  // Then: 통과
+  const catalog = loadCatalog(templatePath('reservation'));
+  assert.equal(typeof catalog, 'object');
+  assert.ok(Array.isArray(catalog.blocks));
+});
+
 test('등록된 모든 템플릿 경로가 실제로 로드된다', () => {
   // Given: templates 객체에 등록된 경로 전부
   // When: 각 경로를 loadCatalog로 읽는다

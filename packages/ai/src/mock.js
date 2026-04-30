@@ -8,6 +8,7 @@
 const TEMPLATE_KEYWORDS = {
   commerce: ['쇼핑', '마켓', '상점', '커머스', '판매', '주문', '결제', '장바구니', '배송'],
   'job-aggregator': ['채용', '구인', '일자리', '공고', '잡', '커리어', '리크루팅'],
+  reservation: ['예약', '대관', '클래스', '강좌', '시간표', '부킹', '레슨', '강의', '룸예약'],
 };
 
 function suggestTemplate(userInput) {

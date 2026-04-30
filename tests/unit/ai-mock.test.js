@@ -51,11 +51,32 @@ test('채용 키워드는 job-aggregator 템플릿을 추천한다', async () =>
   }
 });
 
+test('예약 키워드는 reservation 템플릿을 추천한다', async () => {
+  // Given: 예약/대관/클래스 관련 입력. 매니페스토 IV의 1순위 사용자(학원 원장님, 카페 사장님 등)가
+  // 만나볼 도메인. 한 단어가 들어가면 reservation을 추천한다.
+  const adapter = createMockAdapter();
+  // When/Then
+  for (const input of [
+    '학원 수강 예약 시스템',
+    '카페 룸예약 사이트',
+    '공방 클래스 신청',
+    '미용실 부킹 앱',
+    '시간표 만들기',
+  ]) {
+    const intent = await adapter.extractIntent(input);
+    assert.equal(
+      intent.suggested_template,
+      'reservation',
+      `"${input}"이 reservation을 추천하지 않음`,
+    );
+  }
+});
+
 test('알 수 없는 도메인은 추천 없이 null을 돌려준다', async () => {
   // Given: 키워드 표에 없는 도메인 입력
   const adapter = createMockAdapter();
   // When
-  const intent = await adapter.extractIntent('우주여행 예약 시스템');
+  const intent = await adapter.extractIntent('우주여행 가이드 서비스');
   // Then: suggested_template이 null이고 호출자가 처리한다
   assert.equal(intent.suggested_template, null);
 });
