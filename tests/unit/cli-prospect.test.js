@@ -157,7 +157,7 @@ test('어댑터가 추천하지 못하면 한국어 에러에 지원 도메인 �
     await assert.rejects(
       runProspect({
         cwd,
-        userInput: '우주여행 예약',
+        userInput: '우주여행 가이드 서비스',
         adapter: createMockAdapter(),
       }),
       /commerce/,

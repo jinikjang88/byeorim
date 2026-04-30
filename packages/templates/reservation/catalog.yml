@@ -1,0 +1,412 @@
+# Beoreum — Reservation Template Catalog
+# 예약/대관 도메인 카탈로그 v0.1.0
+# 학원 원장님(수강 예약), 카페 사장님(테이블/룸 예약), 공방 운영자(클래스 예약),
+# 미용실/마사지샵 같은 시간 단위 자리를 가진 1순위 사용자(매니페스토 IV)의 도메인
+name: 예약/대관 서비스
+domain: reservation
+
+worlds:
+  - id: w-customer
+    title: "예약하는 사람의 세계"
+    description: "손님이 가용 시간을 보고 자리를 잡는 영역"
+    order: 1
+    slug: customer
+  - id: w-host
+    title: "자리를 내주는 사람의 세계"
+    description: "주인이 시간표를 짓고 예약 현황을 관리하는 영역"
+    order: 2
+    slug: host
+  - id: w-money
+    title: "돈이 흐르는 세계"
+    description: "결제, 보증금, 환불의 영역"
+    order: 3
+    slug: billing
+  - id: w-integration
+    title: "연결하는 세계"
+    description: "알림과 외부 결제 연동 영역"
+    order: 4
+    slug: integration
+
+bundles:
+  # 손님의 세계
+  - id: b-customer-discover
+    world_id: w-customer
+    title: "예약 잡기"
+    description: "가용 시간 보기, 예약 만들기, 대기자 등록"
+  - id: b-customer-personal
+    world_id: w-customer
+    title: "내 예약 관리"
+    description: "예약 내역, 취소"
+
+  # 주인의 세계
+  - id: b-host-schedule
+    world_id: w-host
+    title: "시간표 관리"
+    description: "가용 시간/자리 등록"
+  - id: b-host-ops
+    world_id: w-host
+    title: "운영 도구"
+    description: "예약 현황, 취소 정책"
+
+  # 돈이 흐르는 세계
+  - id: b-money-payment
+    world_id: w-money
+    title: "결제와 보증금"
+    description: "결제 처리, 노쇼 방지 보증금"
+  - id: b-money-refund
+    world_id: w-money
+    title: "환불"
+    description: "취소 시 환불 처리"
+
+  # 연결하는 세계
+  - id: b-intg-notify
+    world_id: w-integration
+    title: "알림 시스템"
+    description: "예약 확정/리마인드/취소 알림"
+  - id: b-intg-pay
+    world_id: w-integration
+    title: "결제 연동"
+    description: "PG사 연동"
+
+blocks:
+  # ── 주인의 세계 ──
+  - id: schedule-manage
+    bundle_id: b-host-schedule
+    name: "시간표 관리"
+    user_desc: "주인이 손님이 잡을 수 있는 시간과 자리를 등록하는 기능이에요. 학원 시간표를 칠판에 적는 것과 같아요."
+    tech_desc: "Slot 엔티티(시작/종료/정원/가격), 반복 규칙(매주 월/수/금 같은 cron 표현), 휴무일 예외, slot 상태 머신(open/full/closed)"
+    analogy: "학원 시간표를 칠판에 적기"
+    priority: required
+    effort_days: 4
+    api_style: resource
+
+  - id: cancellation-policy
+    bundle_id: b-host-ops
+    name: "취소 정책"
+    user_desc: "예약을 언제까지 취소하면 얼마를 돌려주는지 정하는 기능이에요. 음식점 예약 취소 안내문 같은 거예요."
+    tech_desc: "취소 가능 시간(예약 N시간 전), 시간대별 환불률 표(24h 전 100%, 12h 전 50%, 당일 0%), 노쇼 처리 규칙"
+    analogy: "예약 취소 안내문"
+    priority: required
+    effort_days: 2
+    api_style: resource
+
+  - id: host-dashboard
+    bundle_id: b-host-ops
+    name: "주인 대시보드"
+    user_desc: "오늘과 다음 며칠 예약 현황을 한눈에 보는 기능이에요. 식당 예약 장부와 같아요."
+    tech_desc: "예약 캘린더 뷰(일/주/월), 슬롯별 만석률, 노쇼 리스트, 운영자 권한(RBAC)"
+    analogy: "식당 예약 장부"
+    priority: required
+    effort_days: 4
+    api_style: query
+    concerns: [pii]
+
+  # ── 손님의 세계 ──
+  - id: customer-account
+    bundle_id: b-customer-personal
+    name: "회원가입/로그인"
+    user_desc: "예약을 만들려면 누가 잡았는지 알아야 해요. 이메일이나 카카오로 로그인하는 기능이에요."
+    tech_desc: "JWT 인증, OAuth2 소셜로그인(카카오/네이버/구글), 이메일 인증, 비밀번호 암호화(bcrypt)"
+    analogy: "회원카드 만들기"
+    priority: required
+    effort_days: 4
+    api_style: resource
+    concerns: [auth, pii]
+
+  - id: slot-availability
+    bundle_id: b-customer-discover
+    name: "빈 자리 보기"
+    user_desc: "어느 날 어느 시간에 자리가 남았는지 보는 기능이에요. 영화관 좌석 선택 화면처럼요."
+    tech_desc: "Slot 가용성 조회 API, 시간 범위 쿼리, 정원 대비 예약 수 집계, 캐시(Redis) 활용"
+    analogy: "영화관 좌석 선택 화면"
+    priority: required
+    effort_days: 3
+    api_style: query
+
+  - id: reservation
+    bundle_id: b-customer-discover
+    name: "예약 만들기"
+    user_desc: "원하는 시간을 골라 자리를 잡는 기능이에요. 두 손님이 동시에 마지막 자리를 잡으면 한 명만 성공해요."
+    tech_desc: "Reservation 엔티티, slot 정원 차감(Optimistic Lock @Version 또는 SELECT FOR UPDATE), 동시성 충돌 시 한쪽만 성공, 예약 상태 머신(pending/confirmed/cancelled/no-show)"
+    analogy: "마지막 빵 한 개를 두 손님이 동시에 집기"
+    priority: required
+    effort_days: 5
+    api_style: resource
+    concerns: [concurrency]
+
+  - id: waitlist
+    bundle_id: b-customer-discover
+    name: "대기자 명단"
+    user_desc: "원하는 시간에 자리가 없으면 대기 줄에 서는 기능이에요. 자리가 비면 알려줘요."
+    tech_desc: "Waitlist 엔티티, slot당 대기 큐, 취소 발생 시 큐 헤드에게 알림 발송, 대기 시간 만료 처리"
+    analogy: "맛집 웨이팅 명단에 이름 적기"
+    priority: optional
+    effort_days: 3
+    api_style: resource
+
+  - id: reservation-history
+    bundle_id: b-customer-personal
+    name: "내 예약 내역"
+    user_desc: "지금까지 잡은 예약을 모아보는 기능이에요. 예약 영수증 모음 같은 거예요."
+    tech_desc: "사용자별 예약 목록 API(페이지네이션), 예약 상세, 다가오는 예약 강조"
+    analogy: "예약 영수증 모아보기"
+    priority: required
+    effort_days: 2
+    api_style: query
+
+  - id: reservation-cancel
+    bundle_id: b-customer-personal
+    name: "예약 취소"
+    user_desc: "잡아놓은 예약을 취소하는 기능이에요. 취소 정책에 따라 환불 금액이 정해져요."
+    tech_desc: "취소 요청 API, 취소 정책 조회 후 환불액 계산, 환불 트리거, slot 정원 복원, 대기자 알림 트리거"
+    analogy: "예약 카운터에 취소 요청"
+    priority: required
+    effort_days: 3
+    api_style: resource
+    concerns: [payment]
+
+  # ── 돈이 흐르는 세계 ──
+  - id: payment
+    bundle_id: b-money-payment
+    name: "결제"
+    user_desc: "예약과 동시에 자리값을 지불하는 기능이에요. 카드, 간편결제 등을 지원해요."
+    tech_desc: "PG 연동(토스페이먼츠/이니시스), 결제 상태 머신, 결제 실패 시 reservation 롤백, 결제 검증(금액 위변조 방지)"
+    analogy: "예약 카운터에서 카드 긁기"
+    priority: required
+    effort_days: 5
+    api_style: resource
+    concerns: [payment, concurrency]
+
+  - id: deposit
+    bundle_id: b-money-payment
+    name: "보증금"
+    user_desc: "노쇼를 막기 위해 일부 금액을 미리 받아두는 기능이에요. 호텔 예약 보증금과 같아요."
+    tech_desc: "Deposit 엔티티, 예약 시점 부분 결제, 노쇼 시 보증금 차감 후 환불, 정상 방문 시 전액 환불 또는 가격 차감"
+    analogy: "호텔 예약 보증금"
+    priority: optional
+    effort_days: 3
+    api_style: resource
+    concerns: [payment]
+
+  - id: refund
+    bundle_id: b-money-refund
+    name: "환불"
+    user_desc: "취소된 예약의 결제 금액을 돌려주는 기능이에요. 취소 정책에 따라 일부만 환불될 수도 있어요."
+    tech_desc: "PG 환불 API 연동, 부분 환불(취소 정책의 환불률 적용), 환불 사유 기록, 환불 상태 추적"
+    analogy: "결제 취소 영수증"
+    priority: required
+    effort_days: 4
+    api_style: resource
+    concerns: [payment]
+
+  # ── 연결하는 세계 ──
+  - id: notification
+    bundle_id: b-intg-notify
+    name: "알림"
+    user_desc: "예약 확정, 리마인드, 취소 알림을 보내주는 기능이에요. 카카오톡이나 문자로 받아요."
+    tech_desc: "알림 이벤트 큐(SQS/Kafka), 채널별 발송(이메일/SMS/카카오 알림톡/앱푸시), 예약 시점/하루 전/취소 시 트리거, 알림 템플릿"
+    analogy: "예약 확정 문자"
+    priority: required
+    effort_days: 4
+    api_style: resource
+    concerns: [notification, realtime]
+
+  - id: pg-integration
+    bundle_id: b-intg-pay
+    name: "PG 연동"
+    user_desc: "실제 결제가 이루어지게 하는 연결 장치예요. 카드사와 우리 사이트를 연결해줘요."
+    tech_desc: "PG SDK 통합(토스페이먼츠 v2), 결제 위젯, 웹훅 수신, 결제 검증, 테스트/운영 환경 분리"
+    analogy: "카드 단말기 설치"
+    priority: required
+    effort_days: 5
+    api_style: internal
+    concerns: [payment]
+
+# ── 의존성 정의 ──
+dependencies:
+  # 시간표가 있어야 자리를 보고 잡을 수 있다
+  - source: slot-availability
+    target: schedule-manage
+    type: requires
+    reason: "빈 자리 조회는 주인이 등록한 슬롯을 기준으로 한다"
+  - source: reservation
+    target: schedule-manage
+    type: requires
+    reason: "예약은 슬롯에 귀속된다. 슬롯이 없으면 잡을 수 없다"
+  - source: reservation
+    target: customer-account
+    type: requires
+    reason: "예약은 누가 잡았는지 식별해야 한다"
+  - source: reservation
+    target: payment
+    type: requires
+    reason: "예약 흐름은 결제와 묶여 있다. 무료 예약 도메인은 cascade 질문에서 분기"
+
+  # 내 예약 관리
+  - source: reservation-history
+    target: reservation
+    type: requires
+    reason: "조회할 예약이 있어야 한다"
+  - source: reservation-history
+    target: customer-account
+    type: requires
+    reason: "내 예약 목록은 사용자별로 분리된다"
+  - source: reservation-cancel
+    target: reservation
+    type: requires
+    reason: "취소할 예약이 있어야 한다"
+
+  # 환불은 결제와 취소가 있어야 한다
+  - source: refund
+    target: payment
+    type: requires
+    reason: "환불하려면 결제 내역이 있어야 한다"
+  - source: refund
+    target: reservation-cancel
+    type: requires
+    reason: "환불은 예약 취소에서 트리거된다"
+
+  # 취소 정책의 영향
+  - source: cancellation-policy
+    target: refund
+    type: affects
+    reason: "취소 시점에 따라 환불률이 결정된다"
+  - source: cancellation-policy
+    target: reservation-cancel
+    type: affects
+    reason: "취소 가능 시간을 제한한다"
+
+  # 보증금의 영향
+  - source: deposit
+    target: payment
+    type: affects
+    reason: "보증금은 결제 흐름의 부분 결제 모드"
+  - source: deposit
+    target: refund
+    type: affects
+    reason: "노쇼 시 보증금 차감 환불"
+
+  # 대기자 명단
+  - source: waitlist
+    target: reservation
+    type: requires
+    reason: "대기자는 자리를 잡으려는 사람이라 예약 흐름이 있어야 한다"
+  - source: waitlist
+    target: notification
+    type: affects
+    reason: "자리가 비면 대기자에게 알림을 보낸다"
+
+  # 결제는 PG 연동 필요
+  - source: payment
+    target: pg-integration
+    type: requires
+    reason: "실제 결제를 위해 PG사 연동 필수"
+
+  # 알림은 누구에게 보낼지 알아야 한다
+  - source: notification
+    target: customer-account
+    type: requires
+    reason: "알림 수신처는 사용자 프로필에서 가져온다"
+
+  # 예약은 알림에 영향을 준다
+  - source: reservation
+    target: notification
+    type: affects
+    reason: "예약 확정 시 알림 발송"
+
+  # 운영 대시보드
+  - source: host-dashboard
+    target: reservation
+    type: requires
+    reason: "보여줄 예약 목록이 있어야 한다"
+  - source: host-dashboard
+    target: customer-account
+    type: requires
+    reason: "운영자 권한도 사용자 계정 위에서 부여된다"
+
+# ── 캐스케이드 규칙 ──
+cascades:
+  - trigger: reservation
+    add_blocks: []
+    ask_questions:
+      - question: "두 손님이 동시에 마지막 자리를 잡으면 어떻게 처리하나요?"
+        options:
+          - "먼저 결제까지 끝낸 사람이 가져감 (Optimistic Lock)"
+          - "선착순 예약 후 결제 (자리 잠시 잠그고 결제 시간 부여)"
+          - "랜덤 추첨 (실시간성보다 공정성 우선)"
+        cascade_effects:
+          - "예약 상태 머신에 잠금 시간 분기 추가"
+          - "결제 실패 시 자리 복원 로직 추가"
+      - question: "예약은 결제 필수인가요? 아니면 무료 예약도 허용하나요?"
+        options:
+          - "항상 결제 필수 (유료 도메인)"
+          - "결제 선택 (무료/유료 슬롯 혼재)"
+          - "보증금만 받기 (정상 방문 시 환불)"
+        cascade_effects:
+          - "reservation 흐름에서 payment 호출 분기"
+          - "deposit 블럭 활성화 여부 결정"
+
+  - trigger: cancellation-policy
+    add_blocks: []
+    ask_questions:
+      - question: "취소는 언제까지 가능한가요?"
+        options:
+          - "예약 24시간 전까지 (이후 취소 불가)"
+          - "예약 시작 시점까지 (당일 취소 가능)"
+          - "단계별 환불 (24h 전 100%, 12h 전 50%, 당일 0%)"
+        cascade_effects:
+          - "취소 가능 시간 검증 로직 추가"
+          - "환불액 계산 표 갱신"
+      - question: "노쇼(나타나지 않음)는 어떻게 처리하나요?"
+        options:
+          - "전액 환불 안 함"
+          - "보증금만 차감"
+          - "다음 예약 제한 (블랙리스트 카운터)"
+        cascade_effects:
+          - "예약 상태 머신에 no-show 전이 추가"
+          - "사용자별 노쇼 카운터 또는 블랙리스트 추가"
+
+  - trigger: deposit
+    add_blocks: []
+    ask_questions:
+      - question: "보증금 비율은 어떻게 정하나요?"
+        options:
+          - "전체 가격의 정해진 비율 (예: 30%)"
+          - "정액 (예: 10,000원)"
+          - "슬롯별로 주인이 직접 설정"
+        cascade_effects:
+          - "보증금 계산 로직 분기"
+          - "주인 대시보드에 보증금 설정 UI 추가"
+
+# ── World 0: 시작하기 전의 세계 (준비물) ──
+prerequisites:
+  - id: prereq-biz-register
+    name: "사업자등록"
+    phase: "World 0"
+    where: "세무서 또는 홈택스"
+    time: "3~7일"
+    cost: "무료"
+    enables:
+      - pg-integration
+      - payment
+
+  - id: prereq-pg-contract
+    name: "PG사 계약"
+    phase: "World 0"
+    where: "토스페이먼츠, 이니시스 등"
+    time: "5~14일"
+    cost: "수수료 2.5~3.5%"
+    requires_prereq:
+      - prereq-biz-register
+    enables:
+      - pg-integration
+      - payment
+
+  - id: prereq-kakao-biz
+    name: "카카오 비즈채널"
+    phase: "World 0"
+    where: "카카오 비즈니스"
+    time: "1~3일"
+    cost: "알림톡 건당 8~15원"
+    enables:
+      - notification

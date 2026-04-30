@@ -97,3 +97,67 @@ test('job-aggregator: 카탈로그의 모든 requires 의존성이 실제 도달
     }
   }
 });
+
+// ── reservation ──────────────────────────────────────
+
+test('reservation: reservation만 선택해도 시간표/계정/결제가 requires로 따라온다', () => {
+  // Given: reservation 카탈로그
+  const catalog = load('reservation');
+  // When: reservation 한 개만 선택
+  const result = resolveAll(['reservation'], catalog);
+  // Then: 예약은 슬롯/사용자/결제가 있어야 의미가 있으므로 셋 다 자동 추가된다.
+  //       매니페스토 II.6 "쿠폰을 넣었으면 환불, 정산, 결제도 따라온다"의 reservation 도메인 버전.
+  assert.equal(result.autoAdded.includes('schedule-manage'), true);
+  assert.equal(result.autoAdded.includes('customer-account'), true);
+  assert.equal(result.autoAdded.includes('payment'), true);
+  // payment의 requires 체인을 따라 pg-integration까지 끌려와야 한다
+  assert.equal(result.allBlocks.includes('pg-integration'), true);
+});
+
+test('reservation: reservation 선택 시 동시성과 결제 필수성 cascade 질문 두 개가 모인다', () => {
+  // Given: reservation 카탈로그
+  const catalog = load('reservation');
+  // When: reservation 선택
+  const result = resolveAll(['reservation'], catalog);
+  // Then: catalog.yml의 reservation cascade 두 질문이 모두 수집된다.
+  //       매니페스토 II.6 "두 손님이 동시에 마지막 자리"가 데이터에 살아있는지 본다.
+  const reservationDecisions = result.decisions.filter((d) => d.trigger === 'reservation');
+  assert.equal(reservationDecisions.length, 2);
+  assert.ok(
+    reservationDecisions.some((d) => d.question.includes('동시에 마지막 자리')),
+    '동시성 cascade 질문이 데이터에 없음',
+  );
+  assert.ok(
+    reservationDecisions.some((d) => d.question.includes('결제 필수')),
+    '결제 필수성 cascade 질문이 데이터에 없음',
+  );
+});
+
+test('reservation: payment 선택 시 PG 연동과 사업자등록 prerequisite가 잡힌다', () => {
+  // Given: reservation 카탈로그
+  const catalog = load('reservation');
+  // When: payment만 선택
+  const result = resolveAll(['payment'], catalog);
+  // Then: payment requires pg-integration이므로 자동 추가
+  assert.equal(result.autoAdded.includes('pg-integration'), true);
+  // World 0 prerequisite도 잡힌다(매니페스토 II.5)
+  const prereqIds = result.prerequisites.map((p) => p.id);
+  assert.equal(prereqIds.includes('prereq-pg-contract'), true);
+  assert.equal(prereqIds.includes('prereq-biz-register'), true);
+});
+
+test('reservation: 카탈로그의 모든 requires 의존성이 실제 도달 가능한 블럭만 가리킨다', () => {
+  // Given: reservation 카탈로그
+  const catalog = load('reservation');
+  const blockIds = new Set(catalog.blocks.map((b) => b.id));
+  // When/Then: 모든 블럭에서 출발해 resolveAll을 돌려도 결과 ID가 모두 카탈로그 안에 있다
+  for (const id of blockIds) {
+    const result = resolveAll([id], catalog);
+    for (const got of result.allBlocks) {
+      assert.equal(blockIds.has(got), true, `${id} 시작에서 알 수 없는 블럭 ${got} 등장`);
+    }
+    for (const got of result.affected) {
+      assert.equal(blockIds.has(got), true, `${id} 시작에서 알 수 없는 affected 블럭 ${got} 등장`);
+    }
+  }
+});

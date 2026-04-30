@@ -23,7 +23,7 @@ const INTENT_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 
 - what: 사용자가 만들고 싶은 것의 이름. 명사구로 짧게.
 - who: 사용자가 그것을 누구를 위해 만드는지. 입력에서 추측할 수 없으면 빈 문자열.
 - why: 사용자가 그것을 왜 만드는지. 입력에서 추측할 수 없으면 빈 문자열.
-- suggested_template: 빌트인 템플릿 후보 중 하나. 후보는 "commerce"(쇼핑/마켓/결제), "job-aggregator"(채용/구인/일자리). 둘 다 아니면 null.
+- suggested_template: 빌트인 템플릿 후보 중 하나. 후보는 "commerce"(쇼핑/마켓/결제), "job-aggregator"(채용/구인/일자리), "reservation"(예약/대관/클래스/강좌/시간표). 셋 다 아니면 null.
 
 추측을 강요하지 않는다. 입력이 모호하면 빈 문자열과 null을 그대로 둔다.`;
 

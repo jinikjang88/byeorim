@@ -4,18 +4,19 @@
 
 자세한 배경은 [docs/MANIFESTO.md](docs/MANIFESTO.md)에서 읽는다.
 
-## 6단계
+## 7단계
 
-벼름은 대장장이의 여섯 단계로 일을 진행한다. 명령어는 영문, 이름은 한국어로 병기한다.
+벼름은 대장장이의 일곱 단계로 일을 진행한다. 명령어는 영문, 이름은 한국어로 병기한다. 처음에는 여섯이었고 ADR 0006으로 다듬과 비춤 사이에 세움이 들어와 일곱이 됐다.
 
 | 단계 | 한국어 | 명령어 | 별칭 | 하는 일 |
 |------|--------|--------|------|---------|
 | 0 | 탐광 | `beoreum prospect` | `prs` | 도메인 카탈로그 발견과 Reality Check |
 | 1 | 제련 | `beoreum smelt` | `sml` | 의도 추출, 블럭 선택, 의존성 해결 |
 | 2 | 빚다 | `beoreum shape` | `shp` | 아키텍처 결정과 ADR 기록 |
-| 3 | 단조 | `beoreum forge` | `frg` | 계약 우선 구현과 코드 생성 |
-| 4 | 다듬 | `beoreum temper` | `tmr` | 자동 검증과 Given-When-Then 테스트 |
-| 5 | 비춤 | `beoreum inspect` | `ins` | 다관점 리뷰 |
+| 3 | 단조 | `beoreum forge` | `frg` | 계약 우선 정의(contracts.yml) |
+| 4 | 다듬 | `beoreum temper` | `tmr` | Given-When-Then 테스트 의도 |
+| 5 | 세움 | `beoreum set` | `set` | 산출물 합성과 코드 스켈레톤 생성 |
+| 6 | 비춤 | `beoreum inspect` | `ins` | 6영역 다관점 리뷰 |
 
 ## 시작하기
 
