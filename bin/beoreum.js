@@ -19,6 +19,7 @@ import {
   runVerify,
 } from '@beoreum/cli';
 import { selectAdapter } from '@beoreum/ai';
+import { templates } from '@beoreum/templates';
 
 const program = new Command();
 
@@ -170,12 +171,17 @@ program
   .action(async (input) => {
     try {
       const cwd = process.cwd();
-      const adapter = selectAdapter();
+      const adapter = selectAdapter({ templateNames: Object.keys(templates) });
       const result =
         Array.isArray(input) && input.length > 0
           ? await runProspect({ cwd, userInput: input.join(' '), adapter })
           : await interactiveProspect({ cwd, adapter });
-      console.log(`템플릿을 가져왔습니다: ${result.suggestedTemplate}`);
+      console.log(`카탈로그를 빚었습니다: ${result.catalogFile}`);
+      console.log(`설계 거울을 만들었습니다: ${result.designFile}`);
+      console.log(`출처: ${result.source} (시드: ${result.seedName})`);
+      if (result.source.startsWith('fallback:')) {
+        console.log('AI 생성이 검증을 통과 못 해 시드로 돌아갔습니다. design.md 맨 위 banner를 보세요.');
+      }
       console.log(`의도가 기록되었습니다: ${result.intentFile}`);
       console.log(`다음 단계: beoreum ${result.nextStage}`);
     } catch (err) {
@@ -257,7 +263,7 @@ program
   .description('단조. 계약 우선 정의 (contracts.yml 생성, AI가 schema 채움)')
   .action(async () => {
     try {
-      const adapter = selectAdapter();
+      const adapter = selectAdapter({ templateNames: Object.keys(templates) });
       const result = await runForge({ cwd: process.cwd(), adapter });
       console.log(`계약을 만들었습니다: ${result.contractsFile}`);
       console.log(`블럭 ${result.blockCount}개, 엔드포인트 ${result.endpointCount}개`);

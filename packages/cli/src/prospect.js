@@ -1,16 +1,26 @@
-// beoreum prospect. 사용자 자연어에서 의도를 추출하고 빌트인 템플릿 카탈로그를 가져온다.
+// beoreum prospect. 사용자 자연어에서 의도를 추출하고 카탈로그를 생성한다.
 // ADR 0007의 자리, ADR 0008의 intent.yml 형식, ADR 0009의 AI 어댑터 인터페이스를 따른다.
-// Reality Check 6영역 리포트(ADR 0003)는 다음 출시 자리. 이번 출시는 placeholder만 남긴다.
+// ADR 0026이 picker → generator 전환을 박았고, ADR 0027이 generateCatalog 시그니처를,
+// ADR 0028이 design.md 산출물의 자리를 박았다. Reality Check 6영역 자동 생성은 별도 ADR.
+//
+// 흐름 한 줄:
+//   extractIntent → seedCatalog 결정(suggested_template 또는 commerce default)
+//   → generateCatalog → validateCatalog → 통과: 그대로 / 실패: 시드 fallback + banner
+//   → generateTradeOffDoc → design.md → intent.yml + state advance
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { input } from '@inquirer/prompts';
 import { templates, templatePath } from '@beoreum/templates';
+import { loadCatalog, validateCatalog } from '@beoreum/catalog';
 
 const SCHEMA_VERSION = 1;
 const STAGE = 'prospect';
 const NEXT_STAGE = 'smelt';
+// ADR 0026 결정 2: 시드 후보가 없으면 commerce를 default seed로 본다.
+// 이 결정은 mock의 결정성을 위한 자리지 데이터 의미를 강제하지 않는다.
+const DEFAULT_SEED_NAME = 'commerce';
 
 const REALITY_CHECK_PLACEHOLDER = `# Reality Check
 
@@ -20,10 +30,6 @@ ADR 0003에서 정한 6영역(시장 포화, 진입 비용, 양면 시장, 법�
 
 답하지 못한 질문은 .beoreum/project/diary.md에 적어두세요. 다이어리는 여러분이 만들고 여러분이 봅니다.
 `;
-
-function listAvailableTemplates() {
-  return Object.keys(templates).join(', ');
-}
 
 function loadState(stateFile) {
   if (!existsSync(stateFile)) {
@@ -40,12 +46,18 @@ function ensureStage(state, expected) {
   }
 }
 
-function buildIntent(userInput, extracted, now) {
+// suggested_template이 유효하면 그대로, 아니면 commerce default(ADR 0026 결정 2).
+function resolveSeedName(suggestedTemplate) {
+  if (suggestedTemplate && templates[suggestedTemplate]) return suggestedTemplate;
+  return DEFAULT_SEED_NAME;
+}
+
+function buildIntent(userInput, extracted, source, now) {
   return {
     schema_version: SCHEMA_VERSION,
     created_at: (now || new Date()).toISOString(),
     user_input: userInput,
-    source: `template:${extracted.suggested_template}`,
+    source,
     extracted: {
       what: extracted.what,
       who: extracted.who,
@@ -64,7 +76,66 @@ function advanceState(state, stage) {
   };
 }
 
-// runProspect는 prospect 단계의 본체다. 어댑터 의존성 주입(ADR 0009 결정 4)으로
+function formatValidationErrorBrief(errors) {
+  const first = errors && errors[0];
+  if (!first) return '검증 실패';
+  return `[${first.kind}] ${first.path} ${first.message}`;
+}
+
+// ADR 0028 결정 4: fallback 사실은 design.md 맨 위 한 줄 인용 banner와 intent.source 두 자리.
+function buildFallbackBanner(seedName, errors) {
+  return `> 이번 prospect는 AI 카탈로그 생성에 실패해 ${seedName} seed로 대체됐습니다. 이유: ${formatValidationErrorBrief(errors)}\n\n`;
+}
+
+// adapter.generateCatalog가 있으면 호출, 없으면 시드 그대로(adapter-optional, ADR 0027 결).
+// 반환: { catalog, source, fallbackErrors|null }
+async function buildFinalCatalog({ adapter, userInput, extracted, seedName, seedCatalog }) {
+  if (typeof adapter.generateCatalog !== 'function') {
+    return { catalog: seedCatalog, source: `template:${seedName}`, fallbackErrors: null };
+  }
+  try {
+    const result = await adapter.generateCatalog({ userInput, intent: extracted, seedCatalog });
+    const candidate = result && result.catalog;
+    if (!candidate) {
+      return {
+        catalog: seedCatalog,
+        source: `fallback:template:${seedName}`,
+        fallbackErrors: [{ kind: 'shape', path: '/', message: '어댑터가 catalog를 돌려주지 않음' }],
+      };
+    }
+    const validation = validateCatalog(candidate);
+    if (validation.valid) {
+      return { catalog: candidate, source: `ai-generated:hybrid:${seedName}`, fallbackErrors: null };
+    }
+    return {
+      catalog: seedCatalog,
+      source: `fallback:template:${seedName}`,
+      fallbackErrors: validation.errors,
+    };
+  } catch (err) {
+    // generateCatalog가 throw하면 시드 fallback. 동행 톤(매니페스토 V).
+    return {
+      catalog: seedCatalog,
+      source: `fallback:template:${seedName}`,
+      fallbackErrors: [{ kind: 'runtime', path: '/', message: err.message }],
+    };
+  }
+}
+
+// adapter.generateTradeOffDoc이 있으면 호출, 없으면 한 줄짜리 fallback 마크다운.
+async function buildDesignBody({ adapter, catalog, intentDoc, now }) {
+  if (typeof adapter.generateTradeOffDoc !== 'function') {
+    return '# 설계 거울 미생성\n\n어댑터가 generateTradeOffDoc을 구현하지 않았습니다. catalog.yml을 직접 보세요.\n';
+  }
+  try {
+    const result = await adapter.generateTradeOffDoc({ catalog, intent: intentDoc, now });
+    return (result && result.doc) || '';
+  } catch (err) {
+    return `# 설계 거울 미생성\n\n어댑터가 design.md를 만들지 못했습니다. catalog.yml을 직접 보세요.\n사유: ${err.message}\n`;
+  }
+}
+
+// runProspect는 prospect 단계의 본체. 어댑터 의존성 주입(ADR 0009 결정 4)으로
 // LLM 호출 없는 단위 테스트가 가능하다.
 //
 // 입력:
@@ -73,7 +144,8 @@ function advanceState(state, stage) {
 //   adapter    - AiAdapter 구현(mock, claude 등). extractIntent 메서드를 가진다
 //   now        - 테스트용 결정적 시각(선택)
 //
-// 반환: { intentFile, catalogFile, realityCheckFile, suggestedTemplate, nextStage }
+// 반환: { intentFile, catalogFile, designFile, realityCheckFile,
+//         suggestedTemplate, seedName, source, nextStage }
 export async function runProspect({ cwd, userInput, adapter, now } = {}) {
   if (!cwd) throw new Error('runProspect({ cwd })가 필요합니다');
   if (!userInput || !userInput.trim()) {
@@ -89,29 +161,38 @@ export async function runProspect({ cwd, userInput, adapter, now } = {}) {
 
   const beoreumDir = join(cwd, '.beoreum');
   const stateFile = join(beoreumDir, 'state.yml');
+  const projectDir = join(beoreumDir, 'project');
+  const catalogDir = join(projectDir, 'catalog');
+  const catalogFile = join(catalogDir, 'catalog.yml');
+  const intentFile = join(projectDir, 'intent.yml');
+  const designFile = join(projectDir, 'design.md');
+  const realityCheckFile = join(projectDir, 'reality-check.md');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
   const extracted = await adapter.extractIntent(userInput);
-  if (!extracted.suggested_template) {
-    throw new Error(
-      `사용자 입력에서 적합한 빌트인 템플릿을 추천하지 못했습니다: "${userInput}"\n` +
-        `지금 지원하는 도메인: ${listAvailableTemplates()}`,
-    );
-  }
+  const seedName = resolveSeedName(extracted.suggested_template);
+  const seedCatalog = loadCatalog(templatePath(seedName));
 
-  const sourcePath = templatePath(extracted.suggested_template);
-  const catalogDir = join(beoreumDir, 'project', 'catalog');
+  const { catalog, source, fallbackErrors } = await buildFinalCatalog({
+    adapter,
+    userInput,
+    extracted,
+    seedName,
+    seedCatalog,
+  });
+
   mkdirSync(catalogDir, { recursive: true });
-  const catalogFile = join(catalogDir, 'catalog.yml');
-  copyFileSync(sourcePath, catalogFile);
+  writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
 
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const intentDoc = buildIntent(userInput, extracted, now);
+  const intentDoc = buildIntent(userInput, extracted, source, now);
   writeFileSync(intentFile, yaml.dump(intentDoc, { sortKeys: false }), 'utf8');
 
-  const realityCheckFile = join(beoreumDir, 'project', 'reality-check.md');
+  const designBody = await buildDesignBody({ adapter, catalog, intentDoc, now });
+  const banner = fallbackErrors ? buildFallbackBanner(seedName, fallbackErrors) : '';
+  writeFileSync(designFile, banner + designBody, 'utf8');
+
   writeFileSync(realityCheckFile, REALITY_CHECK_PLACEHOLDER, 'utf8');
 
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
@@ -119,8 +200,11 @@ export async function runProspect({ cwd, userInput, adapter, now } = {}) {
   return {
     intentFile,
     catalogFile,
+    designFile,
     realityCheckFile,
     suggestedTemplate: extracted.suggested_template,
+    seedName,
+    source,
     nextStage: NEXT_STAGE,
   };
 }

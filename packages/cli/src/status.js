@@ -55,6 +55,7 @@ function buildArtifacts(projectDir) {
   return {
     intent: existsSync(join(projectDir, 'intent.yml')),
     catalog: existsSync(join(projectDir, 'catalog', 'catalog.yml')),
+    design: existsSync(join(projectDir, 'design.md')),
     selected_blocks: existsSync(join(projectDir, 'selected-blocks.yml')),
     decisions: existsSync(join(projectDir, 'decisions.yml')),
     architecture: existsSync(join(projectDir, 'architecture.yml')),

@@ -15,17 +15,26 @@ import Anthropic, {
 
 const DEFAULT_MODEL = 'claude-opus-4-7';
 
-// 도메인 무관 시스템 프롬프트. ADR 0024의 prompt caching 약속을 위해 항상 같은 바이트로 둔다.
-// 사용자 입력(extractIntent의 자연어, extractSchema의 block/operation)은 user 메시지로만 들어간다.
-const INTENT_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 의도를 추출하는 도우미다.
+// 도메인 무관 시스템 프롬프트의 기본 후보 목록. ADR 0026 결정 4에 따라
+// createClaudeAdapter({ templateNames }) 옵션으로 호출 자리에서 갈아끼울 수 있다.
+// ai 패키지는 templates에 의존하지 않고(섹션 3 의존성 방향), 호출자(bin/beoreum.js)가
+// Object.keys(templates)를 넘긴다.
+const DEFAULT_TEMPLATE_NAMES = ['commerce', 'job-aggregator', 'reservation'];
+
+// 도메인 무관 시스템 프롬프트. ADR 0024의 prompt caching 약속을 위해 호출 한 자리 안에서 같은 바이트.
+// templateNames가 같은 한 같은 바이트라 cache 적중률이 보존된다.
+function buildIntentSystemPrompt(templateNames) {
+  const list = (templateNames || DEFAULT_TEMPLATE_NAMES).map((n) => `"${n}"`).join(', ');
+  return `너는 사용자가 만들고 싶은 서비스의 의도를 추출하는 도우미다.
 사용자가 한국어 또는 영어로 한 마디를 적으면, 다음 셋을 추출한다.
 
 - what: 사용자가 만들고 싶은 것의 이름. 명사구로 짧게.
 - who: 사용자가 그것을 누구를 위해 만드는지. 입력에서 추측할 수 없으면 빈 문자열.
 - why: 사용자가 그것을 왜 만드는지. 입력에서 추측할 수 없으면 빈 문자열.
-- suggested_template: 빌트인 템플릿 후보 중 하나. 후보는 "commerce"(쇼핑/마켓/결제), "job-aggregator"(채용/구인/일자리), "reservation"(예약/대관/클래스/강좌/시간표). 셋 다 아니면 null.
+- suggested_template: 빌트인 시드 후보 중 하나. 후보: ${list}. 어느 것에도 안 닿으면 null.
 
 추측을 강요하지 않는다. 입력이 모호하면 빈 문자열과 null을 그대로 둔다.`;
+}
 
 const SCHEMA_SYSTEM_PROMPT = `너는 한 도메인 블럭의 한 operation에 대한 JSON Schema를 생성하는 도우미다.
 
@@ -153,14 +162,17 @@ function buildRequest({ model, system, userText, outputSchema }) {
 // Claude AI 어댑터를 만든다.
 //
 // 입력:
-//   apiKey  - Anthropic API 키. 미지정 시 ANTHROPIC_API_KEY 환경 변수에서 읽힘
-//   model   - 사용할 모델 ID (기본 claude-opus-4-7). BEOREUM_AI_MODEL 환경 변수가 우선시됨
-//   client  - 옵셔널 SDK 인스턴스(테스트 주입용). 없으면 new Anthropic({ apiKey, baseURL })로 만든다
-//   baseURL - 옵셔널. 외부 브릿지 서버 URL. 주어지면 SDK가 그쪽으로 호출(ADR 0025).
-//             client가 명시적으로 주입되면 무시됨
+//   apiKey         - Anthropic API 키. 미지정 시 ANTHROPIC_API_KEY 환경 변수에서 읽힘
+//   model          - 사용할 모델 ID (기본 claude-opus-4-7). BEOREUM_AI_MODEL 환경 변수가 우선시됨
+//   client         - 옵셔널 SDK 인스턴스(테스트 주입용). 없으면 new Anthropic({ apiKey, baseURL })로 만든다
+//   baseURL        - 옵셔널. 외부 브릿지 서버 URL. 주어지면 SDK가 그쪽으로 호출(ADR 0025).
+//                    client가 명시적으로 주입되면 무시됨
+//   templateNames  - 옵셔널. INTENT_SYSTEM_PROMPT의 시드 후보 목록(ADR 0026 결정 4).
+//                    호출자(bin/beoreum.js)가 Object.keys(templates)로 넘긴다.
+//                    생략 시 DEFAULT_TEMPLATE_NAMES 사용
 //
 // @returns {import('./adapter.js').AiAdapter}
-export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
+export function createClaudeAdapter({ apiKey, model, client, baseURL, templateNames } = {}) {
   const resolvedModel = model || process.env.BEOREUM_AI_MODEL || DEFAULT_MODEL;
   const resolvedClient =
     client ||
@@ -168,6 +180,7 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
       apiKey: apiKey || process.env.ANTHROPIC_API_KEY,
       ...(baseURL ? { baseURL } : {}),
     });
+  const intentSystemPrompt = buildIntentSystemPrompt(templateNames);
 
   async function callParse(request) {
     try {
@@ -182,7 +195,7 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
     async extractIntent(userInput) {
       const request = buildRequest({
         model: resolvedModel,
-        system: INTENT_SYSTEM_PROMPT,
+        system: intentSystemPrompt,
         userText: userInput || '',
         outputSchema: INTENT_OUTPUT_SCHEMA,
       });
@@ -223,6 +236,21 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
         response:
           parsed.response === null || parsed.response === undefined ? null : parsed.response,
       };
+    },
+    // ADR 0026, 0027. 이번 출시는 mock에서 흐름을 검증하고, 실제 LLM 호출은 다음 PR.
+    // structured output schema(catalog.schema.json), prompt caching, max_tokens 예산을 거기서 결정.
+    async generateCatalog() {
+      throw new Error(
+        'claude.generateCatalog는 다음 출시 자리입니다. ' +
+          'BEOREUM_AI_ADAPTER=mock으로 흐름을 먼저 검증하거나 다음 PR을 기다려주세요',
+      );
+    },
+    // ADR 0028. 트레이드오프 자연어 문서. mock에서 흐름이 검증되면 다음 PR에서 채워진다.
+    async generateTradeOffDoc() {
+      throw new Error(
+        'claude.generateTradeOffDoc는 다음 출시 자리입니다. ' +
+          'BEOREUM_AI_ADAPTER=mock으로 흐름을 먼저 검증하거나 다음 PR을 기다려주세요',
+      );
     },
   };
 }

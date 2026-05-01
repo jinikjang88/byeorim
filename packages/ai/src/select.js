@@ -14,7 +14,9 @@ const DEFAULT_ADAPTER_NAME = 'mock';
 const BRIDGE_PLACEHOLDER_KEY = 'beoreum-bridge-placeholder';
 
 // claude 어댑터 팩토리. ADR 0025 결정 2의 분기 표를 한 자리에서 다룬다.
-function buildClaudeAdapter() {
+// templateNames는 ADR 0026 결정 4의 동적 시드 후보 목록. 호출자(bin/beoreum.js)가
+// Object.keys(templates)로 넘기면 INTENT_SYSTEM_PROMPT가 그 자리에 끼움.
+function buildClaudeAdapter({ templateNames } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const baseURL = process.env.ANTHROPIC_BASE_URL;
   if (!apiKey && !baseURL) {
@@ -28,22 +30,24 @@ function buildClaudeAdapter() {
   return createClaudeAdapter({
     apiKey: apiKey || BRIDGE_PLACEHOLDER_KEY,
     baseURL: baseURL || undefined,
+    templateNames,
   });
 }
 
 // 어댑터 이름 → 팩토리 표. ADR 0024 결정 3의 표.
 const ADAPTERS = {
   mock: () => createMockAdapter(),
-  claude: () => buildClaudeAdapter(),
+  claude: ({ templateNames } = {}) => buildClaudeAdapter({ templateNames }),
 };
 
 // 환경 변수 또는 인자로 들어온 이름을 보고 어댑터 인스턴스를 만든다.
 //
 // 입력:
-//   name - 어댑터 이름. 미지정 시 process.env.BEOREUM_AI_ADAPTER 사용. 둘 다 없으면 mock
+//   name           - 어댑터 이름. 미지정 시 process.env.BEOREUM_AI_ADAPTER 사용. 둘 다 없으면 mock
+//   templateNames  - 옵셔널. claude 어댑터의 INTENT_SYSTEM_PROMPT 시드 후보 목록
 //
 // 알 수 없는 이름이면 한국어 에러로 안내(CLAUDE.md 섹션 8 사용자 출력 정책).
-export function selectAdapter({ name } = {}) {
+export function selectAdapter({ name, templateNames } = {}) {
   const resolved = (name || process.env.BEOREUM_AI_ADAPTER || DEFAULT_ADAPTER_NAME).toLowerCase();
   const factory = ADAPTERS[resolved];
   if (!factory) {
@@ -53,5 +57,5 @@ export function selectAdapter({ name } = {}) {
         `BEOREUM_AI_ADAPTER 환경 변수를 확인해주세요`,
     );
   }
-  return factory();
+  return factory({ templateNames });
 }

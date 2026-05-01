@@ -151,5 +151,6 @@ mock 어댑터의 동작은 다음과 같다.
 
 ## 링크
 - 이전 결정: ADR 0008 (intent.yml 형식, ExtractedIntent와 짝)
+- 이 ADR을 amend하는 결정: ADR 0023 (extractSchema 추가), ADR 0027 (generateCatalog와 generateTradeOffDoc 추가)
 - 후속 작업: 실제 LLM 어댑터(Claude, GPT, Gemini), 어댑터 선택 로직
 - 관련 정책: CLAUDE.md 섹션 2(절대 금지선 6번 벤더 무관), 섹션 3(packages/ai만 LLM 호출), 섹션 4(단위 테스트 5초 미만)

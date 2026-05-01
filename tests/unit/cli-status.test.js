@@ -169,6 +169,7 @@ test('산출물 존재 여부가 단계 진행에 따라 정확히 채워진다'
     status = runStatus({ cwd });
     assert.equal(status.artifacts.intent, true);
     assert.equal(status.artifacts.catalog, true);
+    assert.equal(status.artifacts.design, true); // ADR 0028: design.md를 prospect가 함께 만든다
     assert.equal(status.artifacts.reality_check, true);
     assert.equal(status.artifacts.selected_blocks, false);
   });

@@ -126,6 +126,7 @@ project/generated/
     ├── intent.yml                # Prospect 산출
     ├── catalog/                  # Prospect 산출. 발견된 도메인 카탈로그
     │   └── catalog.yml
+    ├── design.md                 # Prospect 산출. 카탈로그의 사람용 거울 (ADR 0028)
     ├── reality-check.md          # Prospect 산출. 시장 직시 리포트
     ├── selected-blocks.yml       # Smelt 산출. 선택된 블럭 + 자동 추가
     ├── decisions.yml             # Smelt 산출. cascade 답변
@@ -146,6 +147,7 @@ project/generated/
 | .beoreum/project/diary.md                | init        | 사용자가 갱신        |
 | .beoreum/project/intent.yml              | prospect    | prospect 재실행 시   |
 | .beoreum/project/catalog/                | prospect    | prospect 재실행 시   |
+| .beoreum/project/design.md               | prospect    | prospect 재실행 시   |
 | .beoreum/project/reality-check.md        | prospect    | prospect 재실행 시   |
 | .beoreum/project/selected-blocks.yml     | smelt       | smelt 재실행 시      |
 | .beoreum/project/decisions.yml           | smelt       | smelt 재실행 시      |
@@ -176,5 +178,6 @@ project/generated/
 
 ## 링크
 - 이전 결정: ADR 0002 (6단계, 7단계로 ADR 0006이 확장), ADR 0006 (세움 단계 추가)
+- 이 ADR을 amend하는 결정: ADR 0028 (design.md 자리 추가)
 - 후속 작업: 단계별 파일 형식 ADR (intent.yml, selected-blocks.yml 등)
 - 관련 정책: CLAUDE.md 섹션 2(절대 금지선 1번 .beoreum/project/ 자리), 섹션 6(레이아웃 변경 ADR 필수)

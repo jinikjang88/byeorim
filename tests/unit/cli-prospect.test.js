@@ -46,9 +46,9 @@ test('init 직후 prospect를 돌리면 ADR 0007의 자리가 모두 채워진�
   });
 });
 
-test('intent.yml 형식이 ADR 0008 결정을 따른다', async () => {
+test('intent.yml 형식이 ADR 0008 결정을 따르고 source는 ADR 0026의 ai-generated:hybrid 매트릭스를 따른다', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: init 후 prospect
+    // Given: init 후 prospect (mock generateCatalog가 시드를 변형해 카탈로그를 빚음)
     runInit({ cwd });
     const fixedNow = new Date('2026-04-28T12:00:00.000Z');
     await runProspect({
@@ -59,11 +59,11 @@ test('intent.yml 형식이 ADR 0008 결정을 따른다', async () => {
     });
     // When: intent.yml을 읽어 파싱한다
     const intent = yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'intent.yml'), 'utf8'));
-    // Then: ADR 0008의 모든 필드가 들어있다
+    // Then: ADR 0008의 모든 필드 + ADR 0026의 source 매트릭스
     assert.equal(intent.schema_version, 1);
     assert.equal(intent.created_at, '2026-04-28T12:00:00.000Z');
     assert.equal(intent.user_input, '쇼핑몰 만들어줘');
-    assert.equal(intent.source, 'template:commerce');
+    assert.equal(intent.source, 'ai-generated:hybrid:commerce');
     assert.equal(intent.extracted.what, '쇼핑몰');
     assert.equal(intent.extracted.who, '');
     assert.equal(intent.extracted.why, '');
@@ -105,7 +105,7 @@ test('state.yml이 prospect 완료를 반영한다', async () => {
   });
 });
 
-test('채용 키워드는 job-aggregator 템플릿이 복사된다', async () => {
+test('채용 키워드는 job-aggregator를 시드로 받아 ai-generated 카탈로그를 빚는다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: init 후 prospect 채용 키워드
     runInit({ cwd });
@@ -114,10 +114,11 @@ test('채용 키워드는 job-aggregator 템플릿이 복사된다', async () =>
       userInput: '채용 사이트 만들어줘',
       adapter: createMockAdapter(),
     });
-    // Then: job-aggregator 추천, intent.yml의 source도 그쪽
+    // Then: job-aggregator 추천이 시드로 잡히고, mock generateCatalog가 변형해 source는 ai-generated
     assert.equal(result.suggestedTemplate, 'job-aggregator');
+    assert.equal(result.seedName, 'job-aggregator');
     const intent = yaml.load(readFileSync(result.intentFile, 'utf8'));
-    assert.equal(intent.source, 'template:job-aggregator');
+    assert.equal(intent.source, 'ai-generated:hybrid:job-aggregator');
   });
 });
 
@@ -149,19 +150,115 @@ test('현재 단계가 prospect가 아니면 한국어 에러로 거부한다', 
   });
 });
 
-test('어댑터가 추천하지 못하면 한국어 에러에 지원 도메인 목록을 함께 보인다', async () => {
+test('어댑터가 추천하지 못해도 commerce를 default seed로 잡고 흐름을 막지 않는다 (ADR 0026 결정 2)', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: init 후 알 수 없는 도메인 입력
+    // Given: init 후 시드 키워드 어디에도 안 닿는 도메인 입력
     runInit({ cwd });
-    // When/Then: 추천 실패 메시지 + 지원 도메인 안내
-    await assert.rejects(
-      runProspect({
-        cwd,
-        userInput: '우주여행 가이드 서비스',
-        adapter: createMockAdapter(),
-      }),
-      /commerce/,
-    );
+    // When: prospect가 막히지 않고 끝까지 돈다(매니페스토 V 동행 톤)
+    const result = await runProspect({
+      cwd,
+      userInput: '우주여행 가이드 서비스',
+      adapter: createMockAdapter(),
+    });
+    // Then: suggestedTemplate은 null이지만 seedName은 commerce default
+    assert.equal(result.suggestedTemplate, null);
+    assert.equal(result.seedName, 'commerce');
+    const intent = yaml.load(readFileSync(result.intentFile, 'utf8'));
+    assert.equal(intent.source, 'ai-generated:hybrid:commerce');
+    // catalog와 design.md 둘 다 자리잡았다
+    assert.equal(existsSync(result.catalogFile), true);
+    assert.equal(existsSync(result.designFile), true);
+  });
+});
+
+test('design.md가 prospect의 두 번째 산출물로 만들어진다 (ADR 0028)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: init 후 prospect
+    runInit({ cwd });
+    const result = await runProspect({
+      cwd,
+      userInput: '쇼핑몰 만들어줘',
+      adapter: createMockAdapter(),
+    });
+    // Then: design.md가 자리잡고 헤더와 worlds 헤딩 한 자리가 보임
+    assert.equal(existsSync(result.designFile), true);
+    const body = readFileSync(result.designFile, 'utf8');
+    assert.match(body, /^# .+ 설계$/m);
+    assert.match(body, /^## .+\(`w-/m); // 한 줄 이상의 world 헤딩
+    assert.match(body, /^#### .+\(`/m); // 한 줄 이상의 block 헤딩
+    assert.match(body, /트레이드오프:/);
+  });
+});
+
+test('fallback: adapter generateCatalog가 invalid catalog를 돌려주면 시드로 돌아가고 source가 fallback', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: init 후 generateCatalog가 invalid catalog를 돌려주는 fixture adapter
+    runInit({ cwd });
+    const baseAdapter = createMockAdapter();
+    const brokenAdapter = {
+      ...baseAdapter,
+      async generateCatalog() {
+        // 의도적으로 schema를 깨뜨림(worlds 누락)
+        return { catalog: { blocks: [{ id: 'broken', name: 'x', user_desc: 'y' }] } };
+      },
+    };
+    // When: prospect가 막히지 않고 fallback 분기로 진행
+    const result = await runProspect({
+      cwd,
+      userInput: '쇼핑몰 만들어줘',
+      adapter: brokenAdapter,
+    });
+    // Then: source가 fallback으로 잡히고 design.md 맨 위에 banner
+    assert.equal(result.source, 'fallback:template:commerce');
+    const design = readFileSync(result.designFile, 'utf8');
+    assert.match(design, /^> 이번 prospect는 AI 카탈로그 생성에 실패해/);
+    // catalog는 시드 그대로
+    const catalog = yaml.load(readFileSync(result.catalogFile, 'utf8'));
+    assert.ok(Array.isArray(catalog.worlds), 'fallback 시 시드의 worlds가 보존되어야 한다');
+  });
+});
+
+test('fallback: adapter generateCatalog가 throw하면 시드로 돌아가고 사유가 banner에 들어간다', async () => {
+  await withTempCwd(async (cwd) => {
+    runInit({ cwd });
+    const baseAdapter = createMockAdapter();
+    const throwingAdapter = {
+      ...baseAdapter,
+      async generateCatalog() {
+        throw new Error('테스트 사유: API timeout');
+      },
+    };
+    const result = await runProspect({
+      cwd,
+      userInput: '쇼핑몰 만들어줘',
+      adapter: throwingAdapter,
+    });
+    assert.equal(result.source, 'fallback:template:commerce');
+    const design = readFileSync(result.designFile, 'utf8');
+    assert.match(design, /테스트 사유: API timeout/);
+  });
+});
+
+test('adapter-optional: generateCatalog 없는 어댑터는 시드 그대로 복사 결로 동작 (source: template:)', async () => {
+  await withTempCwd(async (cwd) => {
+    runInit({ cwd });
+    const noGenAdapter = {
+      name: 'no-gen',
+      async extractIntent(input) {
+        const base = createMockAdapter();
+        return base.extractIntent(input);
+      },
+      // generateCatalog와 generateTradeOffDoc 둘 다 누락
+    };
+    const result = await runProspect({
+      cwd,
+      userInput: '쇼핑몰 만들어줘',
+      adapter: noGenAdapter,
+    });
+    assert.equal(result.source, 'template:commerce');
+    // design.md는 fallback 본문(generateTradeOffDoc 미구현)
+    const design = readFileSync(result.designFile, 'utf8');
+    assert.match(design, /설계 거울 미생성/);
   });
 });
 

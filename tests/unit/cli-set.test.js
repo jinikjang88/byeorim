@@ -101,8 +101,8 @@ test('프로젝트 개요 섹션이 intent.yml에서 합성된다', async () => 
     // who와 why는 mock에서 빈 문자열이라 "(아직 답하지 않음)"이 들어가야 한다
     assert.match(readme, /누구를 위해 만드시나요: _\(아직 답하지 않음\)_/);
     assert.match(readme, /왜 만드시나요: _\(아직 답하지 않음\)_/);
-    // 카탈로그 출처
-    assert.match(readme, /카탈로그 출처: template:commerce/);
+    // 카탈로그 출처. ADR 0026 결정 4의 source 매트릭스 중 ai-generated:hybrid:<seedName>
+    assert.match(readme, /카탈로그 출처: ai-generated:hybrid:commerce/);
   });
 });
 
