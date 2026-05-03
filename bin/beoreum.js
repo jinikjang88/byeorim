@@ -7,6 +7,7 @@ import {
   runInit,
   runProspect,
   interactiveProspect,
+  importCatalog,
   runSmelt,
   interactiveSmelt,
   interactiveShape,
@@ -162,7 +163,7 @@ program
     }
   });
 
-program
+const prospectCmd = program
   .command('prospect')
   .alias('prs')
   .description('탐광. 7항목 동행 질문과 도메인 카탈로그 가져오기')
@@ -180,6 +181,23 @@ program
       console.log(`템플릿을 가져왔습니다: ${result.suggestedTemplate}`);
       console.log(`의도가 기록되었습니다: ${result.intentFile}`);
       console.log(`다음 단계: beoreum ${result.nextStage}`);
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  });
+
+// prospect 보조 명령(ADR 0028). 외부 AI에서 받은 카탈로그 yml을 가져와 catalog.yml로 교체한다.
+// 예: beoreum prospect import-catalog ./received-catalog.yml
+prospectCmd
+  .command('import-catalog')
+  .alias('import')
+  .description('외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 카탈로그 yml을 가져온다(ADR 0028)')
+  .argument('<file>', '가져올 yml 파일 경로')
+  .action((file) => {
+    try {
+      const cwd = process.cwd();
+      importCatalog({ cwd, sourcePath: file });
     } catch (err) {
       console.error(err.message);
       process.exit(1);

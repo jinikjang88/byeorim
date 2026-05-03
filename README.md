@@ -38,6 +38,16 @@ node bin/beoreum.js prospect
 
 다이어리(`.beoreum/project/diary.md`)에는 두 머리가 자리한다. `prospect 의도에서 미뤄둔 질문`은 7항목에서 비운 자리, `Reality Check에서 미뤄둔 질문`은 6영역의 모든 질문. Reality Check 리포트는 `.beoreum/project/reality-check.md`에서 영역별 AI 관찰과 함께 본다.
 
+### 외부 AI로 더 자세한 카탈로그 받기 (ADR 0028)
+
+prospect가 끝나면 부산물로 `.beoreum/project/prompts/catalog-prompt.md`가 자리잡는다. API 키 없이 Claude.ai, ChatGPT, Gemini 같은 외부 AI에 그 프롬프트를 그대로 붙여넣어 더 자세한 카탈로그를 받을 수 있다. 응답을 yml 파일로 저장한 뒤 다음 명령으로 가져온다.
+
+```bash
+node bin/beoreum.js prospect import-catalog ./received-catalog.yml
+```
+
+가져오는 시점에 catalog.schema.json 검증이 자동으로 돌고, 통과하면 `.beoreum/project/catalog/catalog.yml`을 교체하고 intent.yml의 source를 `custom`으로 박는다. reality-check.md는 이전 카탈로그 기준 그대로 두고 사용자에게 한국어로 안내한다.
+
 비대화형으로 한 줄만 적고 싶다면 다음과 같이 한다. 나머지 6개는 비어 다이어리로 흘러간다.
 
 ```bash

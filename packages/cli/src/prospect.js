@@ -20,6 +20,7 @@ import { templates, templatePath } from '@beoreum/templates';
 import { validateCatalog, loadCatalog } from '@beoreum/catalog';
 import { REALITY_CHECK_AREAS, REALITY_CHECK_AREA_TITLES } from '@beoreum/core';
 import { FIELDS, QUESTIONS } from './prospect-questions.js';
+import { buildCatalogPromptMarkdown } from './prospect-prompt.js';
 
 const SCHEMA_VERSION = 2;
 const STAGE = 'prospect';
@@ -304,6 +305,20 @@ export async function runProspect({
 
   appendIntentDiary(diaryFile, intentDoc.unanswered, now);
 
+  // 외부 AI 경로용 부산물 프롬프트 작성(ADR 0028). source가 무엇이든 항상 만들어둔다.
+  // 사용자가 카탈로그 품질에 만족 못 하거나 더 자세한 자리를 원할 때 쓰는 결.
+  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  mkdirSync(promptsDir, { recursive: true });
+  const catalogPromptFile = join(promptsDir, 'catalog-prompt.md');
+  writeFileSync(
+    catalogPromptFile,
+    buildCatalogPromptMarkdown({
+      answers: normalized,
+      suggestedTemplate: extracted.suggested_template,
+    }),
+    'utf8',
+  );
+
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
 
   printChecklist(intentDoc.extracted, log);
@@ -316,12 +331,17 @@ export async function runProspect({
     log('Reality Check 6영역을 reality-check.md에 적어두었어요. 질문은 다이어리로도 옮겨졌습니다.');
   }
   log(`카탈로그 출처: ${sourceField}`);
+  log(
+    '더 자세한 카탈로그를 원하시면 .beoreum/project/prompts/catalog-prompt.md를 외부 AI에 붙여넣고',
+  );
+  log('  beoreum prospect import-catalog <받은-파일.yml>  명령으로 가져오세요(ADR 0028).');
   log(`다음 단계로 같이 갑니다: beoreum ${NEXT_STAGE}`);
 
   return {
     intentFile,
     catalogFile,
     realityCheckFile,
+    catalogPromptFile,
     suggestedTemplate: extracted.suggested_template,
     source: sourceField,
     realityCheckStatus,
