@@ -40,8 +40,9 @@ async function setupReadyForForge(cwd, blockIds = ['order'], apiStyle = 'rest') 
   runInit({ cwd });
   await runProspect({
     cwd,
-    userInput: '쇼핑몰 만들어줘',
+    answers: { what: '쇼핑몰' },
     adapter: createMockAdapter(),
+    log: () => {},
   });
   await runSmelt({ cwd, blockIds });
   await interactiveShape({
@@ -192,8 +193,9 @@ test('architecture.yml이 없으면 shape 안내 메시지로 거부한다', asy
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
     const stateFile = join(cwd, '.beoreum', 'state.yml');

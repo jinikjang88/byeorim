@@ -10,7 +10,7 @@
 
 | 단계 | 한국어 | 명령어 | 별칭 | 하는 일 |
 |------|--------|--------|------|---------|
-| 0 | 탐광 | `beoreum prospect` | `prs` | 도메인 카탈로그 발견과 Reality Check |
+| 0 | 탐광 | `beoreum prospect` | `prs` | 7항목 동행 질문, 빌트인 또는 AI 카탈로그 선택 |
 | 1 | 제련 | `beoreum smelt` | `sml` | 의도 추출, 블럭 선택, 의존성 해결 |
 | 2 | 빚다 | `beoreum shape` | `shp` | 아키텍처 결정과 ADR 기록 |
 | 3 | 단조 | `beoreum forge` | `frg` | 계약 우선 정의(contracts.yml) |
@@ -25,6 +25,23 @@
 ```bash
 npm install
 node bin/beoreum.js --help
+```
+
+## 탐광 한 번 돌려보기
+
+탐광은 7항목 차례 질문으로 사용자의 서비스를 그려본다(ADR 0026). 답변을 마치면 카탈로그 출처를 4지선다로 고른다(ADR 0027). 빌트인 3개와 AI가 도메인에 맞춰 새로 만드는 옵션이 함께 보인다.
+
+```bash
+node bin/beoreum.js init
+node bin/beoreum.js prospect
+```
+
+각 질문에 답하거나 그냥 엔터로 비워둔다. 비워둔 자리는 `.beoreum/project/diary.md`에 질문으로 옮겨진다. 시간이 지나 답이 자라면 거기에 적어두면 된다.
+
+비대화형으로 한 줄만 적고 싶다면 다음과 같이 한다. 나머지 6개는 비어 다이어리로 흘러간다.
+
+```bash
+node bin/beoreum.js prospect 동네 빵집 단골 주문 앱
 ```
 
 ## AI 어댑터 설정

@@ -40,8 +40,9 @@ async function setupReadyForSet(cwd, blockIds) {
   runInit({ cwd });
   await runProspect({
     cwd,
-    userInput: '쇼핑몰 만들어줘',
+    answers: { what: '쇼핑몰' },
     adapter: createMockAdapter(),
+    log: () => {},
   });
   await runSmelt({ cwd, blockIds });
   await interactiveShape({ cwd, askArchitecture: async () => NODE_CHOICES });
@@ -221,7 +222,12 @@ test('frontend는 architecture.language와 무관하게 항상 생성된다', as
   await withTempCwd(async (cwd) => {
     // backend 언어가 java여도 frontend는 React 표준으로 만들어짐(ADR 0021)
     runInit({ cwd });
-    await runProspect({ cwd, userInput: '쇼핑몰', adapter: createMockAdapter() });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
     await runSmelt({ cwd, blockIds: ['order'] });
     await interactiveShape({
       cwd,

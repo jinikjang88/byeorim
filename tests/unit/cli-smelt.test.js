@@ -24,9 +24,9 @@ async function withTempCwd(fn) {
 }
 
 // init → prospect까지 한 번에 끝낸 자리를 만든다. smelt 단계에 들어와 있는 상태.
-async function setupReadyForSmelt(cwd, userInput = '쇼핑몰 만들어줘') {
+async function setupReadyForSmelt(cwd, answers = { what: '쇼핑몰' }) {
   runInit({ cwd });
-  await runProspect({ cwd, userInput, adapter: createMockAdapter() });
+  await runProspect({ cwd, answers, adapter: createMockAdapter(), log: () => {} });
 }
 
 test('정상 흐름: init → prospect → smelt가 두 산출물을 만들고 단계가 shape로 넘어간다', async () => {

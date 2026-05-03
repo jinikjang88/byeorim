@@ -1,34 +1,50 @@
-// Mock AI 어댑터. 결정적 휴리스틱으로 의도를 추출하고 빌트인 템플릿을 추천한다.
+// Mock AI 어댑터. 결정적 휴리스틱으로 사용자 7항목 답변에서 빌트인 템플릿을 추천한다.
 // 단위 테스트가 LLM 호출 없이 prospect 흐름을 끝까지 돌릴 수 있게 하는 자리.
-// 실제 의도 추출은 미래의 LLM 어댑터가 한다(ADR 0009).
+// 실제 의도 정리는 미래의 LLM 어댑터가 한다(ADR 0009 + 0026).
 
 // 도메인별 키워드 표. commerce가 아닌 다른 도메인이 추가될 때 이 표만 갱신한다.
 // 카탈로그 데이터(commerce/job-aggregator의 블럭 ID)에는 매몰되지 않는다.
-// 이 표는 사용자 자연어 → 빌트인 템플릿 추천이라는 한 단계만 본다.
+// 이 표는 사용자 답변 → 빌트인 템플릿 추천이라는 한 단계만 본다.
 const TEMPLATE_KEYWORDS = {
   commerce: ['쇼핑', '마켓', '상점', '커머스', '판매', '주문', '결제', '장바구니', '배송'],
   'job-aggregator': ['채용', '구인', '일자리', '공고', '잡', '커리어', '리크루팅'],
   reservation: ['예약', '대관', '클래스', '강좌', '시간표', '부킹', '레슨', '강의', '룸예약'],
 };
 
-function suggestTemplate(userInput) {
-  const text = (userInput || '').toLowerCase();
+function suggestTemplate(text) {
+  const lower = (text || '').toLowerCase();
   for (const [template, keywords] of Object.entries(TEMPLATE_KEYWORDS)) {
-    if (keywords.some((kw) => text.includes(kw.toLowerCase()))) {
+    if (keywords.some((kw) => lower.includes(kw.toLowerCase()))) {
       return template;
     }
   }
   return null;
 }
 
-// 사용자 입력에서 첫 명사구처럼 보이는 자리를 'what'으로 잡는다. 휴리스틱이라 완벽하지 않다.
-// who, why는 mock에서는 빈 문자열로 둔다. 실제 LLM 어댑터가 채울 자리.
-function extractWhat(userInput) {
-  const trimmed = (userInput || '').trim();
-  if (!trimmed) return '';
-  // 사용자가 "쇼핑몰 만들어줘" 같이 입력하면 동사 앞부분만 잡는다.
-  const beforeAction = trimmed.split(/\s*(만들|만들어|만들고|짓|지어|구현)/)[0];
-  return (beforeAction || trimmed).trim();
+// catalog.schema.json의 id 패턴(^[a-z][a-z0-9-]*$)에 맞춰 슬러그를 만든다.
+// 한국어 답변에서 알파벳 추출은 휴리스틱이라 빈 결과면 안전한 기본값으로.
+function slugFromAnswer(text, fallback) {
+  const slug = (text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 30);
+  return slug || fallback;
+}
+
+// 7항목 답변에서 누락된 자리를 빈 문자열로 정규화한다. AI 어댑터의 입력 약속(ADR 0026).
+function normalizeAnswers(answers) {
+  const a = answers || {};
+  return {
+    what: typeof a.what === 'string' ? a.what : '',
+    who: typeof a.who === 'string' ? a.who : '',
+    when: typeof a.when === 'string' ? a.when : '',
+    where: typeof a.where === 'string' ? a.where : '',
+    why: typeof a.why === 'string' ? a.why : '',
+    how_use: typeof a.how_use === 'string' ? a.how_use : '',
+    how_manage: typeof a.how_manage === 'string' ? a.how_manage : '',
+  };
 }
 
 // operation별 generic schema placeholder. ADR 0023 결정 5의 표.
@@ -115,12 +131,54 @@ const OPERATION_SCHEMAS = {
 export function createMockAdapter() {
   return {
     name: 'mock',
-    async extractIntent(userInput) {
+    async extractIntent(answers) {
+      const normalized = normalizeAnswers(answers);
+      // 답변을 그대로 통과시키고 모든 답변을 합친 텍스트에서 키워드를 본다.
+      // ADR 0026 결정 2에 따라 mock은 답변 정규화/번역을 하지 않는다.
+      const combined = Object.values(normalized).join(' ');
       return {
-        what: extractWhat(userInput),
-        who: '',
-        why: '',
-        suggested_template: suggestTemplate(userInput),
+        ...normalized,
+        suggested_template: suggestTemplate(combined),
+      };
+    },
+    // ADR 0027의 generateCatalog. 7항목 답변을 받아 최소 검증 통과 카탈로그를 결정적으로 돌려준다.
+    // 단위 테스트가 LLM 호출 없이 prospect의 AI 옵션 흐름을 끝까지 돌릴 수 있게 하는 자리.
+    // 실제 도메인 합성은 미래의 실제 LLM 어댑터가 한다.
+    // seedTemplate은 mock에선 무시(테스트 결정성을 위해). 실제 어댑터에서는 영감으로 사용.
+    async generateCatalog({ answers, seedTemplate: _seedTemplate } = {}) {
+      const a = normalizeAnswers(answers);
+      const name = a.what || '사용자 도메인';
+      // 사용자 세계와 운영자 세계를 기본으로 둔다. 답변에서 더 풍부한 worlds를 만드는 일은
+      // mock 범위가 아니다(섹션 8 데이터 무관성: 도메인 가정 금지).
+      return {
+        name,
+        domain: slugFromAnswer(a.what, 'service'),
+        worlds: [
+          {
+            id: 'w-user',
+            title: '사용자 세계',
+            description: a.who || '서비스 사용자',
+          },
+          {
+            id: 'w-operator',
+            title: '운영자 세계',
+            description: '서비스를 운영하는 사람',
+          },
+        ],
+        blocks: [
+          {
+            id: 'b-core',
+            name: '핵심 기능',
+            user_desc: a.what || '핵심 기능',
+            tech_desc: '핵심 기능을 구현하는 자리',
+          },
+          {
+            id: 'b-manage',
+            name: '관리',
+            user_desc: a.how_manage || '운영자 관리',
+            tech_desc: '운영 흐름을 다루는 자리',
+          },
+        ],
       };
     },
     // ADR 0023의 extractSchema. block과 operation을 받아 generic placeholder schema 반환.

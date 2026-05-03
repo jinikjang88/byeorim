@@ -43,8 +43,9 @@ async function setupReadyForSet(cwd, blockIds = ['order']) {
   runInit({ cwd });
   await runProspect({
     cwd,
-    userInput: '쇼핑몰 만들어줘',
+    answers: { what: '쇼핑몰' },
     adapter: createMockAdapter(),
+    log: () => {},
   });
   await runSmelt({ cwd, blockIds });
   await interactiveShape({
@@ -129,8 +130,9 @@ test('답한 결정과 빈 결정이 별도 섹션으로 들어간다', async ()
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['coupon'] });
     let firstCall = true;
@@ -235,7 +237,12 @@ test('현재 단계가 set이 아니면 한국어 메시지로 거부한다', as
 test('test-scenarios.yml이 없으면 temper 안내 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
-    await runProspect({ cwd, userInput: '쇼핑몰', adapter: createMockAdapter() });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
     await runSmelt({ cwd, blockIds: ['order'] });
     await interactiveShape({ cwd, askArchitecture: async () => REST_CHOICES });
     await runForge({ cwd });

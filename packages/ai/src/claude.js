@@ -16,16 +16,55 @@ import Anthropic, {
 const DEFAULT_MODEL = 'claude-opus-4-7';
 
 // 도메인 무관 시스템 프롬프트. ADR 0024의 prompt caching 약속을 위해 항상 같은 바이트로 둔다.
-// 사용자 입력(extractIntent의 자연어, extractSchema의 block/operation)은 user 메시지로만 들어간다.
-const INTENT_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 의도를 추출하는 도우미다.
-사용자가 한국어 또는 영어로 한 마디를 적으면, 다음 셋을 추출한다.
+// 사용자 입력(extractIntent의 7항목 답변, extractSchema의 block/operation)은 user 메시지로만 들어간다.
+// ADR 0026이 7항목 흐름을 정한 자리.
+const INTENT_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 의도를 정리하는 도우미다.
+사용자는 일곱 자리에 한국어 또는 영어로 답변을 제공한다. 각 답변은 비어있을 수 있다.
 
-- what: 사용자가 만들고 싶은 것의 이름. 명사구로 짧게.
-- who: 사용자가 그것을 누구를 위해 만드는지. 입력에서 추측할 수 없으면 빈 문자열.
-- why: 사용자가 그것을 왜 만드는지. 입력에서 추측할 수 없으면 빈 문자열.
-- suggested_template: 빌트인 템플릿 후보 중 하나. 후보는 "commerce"(쇼핑/마켓/결제), "job-aggregator"(채용/구인/일자리), "reservation"(예약/대관/클래스/강좌/시간표). 셋 다 아니면 null.
+- what: 만들고 싶은 것의 이름
+- who: 누가 사용하는가
+- when: 언제 사용하는가
+- where: 어디에서 사용하는가
+- why: 왜 만드는가
+- how_use: 사용자가 어떤 흐름으로 쓰는가
+- how_manage: 운영자가 어떻게 관리하는가
 
-추측을 강요하지 않는다. 입력이 모호하면 빈 문자열과 null을 그대로 둔다.`;
+너의 일은 답변을 보고 다음 두 가지를 한다.
+
+1) 답변을 그대로 받아서 정리해 돌려준다. 사용자가 적은 한국어를 영어로 옮기지 않는다.
+   비어있는 자리는 빈 문자열 그대로 둔다. 그럴듯한 일반론으로 채우지 않는다.
+2) suggested_template을 정한다. 후보는 "commerce"(쇼핑/마켓/결제),
+   "job-aggregator"(채용/구인/일자리), "reservation"(예약/대관/클래스/강좌/시간표) 셋.
+   답변에서 어느 후보에도 속하지 않으면 null.
+
+추측을 강요하지 않는다. 답변이 모두 비어있으면 suggested_template은 null이다.`;
+
+// ADR 0027 결정 4. 사용자 도메인에 맞춘 카탈로그 생성 자리.
+// 빌트인 3개 템플릿이 사용자 도메인을 못 담을 때 AI가 합성한다.
+const CATALOG_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스에 맞는 도메인 카탈로그를 생성하는 도우미다.
+
+입력으로 다음을 받는다.
+- answers: 7항목 답변 객체 (what, who, when, where, why, how_use, how_manage)
+- seedTemplate: 영감으로 쓸 빌트인 템플릿 이름 또는 null
+
+너의 일은 다음 모양의 카탈로그 객체를 만드는 것이다.
+
+- name: 카탈로그 표시명 (사람이 읽는 한 줄)
+- domain: 영문 슬러그 (소문자/숫자/하이픈, 첫 글자 영문)
+- worlds: 역할별 또는 활동 영역별 세계 3~6개. 각 세계는 id(예: w-user), title, description을 가진다
+- blocks: 각 세계 안에서 의미 있는 기능 단위 5~12개. id(예: b-order), name, user_desc(비기술 창업자가 읽는 일상 언어 설명), tech_desc(엔지니어가 읽는 기술 설명)
+- dependencies: 명확한 인과만. id source/target과 type("requires" 또는 "affects"), reason. 추측은 비운다
+- cascades: 한 블럭이 트리거됐을 때 사용자에게 더 묻고 싶은 질문(ask_questions). 도메인 상식 기반. 비어도 됨
+- prerequisites: 외부 조건(비용, 시간, 허가, 인프라) name과 enables 배열. 떠오르지 않으면 빈 배열
+
+ID 규칙은 소문자/숫자/하이픈만, 첫 글자는 영문. 예: w-user, b-order, p-permit.
+
+시드 템플릿이 주어지면 그 worlds/blocks 구조를 참고하되 사용자 답변에 맞춰 변형한다.
+시드가 null이면 사용자 답변만 보고 처음부터 만든다.
+
+추측을 강요하지 않는다. 사용자 답변에서 근거를 찾지 못한 자리는 비워둔다(예: 빈 dependencies, 빈 cascades, 빈 prerequisites). 그럴듯한 일반론으로 채우지 않는다.
+
+비기술 창업자가 다음 단계(smelt의 블럭 선택)에서 읽을 자리이므로 user_desc는 일상 한국어로 쓴다.`;
 
 const SCHEMA_SYSTEM_PROMPT = `너는 한 도메인 블럭의 한 operation에 대한 JSON Schema를 생성하는 도우미다.
 
@@ -45,17 +84,123 @@ const SCHEMA_SYSTEM_PROMPT = `너는 한 도메인 블럭의 한 operation에 �
 
 블럭의 도메인 의미를 보고 그 블럭다운 필드를 추정한다. 예시: 주문 블럭의 create는 quantity, item_id 같은 필드를 가질 것. 모르면 generic 필드(name, description)로 둔다.`;
 
-// extractIntent의 구조화된 응답 schema.
+// extractIntent의 구조화된 응답 schema. ADR 0026 결정 1로 7항목 + suggested_template.
 const INTENT_OUTPUT_SCHEMA = {
   type: 'object',
   properties: {
     what: { type: 'string' },
     who: { type: 'string' },
+    when: { type: 'string' },
+    where: { type: 'string' },
     why: { type: 'string' },
+    how_use: { type: 'string' },
+    how_manage: { type: 'string' },
     suggested_template: { type: ['string', 'null'] },
   },
-  required: ['what', 'who', 'why', 'suggested_template'],
+  required: ['what', 'who', 'when', 'where', 'why', 'how_use', 'how_manage', 'suggested_template'],
   additionalProperties: false,
+};
+
+// catalog.schema.json의 부분집합. SDK structured output 자리에 그대로 넘긴다.
+// 전체 catalog.schema.json은 $ref와 enum, pattern을 쓰므로 SDK 호환을 위해 부분집합으로 다시 적는다.
+// catalog.schema.json이 진실의 자리이고 이 부분집합은 SDK가 받을 수 있는 모양으로 옮긴 것.
+// 둘이 어긋나지 않도록 prospect.js에서 catalog.schema.json으로 한 번 더 검증한다(ADR 0027 결정 3).
+const CATALOG_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    domain: { type: 'string' },
+    worlds: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+        },
+        required: ['id', 'title'],
+      },
+    },
+    blocks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          user_desc: { type: 'string' },
+          tech_desc: { type: 'string' },
+          bundle_id: { type: 'string' },
+        },
+        required: ['id', 'name', 'user_desc'],
+      },
+    },
+    bundles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          world_id: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+        },
+        required: ['id', 'world_id', 'title'],
+      },
+    },
+    dependencies: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          source: { type: 'string' },
+          target: { type: 'string' },
+          type: { type: 'string' },
+          reason: { type: 'string' },
+        },
+        required: ['source', 'target', 'type'],
+      },
+    },
+    cascades: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          trigger: { type: 'string' },
+          add_blocks: { type: 'array', items: { type: 'string' } },
+          ask_questions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                question: { type: 'string' },
+                options: { type: 'array', items: { type: 'string' } },
+              },
+              required: ['question'],
+            },
+          },
+        },
+        required: ['trigger'],
+      },
+    },
+    prerequisites: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          phase: { type: 'string' },
+          where: { type: 'string' },
+          time: { type: 'string' },
+          cost: { type: 'string' },
+          enables: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['name', 'enables'],
+      },
+    },
+  },
+  required: ['worlds', 'blocks'],
 };
 
 // JSON Schema 부분집합. extractSchema 출력의 request/response 자리에 들어갈 모양.
@@ -136,11 +281,12 @@ function cachedSystem(text) {
 }
 
 // 공통 호출 인자. structured output, adaptive thinking, cached system prompt를 모두 켠다.
-// max_tokens는 응답이 작은 자리(intent/schema 둘 다 평면 객체)라 1024로 충분하다.
-function buildRequest({ model, system, userText, outputSchema }) {
+// max_tokens는 응답이 작은 자리(intent/schema 둘 다 평면 객체)는 1024로 충분.
+// generateCatalog는 카탈로그가 길어 8192를 넘긴다(ADR 0027 토큰 비용 자리).
+function buildRequest({ model, system, userText, outputSchema, maxTokens = 1024 }) {
   return {
     model,
-    max_tokens: 1024,
+    max_tokens: maxTokens,
     thinking: { type: 'adaptive' },
     system: cachedSystem(system),
     messages: [{ role: 'user', content: userText }],
@@ -179,11 +325,25 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
 
   return {
     name: 'claude',
-    async extractIntent(userInput) {
+    async extractIntent(answers) {
+      const a = answers || {};
+      const userText = JSON.stringify(
+        {
+          what: typeof a.what === 'string' ? a.what : '',
+          who: typeof a.who === 'string' ? a.who : '',
+          when: typeof a.when === 'string' ? a.when : '',
+          where: typeof a.where === 'string' ? a.where : '',
+          why: typeof a.why === 'string' ? a.why : '',
+          how_use: typeof a.how_use === 'string' ? a.how_use : '',
+          how_manage: typeof a.how_manage === 'string' ? a.how_manage : '',
+        },
+        null,
+        2,
+      );
       const request = buildRequest({
         model: resolvedModel,
         system: INTENT_SYSTEM_PROMPT,
-        userText: userInput || '',
+        userText,
         outputSchema: INTENT_OUTPUT_SCHEMA,
       });
       const message = await callParse(request);
@@ -191,10 +351,44 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
       return {
         what: typeof parsed.what === 'string' ? parsed.what : '',
         who: typeof parsed.who === 'string' ? parsed.who : '',
+        when: typeof parsed.when === 'string' ? parsed.when : '',
+        where: typeof parsed.where === 'string' ? parsed.where : '',
         why: typeof parsed.why === 'string' ? parsed.why : '',
+        how_use: typeof parsed.how_use === 'string' ? parsed.how_use : '',
+        how_manage: typeof parsed.how_manage === 'string' ? parsed.how_manage : '',
         suggested_template:
           typeof parsed.suggested_template === 'string' ? parsed.suggested_template : null,
       };
+    },
+    async generateCatalog({ answers, seedTemplate } = {}) {
+      const a = answers || {};
+      const userText = JSON.stringify(
+        {
+          answers: {
+            what: typeof a.what === 'string' ? a.what : '',
+            who: typeof a.who === 'string' ? a.who : '',
+            when: typeof a.when === 'string' ? a.when : '',
+            where: typeof a.where === 'string' ? a.where : '',
+            why: typeof a.why === 'string' ? a.why : '',
+            how_use: typeof a.how_use === 'string' ? a.how_use : '',
+            how_manage: typeof a.how_manage === 'string' ? a.how_manage : '',
+          },
+          seedTemplate: seedTemplate || null,
+        },
+        null,
+        2,
+      );
+      const request = buildRequest({
+        model: resolvedModel,
+        system: CATALOG_SYSTEM_PROMPT,
+        userText,
+        outputSchema: CATALOG_OUTPUT_SCHEMA,
+        maxTokens: 8192,
+      });
+      const message = await callParse(request);
+      const parsed = extractParsedOutput(message);
+      // catalog.schema.json 검증은 prospect.js가 한다(ADR 0027 결정 3, 한 자리에서만 검증).
+      return parsed;
     },
     async extractSchema({ block, operation }) {
       const userText = JSON.stringify(

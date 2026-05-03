@@ -165,15 +165,17 @@ program
 program
   .command('prospect')
   .alias('prs')
-  .description('탐광. 도메인 카탈로그 발견과 Reality Check')
-  .argument('[input...]', '무엇을 만들고 싶은지 한 마디로(생략 시 인터랙티브 모드)')
-  .action(async (input) => {
+  .description('탐광. 7항목 동행 질문과 도메인 카탈로그 가져오기')
+  .argument('[what...]', '만들고 싶은 것의 이름(생략 시 7항목 인터랙티브 모드, ADR 0026)')
+  .action(async (what) => {
     try {
       const cwd = process.cwd();
       const adapter = selectAdapter();
+      // 인자로 무엇을 적었으면 그 자리만 채우고 나머지 6항목은 빈 채로 다이어리에 흘려보낸다.
+      // 인자 없으면 인터랙티브 모드로 7항목을 차례차례 묻는다(ADR 0026).
       const result =
-        Array.isArray(input) && input.length > 0
-          ? await runProspect({ cwd, userInput: input.join(' '), adapter })
+        Array.isArray(what) && what.length > 0
+          ? await runProspect({ cwd, answers: { what: what.join(' ') }, adapter })
           : await interactiveProspect({ cwd, adapter });
       console.log(`템플릿을 가져왔습니다: ${result.suggestedTemplate}`);
       console.log(`의도가 기록되었습니다: ${result.intentFile}`);

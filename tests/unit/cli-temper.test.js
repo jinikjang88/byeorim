@@ -41,8 +41,9 @@ async function setupReadyForTemper(cwd, blockIds = ['order']) {
   runInit({ cwd });
   await runProspect({
     cwd,
-    userInput: '쇼핑몰 만들어줘',
+    answers: { what: '쇼핑몰' },
     adapter: createMockAdapter(),
+    log: () => {},
   });
   await runSmelt({ cwd, blockIds });
   await interactiveShape({
@@ -196,7 +197,12 @@ test('contracts.yml이 없으면 forge 안내 메시지로 거부한다', async 
   await withTempCwd(async (cwd) => {
     // Given: smelt까지만 한 뒤 강제로 stage를 temper로 옮긴다
     runInit({ cwd });
-    await runProspect({ cwd, userInput: '쇼핑몰', adapter: createMockAdapter() });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
     await runSmelt({ cwd, blockIds: ['order'] });
     const stateFile = join(cwd, '.beoreum', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));

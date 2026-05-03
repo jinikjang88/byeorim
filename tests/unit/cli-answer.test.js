@@ -27,8 +27,9 @@ async function setupWithCouponDecisions(cwd) {
   runInit({ cwd });
   await runProspect({
     cwd,
-    userInput: '쇼핑몰 만들어줘',
+    answers: { what: '쇼핑몰' },
     adapter: createMockAdapter(),
+    log: () => {},
   });
   return runSmelt({ cwd, blockIds: ['coupon'] });
 }
@@ -150,8 +151,9 @@ test('decisions.yml에 결정이 한 개도 없으면 답할 자리가 없다고
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
     // When

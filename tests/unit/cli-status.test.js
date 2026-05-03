@@ -76,8 +76,9 @@ test('일부 단계 완료 후 status가 진행 상황을 정확히 표시한다
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
     // 이제 shape 단계
@@ -97,8 +98,9 @@ test('7단계 끝까지 가면 is_done=true, 모든 단계가 completed', async 
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
     await interactiveShape({ cwd, askArchitecture: async () => REST_CHOICES });
@@ -125,8 +127,9 @@ test('cascade 결정 카운트가 정확히 들어간다', async () => {
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     // coupon 카탈로그 데이터에 cascade 두 결정
     await runSmelt({ cwd, blockIds: ['coupon'] });
@@ -163,8 +166,9 @@ test('산출물 존재 여부가 단계 진행에 따라 정확히 채워진다'
     // prospect 후
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     status = runStatus({ cwd });
     assert.equal(status.artifacts.intent, true);

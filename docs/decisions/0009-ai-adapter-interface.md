@@ -1,6 +1,6 @@
 # ADR 0009. AI 어댑터 인터페이스
 
-- 상태: 채택
+- 상태: 채택 (extractIntent 시그니처가 ADR 0026으로 갱신, generateCatalog 메서드가 ADR 0027로 추가됨)
 - 날짜: 2026-04-28
 - 결정자: DevSmith
 

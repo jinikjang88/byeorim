@@ -84,9 +84,12 @@ function buildOverview(intent) {
 
 - 무엇을 만드시나요: ${blankNote(extracted.what)}
 - 누구를 위해 만드시나요: ${blankNote(extracted.who)}
+- 언제 쓰는 서비스인가요: ${blankNote(extracted.when)}
+- 어디에서 쓸까요: ${blankNote(extracted.where)}
 - 왜 만드시나요: ${blankNote(extracted.why)}
+- 사용자는 어떻게 쓸까요: ${blankNote(extracted.how_use)}
+- 운영자는 어떻게 관리할까요: ${blankNote(extracted.how_manage)}
 - 카탈로그 출처: ${intent.source || '_(알 수 없음)_'}
-- 사용자 입력 그대로: "${intent.user_input || ''}"
 `;
 }
 

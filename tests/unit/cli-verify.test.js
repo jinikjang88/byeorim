@@ -42,8 +42,9 @@ async function setupReadyForVerify(cwd, blockIds = ['order'], choices = NODE_CHO
   runInit({ cwd });
   await runProspect({
     cwd,
-    userInput: '쇼핑몰 만들어줘',
+    answers: { what: '쇼핑몰' },
     adapter: createMockAdapter(),
+    log: () => {},
   });
   await runSmelt({ cwd, blockIds });
   await interactiveShape({ cwd, askArchitecture: async () => choices });

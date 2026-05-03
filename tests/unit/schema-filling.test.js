@@ -43,8 +43,9 @@ async function setupWithSchemaFill(cwd, blockIds, language) {
   runInit({ cwd });
   await runProspect({
     cwd,
-    userInput: '쇼핑몰 만들어줘',
+    answers: { what: '쇼핑몰' },
     adapter: createMockAdapter(),
+    log: () => {},
   });
   await runSmelt({ cwd, blockIds });
   await interactiveShape({ cwd, askArchitecture: async () => choices });
@@ -58,8 +59,9 @@ test('forge가 adapter로 contracts.yml의 schema를 채운다', async () => {
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
     await interactiveShape({
@@ -89,8 +91,9 @@ test('forge에 adapter 없으면 schema는 TODO 그대로(기존 동작 보존)'
     runInit({ cwd });
     await runProspect({
       cwd,
-      userInput: '쇼핑몰 만들어줘',
+      answers: { what: '쇼핑몰' },
       adapter: createMockAdapter(),
+      log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
     await interactiveShape({
