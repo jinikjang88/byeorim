@@ -10,7 +10,7 @@
 
 | 단계 | 한국어 | 명령어 | 별칭 | 하는 일 |
 |------|--------|--------|------|---------|
-| 0 | 탐광 | `beoreum prospect` | `prs` | 7항목 동행 질문, 빌트인 또는 AI 카탈로그 선택 |
+| 0 | 탐광 | `beoreum prospect` | `prs` | 7항목 동행 질문, 카탈로그 선택, Reality Check 6영역 |
 | 1 | 제련 | `beoreum smelt` | `sml` | 의도 추출, 블럭 선택, 의존성 해결 |
 | 2 | 빚다 | `beoreum shape` | `shp` | 아키텍처 결정과 ADR 기록 |
 | 3 | 단조 | `beoreum forge` | `frg` | 계약 우선 정의(contracts.yml) |
@@ -29,14 +29,14 @@ node bin/beoreum.js --help
 
 ## 탐광 한 번 돌려보기
 
-탐광은 7항목 차례 질문으로 사용자의 서비스를 그려본다(ADR 0026). 답변을 마치면 카탈로그 출처를 4지선다로 고른다(ADR 0027). 빌트인 3개와 AI가 도메인에 맞춰 새로 만드는 옵션이 함께 보인다.
+탐광은 세 자리를 함께 다룬다. 7항목 차례 질문으로 사용자의 서비스를 그리고(ADR 0026), 카탈로그 출처를 4지선다로 고르고(ADR 0027), 마지막으로 Reality Check 6영역으로 광맥의 가치를 본다(ADR 0003). 모든 자리에서 답을 강요하지 않는다. 빈 자리는 다이어리로 흘러간다.
 
 ```bash
 node bin/beoreum.js init
 node bin/beoreum.js prospect
 ```
 
-각 질문에 답하거나 그냥 엔터로 비워둔다. 비워둔 자리는 `.beoreum/project/diary.md`에 질문으로 옮겨진다. 시간이 지나 답이 자라면 거기에 적어두면 된다.
+다이어리(`.beoreum/project/diary.md`)에는 두 머리가 자리한다. `prospect 의도에서 미뤄둔 질문`은 7항목에서 비운 자리, `Reality Check에서 미뤄둔 질문`은 6영역의 모든 질문. Reality Check 리포트는 `.beoreum/project/reality-check.md`에서 영역별 AI 관찰과 함께 본다.
 
 비대화형으로 한 줄만 적고 싶다면 다음과 같이 한다. 나머지 6개는 비어 다이어리로 흘러간다.
 

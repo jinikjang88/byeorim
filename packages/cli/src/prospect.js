@@ -1,7 +1,9 @@
 // beoreum prospect. 사용자에게 7항목을 차례로 묻고 답변에서 의도를 정리한다.
-// ADR 0007의 자리, ADR 0008의 intent.yml 형식, ADR 0009의 AI 어댑터 인터페이스,
-// ADR 0026의 7항목 동행 질문과 다이어리 동행을 따른다.
-// Reality Check 6영역 리포트(ADR 0003)는 다음 출시 자리. 이번 출시는 placeholder만 남긴다.
+// 같은 단계에서 카탈로그 출처를 고르고 Reality Check 6영역 리포트를 만든다.
+// 따르는 ADR: 0007(디렉토리), 0008(intent.yml), 0009(AI 어댑터),
+//             0026(7항목 동행 질문), 0027(카탈로그 출처와 AI 생성),
+//             0003(Reality Check 6영역과 동행 톤).
+// 명세: docs/specs/reality-check.md.
 
 import {
   existsSync,
@@ -15,20 +17,19 @@ import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { input, select } from '@inquirer/prompts';
 import { templates, templatePath } from '@beoreum/templates';
-import { validateCatalog } from '@beoreum/catalog';
+import { validateCatalog, loadCatalog } from '@beoreum/catalog';
+import { REALITY_CHECK_AREAS, REALITY_CHECK_AREA_TITLES } from '@beoreum/core';
 import { FIELDS, QUESTIONS } from './prospect-questions.js';
 
 const SCHEMA_VERSION = 2;
 const STAGE = 'prospect';
 const NEXT_STAGE = 'smelt';
 
-const REALITY_CHECK_PLACEHOLDER = `# Reality Check
+const REALITY_CHECK_INTRO = `# Reality Check
 
-이 자리는 다음 출시에서 채워집니다.
+7항목 동행 질문에서 그린 서비스를 두 번째 시각으로 본다. 광맥의 가치를 보는 자리(ADR 0003).
+답을 강요하지 않는다. 답할 수 없는 질문은 다이어리에 남겨두고 다음 단계로 같이 간다.
 
-ADR 0003에서 정한 6영역(시장 포화, 진입 비용, 양면 시장, 법적 리스크, 수익 모델, 묘지)이 이 파일을 채울 예정입니다. 지금은 prospect 단계가 자리만 잡아두고 다음 단계로 넘어갑니다.
-
-답하지 못한 질문은 .beoreum/project/diary.md에 적어두세요. 다이어리는 여러분이 만들고 여러분이 봅니다.
 `;
 
 function listAvailableTemplates() {
@@ -63,7 +64,7 @@ function isAllEmpty(answers) {
   return FIELDS.every((k) => !answers[k]);
 }
 
-function buildIntent(answers, extracted, sourceField, now) {
+function buildIntent(answers, extracted, sourceField, realityCheckStatus, now) {
   const unanswered = FIELDS.filter((k) => !extracted[k] || !extracted[k].trim());
   return {
     schema_version: SCHEMA_VERSION,
@@ -75,21 +76,80 @@ function buildIntent(answers, extracted, sourceField, now) {
       return acc;
     }, {}),
     unanswered,
-    reality_check_status: 'pending',
+    reality_check_status: realityCheckStatus,
   };
 }
 
-// 빈 항목들을 다이어리에 한 단락으로 append한다. 기존 내용은 보존한다(ADR 0026 결정 3).
-// 한 항목당 한 줄. 머리에 날짜와 단계를 적어 후속 prospect 재실행 시 추적 가능.
-function appendDiary(diaryFile, unanswered, now) {
+// 빈 prospect 7항목을 다이어리에 한 단락으로 append한다(ADR 0026 결정 3).
+// 머리는 "prospect 의도에서 미뤄둔 질문"으로 분리. Reality Check 머리와 자리가 다르다.
+function appendIntentDiary(diaryFile, unanswered, now) {
   if (!unanswered.length) return;
   const date = (now || new Date()).toISOString().slice(0, 10);
-  const lines = [`\n## ${date} prospect에서 미뤄둔 질문`, ''];
+  const lines = [`\n## ${date} prospect 의도에서 미뤄둔 질문`, ''];
   for (const key of unanswered) {
     const q = QUESTIONS[key];
     lines.push(`- ${q ? q.diary : key}`);
   }
   appendFileSync(diaryFile, lines.join('\n') + '\n', 'utf8');
+}
+
+// Reality Check 6영역 질문을 다이어리에 한 단락으로 append한다(docs/specs/reality-check.md).
+// 머리는 "Reality Check에서 미뤄둔 질문"으로 분리(intent 머리와 다른 자리).
+// prospect 단계에서는 사용자가 RC 질문에 인터랙티브로 답하지 않으므로 모든 질문이 다이어리로 흘러간다.
+function appendRealityCheckDiary(diaryFile, report, now) {
+  if (!report || !report.areas) return;
+  const date = (now || new Date()).toISOString().slice(0, 10);
+  const lines = [`\n## ${date} Reality Check에서 미뤄둔 질문`, ''];
+  let any = false;
+  for (const area of REALITY_CHECK_AREAS) {
+    const block = report.areas[area];
+    const title = REALITY_CHECK_AREA_TITLES[area] || area;
+    const questions = Array.isArray(block?.questions) ? block.questions : [];
+    for (const q of questions) {
+      lines.push(`- ${title}: ${q}`);
+      any = true;
+    }
+  }
+  if (!any) return;
+  appendFileSync(diaryFile, lines.join('\n') + '\n', 'utf8');
+}
+
+// Reality Check 6영역 리포트를 사용자가 읽는 마크다운으로 합성한다.
+// docs/specs/reality-check.md의 형식을 따른다. legal_warnings는 비어있으면 절을 생략.
+function renderRealityCheckMarkdown(report) {
+  const lines = [REALITY_CHECK_INTRO];
+  for (const area of REALITY_CHECK_AREAS) {
+    const block = (report && report.areas && report.areas[area]) || {};
+    const title = REALITY_CHECK_AREA_TITLES[area] || area;
+    lines.push(`## ${title}`, '');
+    const obs = typeof block.observation === 'string' ? block.observation.trim() : '';
+    if (obs) {
+      lines.push(obs, '');
+    }
+    const questions = Array.isArray(block.questions) ? block.questions : [];
+    if (questions.length) {
+      lines.push('생각해볼 질문', '');
+      for (const q of questions) {
+        lines.push(`- ${q}`);
+      }
+      lines.push('');
+    }
+  }
+  const warnings = Array.isArray(report?.legal_warnings) ? report.legal_warnings : [];
+  if (warnings.length) {
+    lines.push('## 법적 메모', '');
+    lines.push(
+      '즉각 손해가 발생할 수 있는 법적 항목을 모아둔다. 출시 직전(Inspect 단계)에 다시 본다.',
+      '',
+    );
+    for (const w of warnings) {
+      const item = (w && w.item) || '';
+      const reason = (w && w.reason) || '';
+      lines.push(`- ${item}: ${reason}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
 }
 
 // 7항목 체크리스트를 사용자에게 출력한다. 채움/비움 마커와 한국어 라벨이 한 줄에 나란히.
@@ -219,23 +279,41 @@ export async function runProspect({
     catalogFile,
   });
 
-  const intentDoc = buildIntent(normalized, extracted, sourceField, now);
+  // Reality Check 6영역 리포트 생성(ADR 0003 + docs/specs/reality-check.md).
+  // 어댑터가 generateRealityCheck를 구현하지 않은 경우(미래의 다른 어댑터)는 status='skipped'로 둔다.
+  const realityCheckFile = join(beoreumDir, 'project', 'reality-check.md');
+  const diaryFile = join(beoreumDir, 'project', 'diary.md');
+  let realityCheckStatus = 'skipped';
+  if (typeof adapter.generateRealityCheck === 'function') {
+    const catalogObj = loadCatalog(catalogFile);
+    const report = await adapter.generateRealityCheck({ answers: normalized, catalog: catalogObj });
+    writeFileSync(realityCheckFile, renderRealityCheckMarkdown(report), 'utf8');
+    appendRealityCheckDiary(diaryFile, report, now);
+    realityCheckStatus = 'completed';
+  } else {
+    writeFileSync(
+      realityCheckFile,
+      REALITY_CHECK_INTRO + '_이 어댑터는 Reality Check를 지원하지 않아 자리만 잡아두었습니다._\n',
+      'utf8',
+    );
+  }
+
+  const intentDoc = buildIntent(normalized, extracted, sourceField, realityCheckStatus, now);
   const intentFile = join(beoreumDir, 'project', 'intent.yml');
   writeFileSync(intentFile, yaml.dump(intentDoc, { sortKeys: false }), 'utf8');
 
-  const realityCheckFile = join(beoreumDir, 'project', 'reality-check.md');
-  writeFileSync(realityCheckFile, REALITY_CHECK_PLACEHOLDER, 'utf8');
-
-  const diaryFile = join(beoreumDir, 'project', 'diary.md');
-  appendDiary(diaryFile, intentDoc.unanswered, now);
+  appendIntentDiary(diaryFile, intentDoc.unanswered, now);
 
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
 
   printChecklist(intentDoc.extracted, log);
   if (intentDoc.unanswered.length) {
     log(
-      `다이어리에 ${intentDoc.unanswered.length}개 질문을 적어두었어요: ${intentDoc.unanswered.join(', ')}`,
+      `다이어리에 prospect 의도에서 미뤄둔 ${intentDoc.unanswered.length}개 질문을 적어두었어요: ${intentDoc.unanswered.join(', ')}`,
     );
+  }
+  if (realityCheckStatus === 'completed') {
+    log('Reality Check 6영역을 reality-check.md에 적어두었어요. 질문은 다이어리로도 옮겨졌습니다.');
   }
   log(`카탈로그 출처: ${sourceField}`);
   log(`다음 단계로 같이 갑니다: beoreum ${NEXT_STAGE}`);
@@ -246,6 +324,7 @@ export async function runProspect({
     realityCheckFile,
     suggestedTemplate: extracted.suggested_template,
     source: sourceField,
+    realityCheckStatus,
     nextStage: NEXT_STAGE,
     unanswered: intentDoc.unanswered,
   };

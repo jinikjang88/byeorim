@@ -40,13 +40,14 @@ function schemaResponse(parsed) {
   return { parsed_output: parsed, content: [] };
 }
 
-test('claude 어댑터는 name이 claude이고 세 메서드를 가진다', () => {
+test('claude 어댑터는 name이 claude이고 네 메서드를 가진다', () => {
   const client = makeFakeClient(() => intentResponse({}));
   const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
   assert.equal(adapter.name, 'claude');
   assert.equal(typeof adapter.extractIntent, 'function');
   assert.equal(typeof adapter.extractSchema, 'function');
   assert.equal(typeof adapter.generateCatalog, 'function');
+  assert.equal(typeof adapter.generateRealityCheck, 'function');
 });
 
 test('extractIntent: parsed_output 7항목을 그대로 결과 모양으로 반환한다', async () => {
@@ -383,4 +384,89 @@ test('generateCatalog: seedTemplate이 null이면 그대로 null로 전달된다
   await adapter.generateCatalog({ answers: { what: '우주여행' }, seedTemplate: null });
   const parsed = JSON.parse(client.captured[0].messages[0].content);
   assert.equal(parsed.seedTemplate, null);
+});
+
+// ── generateRealityCheck (ADR 0003 + docs/specs/reality-check.md) ─────────────────
+
+function realityCheckResponse(parsed) {
+  return { parsed_output: parsed, content: [] };
+}
+
+const RC_EMPTY = {
+  areas: {
+    market_saturation: { observation: '', questions: ['q1', 'q2'] },
+    entry_cost: { observation: '', questions: ['q1', 'q2'] },
+    two_sided_market: { observation: '', questions: ['q1', 'q2'] },
+    legal_risk: { observation: '', questions: ['q1', 'q2'] },
+    revenue_model: { observation: '', questions: ['q1', 'q2'] },
+    graveyard: { observation: '', questions: ['q1', 'q2'] },
+  },
+  legal_warnings: [],
+};
+
+test('generateRealityCheck: parsed_output을 그대로 결과로 돌려준다', async () => {
+  const fakeReport = {
+    areas: {
+      market_saturation: {
+        observation: '비슷한 자리가 한두 곳 보인다',
+        questions: ['경쟁자가 누구인가요'],
+      },
+      entry_cost: { observation: '', questions: ['초기 자금이 얼마인가요'] },
+      two_sided_market: { observation: '', questions: ['양쪽이 필요한가요'] },
+      legal_risk: { observation: '', questions: ['인허가가 필요한가요'] },
+      revenue_model: { observation: '', questions: ['누가 돈을 내나요'] },
+      graveyard: { observation: '', questions: ['닫은 서비스가 떠오르나요'] },
+    },
+    legal_warnings: [{ item: '개인정보 처리', reason: '미성년자 데이터 가능성' }],
+  };
+  const client = makeFakeClient(() => realityCheckResponse(fakeReport));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.generateRealityCheck({
+    answers: { what: '동네 빵집 단골 주문 앱' },
+    catalog: { worlds: [{ id: 'w-x', title: 'X' }], blocks: [] },
+  });
+  assert.deepEqual(result, fakeReport);
+});
+
+test('generateRealityCheck: user 메시지에 answers와 catalog가 JSON으로 들어간다', async () => {
+  const client = makeFakeClient(() => realityCheckResponse(RC_EMPTY));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.generateRealityCheck({
+    answers: { what: '쇼핑몰', who: '단골' },
+    catalog: { worlds: [{ id: 'w-c', title: 'C' }], blocks: [] },
+  });
+  const parsed = JSON.parse(client.captured[0].messages[0].content);
+  assert.equal(parsed.answers.what, '쇼핑몰');
+  assert.equal(parsed.answers.who, '단골');
+  assert.equal(parsed.catalog.worlds[0].id, 'w-c');
+});
+
+test('generateRealityCheck: max_tokens가 4096이고 system은 RC 프롬프트(6영역 ID 포함)', async () => {
+  const client = makeFakeClient(() => realityCheckResponse(RC_EMPTY));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.generateRealityCheck({ answers: { what: '쇼핑몰' }, catalog: {} });
+  const req = client.captured[0];
+  assert.equal(req.max_tokens, 4096);
+  // ADR 0003의 6영역 ID가 system 프롬프트에 박혀있어야 한다
+  assert.match(req.system[0].text, /market_saturation/);
+  assert.match(req.system[0].text, /legal_warnings/);
+});
+
+test('generateRealityCheck: structured output schema가 6영역과 legal_warnings를 required로 가진다', async () => {
+  const client = makeFakeClient(() => realityCheckResponse(RC_EMPTY));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.generateRealityCheck({ answers: {}, catalog: {} });
+  const schema = client.captured[0].output_config.format.schema;
+  assert.deepEqual(schema.required.sort(), ['areas', 'legal_warnings'].sort());
+  assert.deepEqual(
+    schema.properties.areas.required.sort(),
+    [
+      'entry_cost',
+      'graveyard',
+      'legal_risk',
+      'market_saturation',
+      'revenue_model',
+      'two_sided_market',
+    ].sort(),
+  );
 });

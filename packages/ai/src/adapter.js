@@ -66,6 +66,25 @@
  */
 
 /**
+ * Reality Check 한 영역의 결과(ADR 0003 + docs/specs/reality-check.md).
+ *
+ * @typedef {object} RealityCheckArea
+ * @property {string} observation - AI의 한두 줄 한국어 관찰. 모르면 빈 문자열
+ * @property {string[]} questions - 사용자가 멈춰 생각할 한국어 질문 2~4개
+ */
+
+/**
+ * Reality Check 6영역 리포트.
+ * 키는 표준 영역 ID(market_saturation, entry_cost, two_sided_market, legal_risk, revenue_model, graveyard).
+ *
+ * @typedef {object} RealityCheckReport
+ * @property {{[area: string]: RealityCheckArea}} areas - 6영역 결과
+ * @property {Array<{item: string, reason: string}>} legal_warnings - 즉각 손해 가능 법적 항목 모음(ADR 0003 결정 3)
+ *   - prospect 단계에서는 차단/경고로 쓰지 않고 모아두기만 한다. Inspect 단계가 다시 본다
+ *   - 비어있을 수 있다
+ */
+
+/**
  * AI 어댑터. 구현체는 createMockAdapter, createClaudeAdapter 같은 팩토리 함수가 만든다.
  *
  * @typedef {object} AiAdapter
@@ -74,6 +93,9 @@
  * @property {(args: { answers: ProspectAnswers, seedTemplate?: string|null }) => Promise<Catalog>} generateCatalog
  *   - 사용자 답변에서 카탈로그를 생성한다(ADR 0027). 출력은 catalog.schema.json 검증을 통과해야 한다.
  *     seedTemplate이 주어지면 그 빌트인 템플릿의 worlds/blocks를 영감으로 사용하되 사용자 도메인에 맞춰 변형한다.
+ * @property {(args: { answers: ProspectAnswers, catalog: Catalog }) => Promise<RealityCheckReport>} generateRealityCheck
+ *   - 7항목 답변과 카탈로그를 받아 Reality Check 6영역 리포트를 만든다(ADR 0003 + docs/specs/reality-check.md).
+ *     동행 톤(답을 강요하지 않음). 강한 신호는 prospect 단계에서 안 쓰고 legal_warnings로 모아둔다
  * @property {({ block: object, operation: string }) => Promise<ExtractedSchema>} extractSchema
  */
 

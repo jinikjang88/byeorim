@@ -39,6 +39,30 @@ const INTENT_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 
 
 추측을 강요하지 않는다. 답변이 모두 비어있으면 suggested_template은 null이다.`;
 
+// ADR 0003 + docs/specs/reality-check.md. 6영역 Reality Check 자리.
+// 사용자 도메인에 대한 두 번째 시각. 동행 톤 유지, prospect 단계에서는 강한 신호 안 씀.
+const REALITY_CHECK_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 시장 가치를 함께 보는 도우미다.
+ADR 0003 결정 1로 정한 6영역(market_saturation, entry_cost, two_sided_market, legal_risk, revenue_model, graveyard)에서
+사용자가 멈춰 생각할 자리를 만든다.
+
+입력으로 7항목 답변(answers)과 카탈로그(catalog) 두 자리를 받는다.
+사용자 도메인을 보고 영역마다 다음을 만든다.
+
+- observation: AI가 본 한두 줄 한국어 관찰. 단정형 대신 가능성형 결로 쓴다("보일 수 있다", "한 번 보세요").
+  도메인을 잘 모르면 빈 문자열로 둔다. 그럴듯한 일반론으로 채우지 않는다.
+- questions: 사용자가 그 영역에서 멈춰 생각할 한국어 질문 2~4개.
+  도메인 맥락으로 다듬는다. 답을 강요하지 않는다.
+
+추가로 legal_warnings 자리를 채운다. 즉각 손해가 발생할 수 있는 법적 항목(개인정보, 인허가, 미성년자 보호 등)이
+사용자 도메인에서 보이면 항목과 이유를 적는다. 비어있어도 된다(prospect 단계에서는 차단/경고로 쓰지 않고 모아두기만 함).
+
+톤 가이드.
+- 답을 강요하지 않는다(ADR 0003 결정 2). 모든 영역에서 같은 결
+- 시장 포화도가 높다고 차단하지 않는다. 수익 모델이 약해 보인다고 차단하지 않는다(ADR 0003 결정 3)
+- 마케팅 카피 형용사("강력한", "획기적인") 금지
+- 비기술 창업자가 압도되지 않게 한다. 영역마다 한두 줄 관찰 + 질문 2~4개로 끝
+- 사용자가 적은 한국어를 영어로 옮기지 않는다`;
+
 // ADR 0027 결정 4. 사용자 도메인에 맞춘 카탈로그 생성 자리.
 // 빌트인 3개 템플릿이 사용자 도메인을 못 담을 때 AI가 합성한다.
 const CATALOG_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스에 맞는 도메인 카탈로그를 생성하는 도우미다.
@@ -99,6 +123,54 @@ const INTENT_OUTPUT_SCHEMA = {
   },
   required: ['what', 'who', 'when', 'where', 'why', 'how_use', 'how_manage', 'suggested_template'],
   additionalProperties: false,
+};
+
+// Reality Check 6영역 출력 schema. ADR 0003 결정 1과 docs/specs/reality-check.md.
+// 6영역 ID는 표준이라 properties 키 모두 required에 둔다.
+const REALITY_CHECK_AREA_SCHEMA = {
+  type: 'object',
+  properties: {
+    observation: { type: 'string' },
+    questions: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['observation', 'questions'],
+};
+
+const REALITY_CHECK_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    areas: {
+      type: 'object',
+      properties: {
+        market_saturation: REALITY_CHECK_AREA_SCHEMA,
+        entry_cost: REALITY_CHECK_AREA_SCHEMA,
+        two_sided_market: REALITY_CHECK_AREA_SCHEMA,
+        legal_risk: REALITY_CHECK_AREA_SCHEMA,
+        revenue_model: REALITY_CHECK_AREA_SCHEMA,
+        graveyard: REALITY_CHECK_AREA_SCHEMA,
+      },
+      required: [
+        'market_saturation',
+        'entry_cost',
+        'two_sided_market',
+        'legal_risk',
+        'revenue_model',
+        'graveyard',
+      ],
+    },
+    legal_warnings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          item: { type: 'string' },
+          reason: { type: 'string' },
+        },
+        required: ['item', 'reason'],
+      },
+    },
+  },
+  required: ['areas', 'legal_warnings'],
 };
 
 // catalog.schema.json의 부분집합. SDK structured output 자리에 그대로 넘긴다.
@@ -359,6 +431,35 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
         suggested_template:
           typeof parsed.suggested_template === 'string' ? parsed.suggested_template : null,
       };
+    },
+    async generateRealityCheck({ answers, catalog } = {}) {
+      const a = answers || {};
+      const userText = JSON.stringify(
+        {
+          answers: {
+            what: typeof a.what === 'string' ? a.what : '',
+            who: typeof a.who === 'string' ? a.who : '',
+            when: typeof a.when === 'string' ? a.when : '',
+            where: typeof a.where === 'string' ? a.where : '',
+            why: typeof a.why === 'string' ? a.why : '',
+            how_use: typeof a.how_use === 'string' ? a.how_use : '',
+            how_manage: typeof a.how_manage === 'string' ? a.how_manage : '',
+          },
+          catalog: catalog || null,
+        },
+        null,
+        2,
+      );
+      const request = buildRequest({
+        model: resolvedModel,
+        system: REALITY_CHECK_SYSTEM_PROMPT,
+        userText,
+        outputSchema: REALITY_CHECK_OUTPUT_SCHEMA,
+        maxTokens: 4096,
+      });
+      const message = await callParse(request);
+      const parsed = extractParsedOutput(message);
+      return parsed;
     },
     async generateCatalog({ answers, seedTemplate } = {}) {
       const a = answers || {};

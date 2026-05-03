@@ -3,6 +3,8 @@
 - 상태: 채택
 - 날짜: 2026-04-27
 - 결정자: DevSmith
+- 구현 자리: prospect 단계의 두 번째 산출물(`reality-check.md`). AI 어댑터 `generateRealityCheck` 메서드. 2026-05-04 출시
+- 명세: [docs/specs/reality-check.md](../specs/reality-check.md)
 
 ## 맥락
 

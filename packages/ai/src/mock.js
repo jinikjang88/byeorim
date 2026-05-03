@@ -2,6 +2,8 @@
 // 단위 테스트가 LLM 호출 없이 prospect 흐름을 끝까지 돌릴 수 있게 하는 자리.
 // 실제 의도 정리는 미래의 LLM 어댑터가 한다(ADR 0009 + 0026).
 
+import { REALITY_CHECK_AREAS, REALITY_CHECK_SEED_QUESTIONS } from '@beoreum/core';
+
 // 도메인별 키워드 표. commerce가 아닌 다른 도메인이 추가될 때 이 표만 갱신한다.
 // 카탈로그 데이터(commerce/job-aggregator의 블럭 ID)에는 매몰되지 않는다.
 // 이 표는 사용자 답변 → 빌트인 템플릿 추천이라는 한 단계만 본다.
@@ -140,6 +142,19 @@ export function createMockAdapter() {
         ...normalized,
         suggested_template: suggestTemplate(combined),
       };
+    },
+    // ADR 0003 + docs/specs/reality-check.md의 generateRealityCheck.
+    // 6영역 표준 시드 질문을 그대로 돌려주고 observation은 빈 문자열, legal_warnings는 빈 배열.
+    // 실제 도메인 관찰은 LLM 어댑터가 한다. mock은 결정성과 형식만 보장.
+    async generateRealityCheck({ answers: _answers, catalog: _catalog } = {}) {
+      const areas = {};
+      for (const area of REALITY_CHECK_AREAS) {
+        areas[area] = {
+          observation: '',
+          questions: [...REALITY_CHECK_SEED_QUESTIONS[area]],
+        };
+      }
+      return { areas, legal_warnings: [] };
     },
     // ADR 0027의 generateCatalog. 7항목 답변을 받아 최소 검증 통과 카탈로그를 결정적으로 돌려준다.
     // 단위 테스트가 LLM 호출 없이 prospect의 AI 옵션 흐름을 끝까지 돌릴 수 있게 하는 자리.

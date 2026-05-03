@@ -89,11 +89,12 @@ test('intent.yml 형식이 ADR 0026 7항목 결정을 따른다', async () => {
     assert.equal(intent.extracted.how_use, 'QR로 메뉴 보고 주문');
     assert.equal(intent.extracted.how_manage, '주방 화면에서 주문 확인');
     assert.deepEqual(intent.unanswered, []);
-    assert.equal(intent.reality_check_status, 'pending');
+    // mock 어댑터가 generateRealityCheck를 구현하므로 status가 completed로 진행된다(ADR 0003).
+    assert.equal(intent.reality_check_status, 'completed');
   });
 });
 
-test('빈 항목은 unanswered 배열에 들어가고 다이어리에 질문으로 추가된다', async () => {
+test('빈 항목은 unanswered 배열에 들어가고 다이어리에 prospect 의도 머리로 추가된다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: init 후, when과 how_manage만 비운 답변
     runInit({ cwd });
@@ -106,10 +107,10 @@ test('빈 항목은 unanswered 배열에 들어가고 다이어리에 질문으�
       now: new Date('2026-05-03T12:00:00.000Z'),
       log: silentLog,
     });
-    // Then: unanswered가 두 키, diary.md에 두 질문이 추가됨
+    // Then: unanswered가 두 키, diary.md에 두 질문이 prospect 의도 머리 아래 추가됨
     assert.deepEqual(result.unanswered, ['when', 'how_manage']);
     const diary = readFileSync(join(cwd, '.beoreum', 'project', 'diary.md'), 'utf8');
-    assert.match(diary, /## 2026-05-03 prospect에서 미뤄둔 질문/);
+    assert.match(diary, /## 2026-05-03 prospect 의도에서 미뤄둔 질문/);
     assert.match(diary, /- when:/);
     assert.match(diary, /- how_manage:/);
     // 답한 자리는 다이어리에 안 들어간다
@@ -149,8 +150,8 @@ test('기존 다이어리 메모는 보존되고 새 단락은 끝에 append된�
     // Then: 기존 메모 보존, 새 단락은 끝에
     const after = readFileSync(diaryFile, 'utf8');
     assert.match(after, /나만의 노트입니다\./);
-    assert.match(after, /## 2026-05-03 prospect에서 미뤄둔 질문/);
-    assert.ok(after.indexOf('나만의 노트') < after.indexOf('미뤄둔 질문'));
+    assert.match(after, /## 2026-05-03 prospect 의도에서 미뤄둔 질문/);
+    assert.ok(after.indexOf('나만의 노트') < after.indexOf('의도에서 미뤄둔 질문'));
   });
 });
 
@@ -448,5 +449,117 @@ test('interactiveProspect: askCatalogSource에 suggested가 전달되고 결과�
     });
     assert.equal(suggestedSeen, 'commerce');
     assert.equal(result.source, 'ai:mock');
+  });
+});
+
+// ── ADR 0003 Reality Check 6영역 통합 ─────────────────
+
+test('Reality Check가 reality-check.md에 6영역 머리로 합성된다', async () => {
+  await withTempCwd(async (cwd) => {
+    runInit({ cwd });
+    const result = await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰', who: '단골' },
+      adapter: createMockAdapter(),
+      now: new Date('2026-05-04T09:00:00.000Z'),
+      log: silentLog,
+    });
+    const md = readFileSync(result.realityCheckFile, 'utf8');
+    // 6영역 한국어 머리가 모두 자리한다
+    assert.match(md, /## 시장 포화도/);
+    assert.match(md, /## 진입 비용/);
+    assert.match(md, /## 양면 시장 함정/);
+    assert.match(md, /## 법적 리스크/);
+    assert.match(md, /## 수익 모델 현실/);
+    assert.match(md, /## 사라진 서비스들의 묘지/);
+    assert.match(md, /생각해볼 질문/);
+    // 빈 legal_warnings는 절을 출력하지 않는다
+    assert.equal(md.includes('## 법적 메모'), false);
+    // intent.yml의 reality_check_status가 completed
+    const intent = yaml.load(readFileSync(result.intentFile, 'utf8'));
+    assert.equal(intent.reality_check_status, 'completed');
+    assert.equal(result.realityCheckStatus, 'completed');
+  });
+});
+
+test('Reality Check 질문이 다이어리에 RC 머리로 분리되어 추가된다', async () => {
+  await withTempCwd(async (cwd) => {
+    runInit({ cwd });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰', who: '단골', when: '주말' },
+      adapter: createMockAdapter(),
+      now: new Date('2026-05-04T09:00:00.000Z'),
+      log: silentLog,
+    });
+    const diary = readFileSync(join(cwd, '.beoreum', 'project', 'diary.md'), 'utf8');
+    // 두 머리가 모두 자리한다(prospect 의도 + Reality Check)
+    assert.match(diary, /## 2026-05-04 prospect 의도에서 미뤄둔 질문/);
+    assert.match(diary, /## 2026-05-04 Reality Check에서 미뤄둔 질문/);
+    // RC 질문은 영역 한국어 제목으로 시작한다
+    assert.match(diary, /- 시장 포화도:/);
+    assert.match(diary, /- 진입 비용:/);
+    assert.match(diary, /- 사라진 서비스들의 묘지:/);
+  });
+});
+
+test('legal_warnings가 있으면 reality-check.md에 법적 메모 절이 자리한다', async () => {
+  await withTempCwd(async (cwd) => {
+    runInit({ cwd });
+    // Given: legal_warnings를 채워 돌려주는 어댑터
+    const adapter = {
+      ...createMockAdapter(),
+      async generateRealityCheck() {
+        return {
+          areas: {
+            market_saturation: { observation: '', questions: ['q'] },
+            entry_cost: { observation: '', questions: ['q'] },
+            two_sided_market: { observation: '', questions: ['q'] },
+            legal_risk: { observation: '', questions: ['q'] },
+            revenue_model: { observation: '', questions: ['q'] },
+            graveyard: { observation: '', questions: ['q'] },
+          },
+          legal_warnings: [
+            { item: '미성년자 데이터', reason: '동의 절차가 별도로 필요할 수 있다' },
+          ],
+        };
+      },
+    };
+    const result = await runProspect({
+      cwd,
+      answers: { what: '청소년 학습 예약 앱' },
+      adapter,
+      source: { kind: 'ai' },
+      log: silentLog,
+    });
+    const md = readFileSync(result.realityCheckFile, 'utf8');
+    assert.match(md, /## 법적 메모/);
+    assert.match(md, /미성년자 데이터: 동의 절차가 별도로 필요할 수 있다/);
+  });
+});
+
+test('generateRealityCheck를 구현하지 않은 어댑터는 status=skipped로 흘러간다', async () => {
+  await withTempCwd(async (cwd) => {
+    runInit({ cwd });
+    // Given: generateRealityCheck를 빼낸 어댑터
+    const base = createMockAdapter();
+    const adapter = {
+      name: base.name,
+      extractIntent: base.extractIntent,
+      extractSchema: base.extractSchema,
+      generateCatalog: base.generateCatalog,
+      // generateRealityCheck 일부러 안 넣음
+    };
+    const result = await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter,
+      log: silentLog,
+    });
+    assert.equal(result.realityCheckStatus, 'skipped');
+    const intent = yaml.load(readFileSync(result.intentFile, 'utf8'));
+    assert.equal(intent.reality_check_status, 'skipped');
+    const md = readFileSync(result.realityCheckFile, 'utf8');
+    assert.match(md, /Reality Check를 지원하지 않아 자리만/);
   });
 });

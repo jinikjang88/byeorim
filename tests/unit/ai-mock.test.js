@@ -156,6 +156,42 @@ test('generateCatalog: 인자 없이 호출해도 안전한 기본값', async ()
   assert.ok(Array.isArray(result.blocks));
 });
 
+// ── generateRealityCheck (ADR 0003 + docs/specs/reality-check.md) ─────────────────
+
+test('generateRealityCheck: 6영역과 legal_warnings를 모두 가진 결정적 리포트를 돌려준다', async () => {
+  // Given: 7항목 답변과 카탈로그
+  const adapter = createMockAdapter();
+  const answers = { what: '동네 빵집 단골 주문 앱', who: '카페 단골' };
+  const catalog = { worlds: [{ id: 'w-x', title: 'X' }], blocks: [] };
+  // When: 두 번 호출
+  const a = await adapter.generateRealityCheck({ answers, catalog });
+  const b = await adapter.generateRealityCheck({ answers, catalog });
+  // Then: 결정적이고 6영역 모두 자리한다
+  assert.deepEqual(a, b);
+  for (const area of [
+    'market_saturation',
+    'entry_cost',
+    'two_sided_market',
+    'legal_risk',
+    'revenue_model',
+    'graveyard',
+  ]) {
+    assert.ok(a.areas[area], `${area} 영역이 빠짐`);
+    assert.equal(a.areas[area].observation, '');
+    assert.ok(Array.isArray(a.areas[area].questions));
+    assert.ok(a.areas[area].questions.length >= 2, `${area} 질문이 2개 미만`);
+  }
+  assert.ok(Array.isArray(a.legal_warnings));
+  assert.equal(a.legal_warnings.length, 0);
+});
+
+test('generateRealityCheck: 인자 없이 호출해도 6영역 표준 시드를 돌려준다', async () => {
+  const adapter = createMockAdapter();
+  const result = await adapter.generateRealityCheck();
+  assert.ok(result.areas.market_saturation.questions.length >= 2);
+  assert.equal(result.legal_warnings.length, 0);
+});
+
 // ── extractSchema (ADR 0023) ─────────────────────────────────
 
 test('extractSchema: create operation은 request와 response를 모두 가진다', async () => {
