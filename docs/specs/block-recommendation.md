@@ -22,14 +22,20 @@ recommendBlocks({
 ```ts
 {
   recommended: string[],          // 추천 블럭 ID 배열(우선순위 순, 최대 10개)
-  reasons: { [blockId: string]: string }  // 추천 이유 한국어 한 줄
+  reasons: {
+    [blockId: string]: {
+      user: string,  // 비개발자(1순위 사용자)가 읽는 한국어 일상어. 두세 줄 가능. 단축어 금지
+      dev: string,   // 개발자가 읽는 기술 한 줄. 단축어(PG, DTO, API 등) 사용 가능
+    }
+  }
 }
 ```
 
 - `recommended`는 catalog.blocks에 실재하는 ID만. 추천 못 할 때 빈 배열
 - `reasons`의 키는 `recommended`의 ID 부분집합. 모든 추천 블럭에 이유가 있어야 하지는 않음(일부만 있어도 OK)
-- 이유가 없는 블럭은 picker에서 prefix만 보임("[추천] order — 주문")
-- 이유가 있는 블럭은 picker에서 prefix + 이유("[추천] order — 주문 (이유: ...)")
+- `reasons[id].user`와 `reasons[id].dev`는 각각 빈 문자열 허용(어댑터가 한 시점만 채워도 OK)
+- picker는 `reasons[id].user`만 보여줌(ADR 0030 결정 2). 비어있으면 prefix만 보임("[추천] order — 주문")
+- `dev` 시점은 block-review-prompt.md 부산물에서만 노출(개발자가 외부 AI에 검토 부탁할 때 도움)
 
 ## 추천 기준 가이드
 
@@ -46,11 +52,18 @@ recommendBlocks({
 - 카탈로그에 없는 ID는 절대 추천하지 않는다(picker에서 의미 없음)
 - 사용자 답변과 무관해 보이는 블럭은 비운다(억지로 채우지 않음)
 
-### 이유 작성 결
-- 한 줄(50자 이내)로 끝내기. picker 한 줄에 들어가야 함
-- 단정형보다 가능성형 결("핵심 흐름이에요" 보다 "핵심 흐름으로 보여요")
-- 마케팅 카피 형용사("강력한", "획기적인") 금지(CLAUDE.md 섹션 10)
-- 사용자 답변의 단어를 인용하면 더 친근
+### 이유 작성 결 (ADR 0030 두 시점 분리)
+
+**user 시점**(비개발자, 1순위 사용자)
+- 일상 한국어. PG는 "결제대행사", DTO는 "데이터 모양", API는 "프로그램 사이의 약속" 같이 풀어쓰기
+- 두세 줄 가능(prompt 부산물에서 자세히 보임). 사용자 답변의 단어를 인용하면 친근
+- 단정형보다 가능성형 결("핵심으로 보여요", "잘 어울릴 수 있어요")
+- 마케팅 카피 형용사("강력한", "획기적인", "본질적인") 금지(CLAUDE.md 섹션 10)
+
+**dev 시점**(개발자, 3순위 사용자)
+- 정확한 기술 용어 OK. PG, DTO, API, REST, CRUD 같은 단축어 사용 가능
+- 한 줄 권장. prompt 부산물이 길어지지 않게
+- 의존성, 데이터 흐름, 외부 시스템을 짚을 수 있음
 
 ## mock 어댑터 결정적 휴리스틱
 
@@ -61,9 +74,15 @@ mock은 LLM 없이 도는 단위 테스트용 자리. 결정성과 형식만 보
 2. 위에서 5개 미만이면 부족분을 catalog 순서대로 채워 5개로
 3. 추천이 10개를 넘으면 앞 10개로 자른다
 
-### reason
-- `priority='required'` 블럭: `'카탈로그가 핵심으로 표시한 자리'`
-- 그 외 블럭: `'카탈로그 순서 기준 추천(mock)'`
+### reasons (두 시점, ADR 0030)
+mock은 user/dev 두 시점에 한 줄씩 채운다.
+
+- `priority='required'` 블럭
+  - user: `'카탈로그가 핵심으로 표시한 자리예요'`
+  - dev: `'priority=required 블럭'`
+- 그 외 블럭
+  - user: `'카탈로그 순서 기준으로 골라봤어요(자동 추천이라 도메인은 못 봐요)'`
+  - dev: `'mock heuristic: catalog index fallback'`
 
 ### 빈 입력 처리
 - catalog가 비어있거나 blocks가 빈 배열이면 `{ recommended: [], reasons: {} }`

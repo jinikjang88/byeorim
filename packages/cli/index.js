@@ -4,6 +4,7 @@ export { runInit } from './src/init.js';
 export { runProspect, interactiveProspect } from './src/prospect.js';
 export { importCatalog } from './src/prospect-import.js';
 export { buildCatalogPromptMarkdown } from './src/prospect-prompt.js';
+export { buildBlockReviewPromptMarkdown } from './src/smelt-prompt.js';
 export { runSmelt, interactiveSmelt } from './src/smelt.js';
 export { interactiveShape } from './src/shape.js';
 export { runForge } from './src/forge.js';

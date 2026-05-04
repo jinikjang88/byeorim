@@ -85,12 +85,21 @@
  */
 
 /**
- * Smelt 단계의 블럭 추천 결과(ADR 0029 + docs/specs/block-recommendation.md).
+ * Smelt 단계의 블럭 추천 한 자리에 대한 두 시점 이유(ADR 0030).
+ *
+ * @typedef {object} RecommendationReason
+ * @property {string} user - 비개발자(1순위 사용자)가 읽는 한국어 일상어. 단축어 풀어쓰기. 빈 문자열 허용
+ * @property {string} dev - 개발자(3순위 사용자)가 읽는 기술 한 줄. 단축어 사용 가능. 빈 문자열 허용
+ */
+
+/**
+ * Smelt 단계의 블럭 추천 결과(ADR 0029 + ADR 0030 + docs/specs/block-recommendation.md).
  *
  * @typedef {object} BlockRecommendation
  * @property {string[]} recommended - 추천 블럭 ID 배열(우선순위 순, 최대 10개)
- * @property {{[blockId: string]: string}} reasons - 블럭 ID별 짧은 한국어 추천 이유
+ * @property {{[blockId: string]: RecommendationReason}} reasons - 블럭 ID별 두 시점 추천 이유
  *   - reasons의 키는 recommended의 ID 부분집합. 모든 추천에 이유가 있어야 하지는 않음
+ *   - picker는 reasons[id].user만 보여줌(ADR 0030 결정 2). dev는 prompt 부산물에서만 노출
  */
 
 /**

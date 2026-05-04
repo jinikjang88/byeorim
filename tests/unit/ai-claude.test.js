@@ -479,11 +479,15 @@ function recommendResponse(parsed) {
 }
 
 test('recommendBlocks: parsed_output을 받아 catalog에 있는 ID만 통과시킨다(안전망)', async () => {
-  // Given: AI가 catalog에 있는 b1과 없는 ghost를 함께 추천
+  // Given: AI가 catalog에 있는 b1과 없는 ghost를 함께 추천. reasons는 ADR 0030의 두 시점 객체.
   const client = makeFakeClient(() =>
     recommendResponse({
       recommended: ['b1', 'ghost', 'b2'],
-      reasons: { b1: 'r1', ghost: 'r-ghost', b2: 'r2' },
+      reasons: {
+        b1: { user: '일상어 r1', dev: 'tech r1' },
+        ghost: { user: '버려질 자리', dev: 'discarded' },
+        b2: { user: '일상어 r2', dev: 'tech r2' },
+      },
     }),
   );
   const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
@@ -496,11 +500,36 @@ test('recommendBlocks: parsed_output을 받아 catalog에 있는 ID만 통과시
       ],
     },
   });
-  // Then: ghost는 걸러지고 b1, b2만 남는다
+  // Then: ghost는 걸러지고 b1, b2만 남는다. reasons는 두 시점 객체.
   assert.deepEqual(result.recommended, ['b1', 'b2']);
-  assert.equal(result.reasons.b1, 'r1');
-  assert.equal(result.reasons.b2, 'r2');
+  assert.deepEqual(result.reasons.b1, { user: '일상어 r1', dev: 'tech r1' });
+  assert.deepEqual(result.reasons.b2, { user: '일상어 r2', dev: 'tech r2' });
   assert.equal(result.reasons.ghost, undefined);
+});
+
+test('recommendBlocks: 옛 string 형식 reasons는 user 시점으로 폴백된다(미래 호환)', async () => {
+  const client = makeFakeClient(() =>
+    recommendResponse({
+      recommended: ['b1'],
+      reasons: { b1: '단순 한 줄 이유' },
+    }),
+  );
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.recommendBlocks({
+    answers: {},
+    catalog: { blocks: [{ id: 'b1', name: 'B1' }] },
+  });
+  assert.deepEqual(result.reasons.b1, { user: '단순 한 줄 이유', dev: '' });
+});
+
+test('recommendBlocks: system 프롬프트에 단축어 풀어쓰기 가이드(PG → 결제대행사)가 박혀있다(ADR 0030)', async () => {
+  const client = makeFakeClient(() => recommendResponse({ recommended: [], reasons: {} }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.recommendBlocks({ answers: {}, catalog: { blocks: [] } });
+  const text = client.captured[0].system[0].text;
+  assert.match(text, /PG → "결제대행사"/);
+  assert.match(text, /reasons\[블럭ID\]\.user/);
+  assert.match(text, /reasons\[블럭ID\]\.dev/);
 });
 
 test('recommendBlocks: max_tokens가 2048이고 system 프롬프트가 추천 결을 가진다', async () => {

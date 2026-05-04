@@ -143,9 +143,10 @@ export function createMockAdapter() {
         suggested_template: suggestTemplate(combined),
       };
     },
-    // ADR 0029 + docs/specs/block-recommendation.md의 recommendBlocks.
+    // ADR 0029 + ADR 0030 + docs/specs/block-recommendation.md의 recommendBlocks.
     // 결정적 휴리스틱: priority='required' 블럭을 먼저, 부족하면 catalog 순서대로 채워 5개,
     // 너무 많으면 앞 10개로 자른다. answers는 mock에서 결과에 영향 안 줌(결정성 보장).
+    // reasons는 두 시점({user, dev}) 객체(ADR 0030 결정 1).
     async recommendBlocks({ answers: _answers, catalog } = {}) {
       const blocks = Array.isArray(catalog?.blocks) ? catalog.blocks : [];
       if (!blocks.length) return { recommended: [], reasons: {} };
@@ -161,10 +162,17 @@ export function createMockAdapter() {
       const reasons = {};
       for (const b of limited) {
         if (typeof b?.id !== 'string') continue;
-        reasons[b.id] =
-          b.priority === 'required'
-            ? '카탈로그가 핵심으로 표시한 자리'
-            : '카탈로그 순서 기준 추천(mock)';
+        if (b.priority === 'required') {
+          reasons[b.id] = {
+            user: '카탈로그가 핵심으로 표시한 자리예요',
+            dev: 'priority=required 블럭',
+          };
+        } else {
+          reasons[b.id] = {
+            user: '카탈로그 순서 기준으로 골라봤어요(자동 추천이라 도메인은 못 봐요)',
+            dev: 'mock heuristic: catalog index fallback',
+          };
+        }
       }
       return { recommended, reasons };
     },

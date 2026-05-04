@@ -46,7 +46,11 @@ prospect가 끝나면 smelt가 같은 카탈로그 위에서 블럭을 고르는
 node bin/beoreum.js smelt
 ```
 
-mock 어댑터는 카탈로그가 핵심으로 표시한 블럭(priority='required')을 우선 추천하고, 그 외에는 카탈로그 순서대로 5개를 채운다. claude 어댑터를 쓰면 사용자 도메인에 맞춘 추천을 받는다(LLM 호출 한 번 더 추가).
+mock 어댑터는 카탈로그가 핵심으로 표시한 블럭(priority='required')을 우선 추천하고, 그 외에는 카탈로그 순서대로 5개를 채운다. claude 어댑터를 쓰면 사용자 도메인에 맞춘 추천을 받는다(LLM 호출 한 번 더 추가). 추천 이유는 두 시점으로 적힌다(ADR 0030). 비개발자(1순위 사용자)가 picker에서 일상어로 짧게 보고, 개발자가 외부 AI 검토 프롬프트에서 기술 한 줄을 본다.
+
+### 외부 AI로 블럭 더 자세히 검토받기 (ADR 0030)
+
+smelt가 끝나면 부산물로 `.beoreum/project/prompts/block-review-prompt.md`가 자리잡는다. 사용자가 고른 블럭 + 의존성 결과 + 카탈로그 전체 + AI 추천이 한 자리에 묶여 있어 외부 AI(Claude.ai/ChatGPT/Gemini 등)에 그대로 붙여넣으면 "잘 맞는 부분, 빠진 자리, 시작 무게"를 자세히 검토받는다. 응답은 자유 형식이라 사용자가 읽고 selected-blocks.yml을 다듬거나 smelt를 다시 돌릴 수 있다.
 
 ### 외부 AI로 더 자세한 카탈로그 받기 (ADR 0028)
 

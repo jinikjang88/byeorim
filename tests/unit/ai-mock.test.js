@@ -211,12 +211,31 @@ test('recommendBlocks: priority=required 블럭이 먼저, 부족분은 catalog 
   // required 둘이 먼저 + 부족분 채워 5개
   assert.deepEqual(result.recommended.slice(0, 2), ['b2', 'b4']);
   assert.equal(result.recommended.length, 5);
-  // reason은 모든 추천에 들어있다
+  // reasons는 두 시점 객체(ADR 0030 결정 1). 모든 추천에 user/dev 둘 다 한 줄
   for (const id of result.recommended) {
-    assert.equal(typeof result.reasons[id], 'string');
-    assert.ok(result.reasons[id].length > 0);
+    assert.equal(typeof result.reasons[id], 'object');
+    assert.equal(typeof result.reasons[id].user, 'string');
+    assert.equal(typeof result.reasons[id].dev, 'string');
+    assert.ok(result.reasons[id].user.length > 0, `${id}의 user 시점이 비어있음`);
+    assert.ok(result.reasons[id].dev.length > 0, `${id}의 dev 시점이 비어있음`);
   }
-  assert.match(result.reasons.b2, /핵심/);
+  // required 블럭의 user는 "핵심"을 짚는 일상어
+  assert.match(result.reasons.b2.user, /핵심/);
+  // required 블럭의 dev는 priority=required를 짚는다
+  assert.match(result.reasons.b2.dev, /priority=required/);
+});
+
+test('recommendBlocks: 두 시점 reasons가 단축어 자리(dev)와 일상어 자리(user)로 갈린다(ADR 0030)', async () => {
+  const adapter = createMockAdapter();
+  const catalog = {
+    blocks: [{ id: 'a', name: 'A', user_desc: '...' }], // priority 없음
+  };
+  const result = await adapter.recommendBlocks({ answers: {}, catalog });
+  const r = result.reasons.a;
+  // user 시점은 일상어("골라봤어요")
+  assert.match(r.user, /골라봤어요|봤어요|해봤/);
+  // dev 시점은 기술 용어 OK("heuristic", "fallback")
+  assert.match(r.dev, /heuristic|fallback/i);
 });
 
 test('recommendBlocks: 결정적이다(같은 입력은 같은 출력)', async () => {

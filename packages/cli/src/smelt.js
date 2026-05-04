@@ -2,12 +2,13 @@
 // ADR 0007의 자리, ADR 0010의 두 파일 형식, ADR 0003의 동행 톤(답하지 못한 질문 허용),
 // ADR 0029의 블럭 추천 + 선택 검토를 따른다.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { checkbox, select } from '@inquirer/prompts';
 import { resolveAll } from '@beoreum/core';
 import { loadCatalog } from '@beoreum/catalog';
+import { buildBlockReviewPromptMarkdown } from './smelt-prompt.js';
 
 const SCHEMA_VERSION = 1;
 const STAGE = 'smelt';
@@ -106,18 +107,20 @@ async function fetchRecommendation({ adapter, answers, catalog, log }) {
 
 // runSmelt는 smelt 단계의 본체. 사용자가 고른 블럭 ID 배열로 의존성 해결을 돌리고
 // selected-blocks.yml과 decisions.yml을 만든다.
+// 끝에 항상 prompts/block-review-prompt.md 부산물을 만든다(ADR 0030).
 //
 // 입력:
-//   cwd       - 프로젝트 루트 절대 경로
-//   blockIds  - 사용자가 명시적으로 고른 블럭 ID 배열(한 개 이상)
-//   now       - 테스트용 결정적 시각(선택)
+//   cwd            - 프로젝트 루트 절대 경로
+//   blockIds       - 사용자가 명시적으로 고른 블럭 ID 배열(한 개 이상)
+//   recommendation - 외부에서 미리 받은 추천(선택). 없으면 빈 추천으로 부산물 생성
+//   now            - 테스트용 결정적 시각(선택)
 //
 // 반환: {
-//   selectedBlocksFile, decisionsFile,
+//   selectedBlocksFile, decisionsFile, blockReviewPromptFile,
 //   selected, autoAdded, affected, prerequisites, decisions,
 //   nextStage,
 // }
-export async function runSmelt({ cwd, blockIds, now } = {}) {
+export async function runSmelt({ cwd, blockIds, recommendation = EMPTY_RECOMMENDATION, now } = {}) {
   if (!cwd) throw new Error('runSmelt({ cwd })가 필요합니다');
   if (!Array.isArray(blockIds) || blockIds.length === 0) {
     throw new Error('runSmelt({ blockIds })가 필요합니다. 한 개 이상의 블럭 ID를 골라주세요');
@@ -129,6 +132,8 @@ export async function runSmelt({ cwd, blockIds, now } = {}) {
   const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
   const selectedBlocksFile = join(beoreumDir, 'project', 'selected-blocks.yml');
   const decisionsFile = join(beoreumDir, 'project', 'decisions.yml');
+  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  const blockReviewPromptFile = join(promptsDir, 'block-review-prompt.md');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
@@ -146,11 +151,29 @@ export async function runSmelt({ cwd, blockIds, now } = {}) {
 
   writeFileSync(selectedBlocksFile, yaml.dump(selectedBlocks, { sortKeys: false }), 'utf8');
   writeFileSync(decisionsFile, yaml.dump(decisions, { sortKeys: false }), 'utf8');
+
+  // 외부 AI 검토 프롬프트 부산물(ADR 0030 결정 3). 사용자가 고른 자리와 카탈로그 전체를 묶는다.
+  // 사용자 답변(intent.yml의 user_answers)도 함께 담아 외부 AI가 도메인 맥락을 본다.
+  const intent = readIntent(intentFile);
+  mkdirSync(promptsDir, { recursive: true });
+  writeFileSync(
+    blockReviewPromptFile,
+    buildBlockReviewPromptMarkdown({
+      answers: intent.user_answers,
+      catalog,
+      selectedBlocks: blockIds,
+      resolved,
+      recommendation,
+    }),
+    'utf8',
+  );
+
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
 
   return {
     selectedBlocksFile,
     decisionsFile,
+    blockReviewPromptFile,
     selected: blockIds,
     autoAdded: resolved.autoAdded,
     affected: resolved.affected,
@@ -160,18 +183,30 @@ export async function runSmelt({ cwd, blockIds, now } = {}) {
   };
 }
 
+// reasons[id]에서 사용자 시점 한 줄을 꺼낸다(ADR 0030 결정 2).
+// 새 모양({user, dev}) 우선, 옛 string 모양은 user 시점으로 폴백.
+function pickUserReason(reasonsEntry) {
+  if (!reasonsEntry) return '';
+  if (typeof reasonsEntry === 'string') return reasonsEntry;
+  if (typeof reasonsEntry === 'object' && typeof reasonsEntry.user === 'string') {
+    return reasonsEntry.user;
+  }
+  return '';
+}
+
 // 기본 picker. @inquirer/prompts의 checkbox로 카탈로그 블럭을 ID + name으로 보여준다.
-// 추천 블럭은 [추천] prefix와 한 줄 이유로 강조한다(ADR 0029 결정 2).
+// 추천 블럭은 [추천] prefix와 user 시점 이유 한 줄로 강조한다(ADR 0029 결정 2 + ADR 0030 결정 2).
+// dev 시점은 picker에 노출하지 않는다(prompt 부산물에서만 보임).
 // 식별자(블럭 ID)를 보존해 다음 단계 메시지와 결을 맞춘다(ADR 0011 결정 4).
 async function defaultPickBlocks({ catalog, recommendation = EMPTY_RECOMMENDATION } = {}) {
   const recommendedSet = new Set(recommendation.recommended || []);
   const reasons = recommendation.reasons || {};
   const choices = catalog.blocks.map((block) => {
     const isRec = recommendedSet.has(block.id);
-    const reason = reasons[block.id];
+    const userReason = pickUserReason(reasons[block.id]);
     let label = `${block.id} — ${block.name}`;
     if (isRec) {
-      label = reason ? `[추천] ${label} (이유: ${reason})` : `[추천] ${label}`;
+      label = userReason ? `[추천] ${label} (이유: ${userReason})` : `[추천] ${label}`;
     }
     return {
       name: label,
@@ -260,7 +295,7 @@ export async function interactiveSmelt({
     const resolved = resolveAll(blockIds, catalog);
     const decision = await confirmSelection({ resolved, blockIds, log });
     if (decision === 'proceed') {
-      return runSmelt({ cwd, blockIds, now });
+      return runSmelt({ cwd, blockIds, recommendation, now });
     }
     log('알겠어요. 다시 골라볼게요.');
   }

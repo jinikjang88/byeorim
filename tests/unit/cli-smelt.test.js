@@ -226,7 +226,10 @@ test('interactiveSmelt: adapter가 주어지면 recommendBlocks가 호출되고 
         recCalled = true;
         assert.equal(typeof answers, 'object');
         assert.ok(Array.isArray(catalog.blocks));
-        return { recommended: ['order'], reasons: { order: '핵심으로 보여요' } };
+        return {
+          recommended: ['order'],
+          reasons: { order: { user: '핵심으로 보여요', dev: 'order create' } },
+        };
       },
     };
     let pickerSawRec = null;
@@ -243,7 +246,10 @@ test('interactiveSmelt: adapter가 주어지면 recommendBlocks가 호출되고 
     });
     assert.equal(recCalled, true);
     assert.deepEqual(pickerSawRec.recommended, ['order']);
-    assert.equal(pickerSawRec.reasons.order, '핵심으로 보여요');
+    assert.deepEqual(pickerSawRec.reasons.order, {
+      user: '핵심으로 보여요',
+      dev: 'order create',
+    });
   });
 });
 
@@ -394,6 +400,69 @@ test('interactiveSmelt: intent.yml schema_version 1 폴백(user_answers 없음)�
     });
     // user_answers가 없어도 빈 객체로 폴백
     assert.deepEqual(answersSeen, {});
+  });
+});
+
+// ── ADR 0030: block-review-prompt.md 부산물과 두 시점 reason 노출 ─────
+
+test('runSmelt가 끝에 prompts/block-review-prompt.md 부산물을 만든다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    const result = await runSmelt({ cwd, blockIds: ['order'] });
+    assert.ok(result.blockReviewPromptFile, 'result.blockReviewPromptFile이 빠짐');
+    assert.equal(existsSync(result.blockReviewPromptFile), true);
+    assert.match(result.blockReviewPromptFile, /prompts\/block-review-prompt\.md$/);
+  });
+});
+
+test('block-review-prompt.md 본문에 7항목, 카탈로그 전체 blocks, 선택, 의존성, 추천이 모두 들어간다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    const recommendation = {
+      recommended: ['order'],
+      reasons: { order: { user: '핵심 흐름으로 보여요', dev: 'order create' } },
+    };
+    const result = await runSmelt({ cwd, blockIds: ['order'], recommendation });
+    const md = readFileSync(result.blockReviewPromptFile, 'utf8');
+    // 7항목 답변 자리(prospect의 user_answers가 commerce mock이라 what에 쇼핑몰)
+    assert.match(md, /## 사용자 7항목 답변/);
+    assert.match(md, /what:.*쇼핑몰/);
+    // 카탈로그 전체 blocks 자리(ADR 0030 결정 4)
+    assert.match(md, /## 카탈로그 전체 블럭/);
+    assert.match(md, /총 \d+개 블럭/);
+    // 사용자 선택 + 의존성 결과
+    assert.match(md, /## 사용자가 고른 블럭/);
+    assert.match(md, /## 의존성 해결 결과/);
+    assert.match(md, /자동 추가/);
+    // 추천 두 시점이 모두 노출(ADR 0030 결정 1)
+    assert.match(md, /## AI 추천/);
+    assert.match(md, /일반 사용자 시점:.*핵심 흐름으로 보여요/);
+    assert.match(md, /개발자 시점:.*order create/);
+  });
+});
+
+test('block-review-prompt.md 본문이 단축어 풀어쓰기 가이드와 비개발자 톤을 포함한다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    const result = await runSmelt({ cwd, blockIds: ['order'] });
+    const md = readFileSync(result.blockReviewPromptFile, 'utf8');
+    // 외부 AI에게 단축어 풀어쓰기 안내(예: PG, DTO, API)
+    assert.match(md, /비기술 창업자/);
+    assert.match(md, /일상 한국어/);
+    assert.match(md, /PG.*결제대행사/);
+    // 부탁드릴 검토 세 자리
+    assert.match(md, /1\. 잘 맞는 부분/);
+    assert.match(md, /2\. 비어있는 자리/);
+    assert.match(md, /3\. 시작 무게/);
+  });
+});
+
+test('runSmelt에 recommendation을 안 넘겨도 부산물은 빈 추천으로 만들어진다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    const result = await runSmelt({ cwd, blockIds: ['order'] });
+    const md = readFileSync(result.blockReviewPromptFile, 'utf8');
+    assert.match(md, /이번 흐름은 추천이 비어있어요/);
   });
 });
 

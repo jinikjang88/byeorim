@@ -39,8 +39,9 @@ const INTENT_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 
 
 추측을 강요하지 않는다. 답변이 모두 비어있으면 suggested_template은 null이다.`;
 
-// ADR 0029 + docs/specs/block-recommendation.md. 사용자 답변과 카탈로그를 보고 추천 블럭을 돌려준다.
-// smelt picker가 [추천] prefix와 한 줄 이유로 강조하는 자리.
+// ADR 0029 + ADR 0030 + docs/specs/block-recommendation.md.
+// 사용자 답변과 카탈로그를 보고 추천 블럭과 두 시점 이유(user/dev)를 돌려준다.
+// smelt picker는 reasons[id].user만 보여주고, dev는 prompt 부산물에서 노출.
 const RECOMMEND_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스에서 어떤 블럭부터 시작하면 좋을지 추천하는 도우미다.
 입력으로 7항목 답변(answers)과 카탈로그(catalog)를 받는다.
 catalog의 blocks 배열을 보고 사용자 도메인에 가장 어울리는 5~7개를 골라준다.
@@ -53,17 +54,49 @@ catalog의 blocks 배열을 보고 사용자 도메인에 가장 어울리는 5~
 - 추천은 5~7개. 너무 많으면(>10) 비기술 창업자에게 압도. 추천 못 할 자리는 비운다
 - catalog.blocks에 없는 ID는 절대 추천하지 않는다
 
-이유는 한 줄(50자 이내). 단정형보다 가능성형 결("핵심 흐름이에요" 보다 "핵심 흐름으로 보여요").
-마케팅 카피 형용사("강력한", "획기적인") 금지.
-사용자 답변의 단어를 인용하면 더 친근.
+이유는 두 시점으로 나눠 적는다(ADR 0030).
+
+reasons[블럭ID].user: 비개발자(1순위 사용자, 카페 사장님/학원 원장님)가 읽는 자리.
+- 일상 한국어. 단축어 풀어쓰기. 다음 단어들은 절대 그대로 쓰지 말고 풀어 적는다.
+  - PG → "결제대행사"
+  - DTO → "데이터 모양" 또는 "주고받을 정보의 모양"
+  - API → "프로그램 사이의 약속"
+  - REST → "웹 표준 방식"
+  - CRUD → "만들고 보고 고치고 지우는 자리"
+  - SDK → "도구 묶음"
+  - JWT → "로그인 증명"
+  - OAuth → "다른 서비스 계정으로 로그인"
+- 두세 줄 가능. 사용자 답변(answers의 what/why/who 등)의 단어를 인용하면 친근
+- 단정형보다 가능성형 결("핵심 흐름이에요"보다 "핵심 흐름으로 보여요", "잘 어울릴 수 있어요")
+- 마케팅 카피 형용사("강력한", "획기적인", "본질적인") 금지
+
+reasons[블럭ID].dev: 개발자(3순위 사용자)가 읽는 자리.
+- 정확한 기술 용어 OK. PG, DTO, API, REST, CRUD 같은 단축어 사용 가능
+- 한 줄 권장. 의존성, 데이터 흐름, 외부 시스템을 짚을 수 있음
+
+두 시점 모두 비어있을 수 있다. 한 시점만 채워도 OK.
 
 추측을 강요하지 않는다. 사용자 답변이 모두 비어있거나 도메인이 모호하면 빈 추천(recommended=[])도 옳다.`;
+
+// reasons[id] 한 자리의 모양: {user, dev} 두 시점 객체(ADR 0030 결정 1).
+const REASON_SCHEMA = {
+  type: 'object',
+  properties: {
+    user: { type: 'string' },
+    dev: { type: 'string' },
+  },
+  required: ['user', 'dev'],
+};
 
 const RECOMMEND_OUTPUT_SCHEMA = {
   type: 'object',
   properties: {
     recommended: { type: 'array', items: { type: 'string' } },
-    reasons: { type: 'object' },
+    // reasons는 { [blockId]: REASON_SCHEMA } 모양. 키는 동적이라 additionalProperties로 표현.
+    reasons: {
+      type: 'object',
+      additionalProperties: REASON_SCHEMA,
+    },
   },
   required: ['recommended', 'reasons'],
   additionalProperties: false,
@@ -503,11 +536,20 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
       const recommended = Array.isArray(parsed.recommended)
         ? parsed.recommended.filter((id) => known.has(id))
         : [];
+      // reasons는 { user, dev } 객체 모양(ADR 0030). 옛 string 모양도 user 시점으로 폴백.
       const reasons = {};
       if (parsed.reasons && typeof parsed.reasons === 'object') {
         for (const id of recommended) {
           const r = parsed.reasons[id];
-          if (typeof r === 'string' && r.trim()) reasons[id] = r;
+          if (r && typeof r === 'object') {
+            reasons[id] = {
+              user: typeof r.user === 'string' ? r.user : '',
+              dev: typeof r.dev === 'string' ? r.dev : '',
+            };
+          } else if (typeof r === 'string' && r.trim()) {
+            // 옛 어댑터 응답이 string으로 올 자리(미래 호환). user 시점으로 폴백.
+            reasons[id] = { user: r, dev: '' };
+          }
         }
       }
       return { recommended, reasons };
