@@ -1,14 +1,21 @@
 // beoreum smelt. 사용자가 고른 블럭에서 의존성을 해결해 두 산출물을 만든다.
 // ADR 0007의 자리, ADR 0010의 두 파일 형식, ADR 0003의 동행 톤(답하지 못한 질문 허용),
-// ADR 0029의 블럭 추천 + 선택 검토를 따른다.
+// ADR 0029(블럭 추천 + 선택 검토), ADR 0030(두 시점 reason + 외부 검토 프롬프트),
+// ADR 0031(picker 세계/번들 그룹화 + 의존성 상세 검토)를 따른다.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { checkbox, select } from '@inquirer/prompts';
+import { checkbox, select, Separator } from '@inquirer/prompts';
 import { resolveAll } from '@beoreum/core';
 import { loadCatalog } from '@beoreum/catalog';
 import { buildBlockReviewPromptMarkdown } from './smelt-prompt.js';
+import {
+  buildBlockHierarchy,
+  lookupBlockDetail,
+  buildBlockDescription,
+  truncateOneLine,
+} from './smelt-picker-helpers.js';
 
 const SCHEMA_VERSION = 1;
 const STAGE = 'smelt';
@@ -194,26 +201,38 @@ function pickUserReason(reasonsEntry) {
   return '';
 }
 
-// 기본 picker. @inquirer/prompts의 checkbox로 카탈로그 블럭을 ID + name으로 보여준다.
+// 기본 picker. @inquirer/prompts의 checkbox로 카탈로그 블럭을 두 단계로 그룹화해 보여준다(ADR 0031).
 // 추천 블럭은 [추천] prefix와 user 시점 이유 한 줄로 강조한다(ADR 0029 결정 2 + ADR 0030 결정 2).
+// focused description에 priority/effort_days/concerns를 더해 사용자가 블럭 무게를 가늠하게 한다.
 // dev 시점은 picker에 노출하지 않는다(prompt 부산물에서만 보임).
-// 식별자(블럭 ID)를 보존해 다음 단계 메시지와 결을 맞춘다(ADR 0011 결정 4).
 async function defaultPickBlocks({ catalog, recommendation = EMPTY_RECOMMENDATION } = {}) {
   const recommendedSet = new Set(recommendation.recommended || []);
   const reasons = recommendation.reasons || {};
-  const choices = catalog.blocks.map((block) => {
-    const isRec = recommendedSet.has(block.id);
-    const userReason = pickUserReason(reasons[block.id]);
-    let label = `${block.id} — ${block.name}`;
-    if (isRec) {
-      label = userReason ? `[추천] ${label} (이유: ${userReason})` : `[추천] ${label}`;
+  const hierarchy = buildBlockHierarchy(catalog);
+
+  const choices = [];
+  for (const { world, groups } of hierarchy) {
+    choices.push(new Separator(`─── ${world.title} ───`));
+    for (const { bundle, blocks } of groups) {
+      if (bundle && bundle.title) {
+        choices.push(new Separator(`  · ${bundle.title}`));
+      }
+      for (const block of blocks) {
+        const isRec = recommendedSet.has(block.id);
+        const userReason = pickUserReason(reasons[block.id]);
+        let label = `${block.id} — ${block.name}`;
+        if (isRec) {
+          label = userReason ? `[추천] ${label} (이유: ${userReason})` : `[추천] ${label}`;
+        }
+        choices.push({
+          name: label,
+          value: block.id,
+          description: buildBlockDescription(block),
+        });
+      }
     }
-    return {
-      name: label,
-      value: block.id,
-      description: block.user_desc,
-    };
-  });
+  }
+
   return checkbox({
     message: '어떤 블럭을 만들고 싶으세요? (스페이스로 선택, 엔터로 확정)',
     choices,
@@ -221,19 +240,54 @@ async function defaultPickBlocks({ catalog, recommendation = EMPTY_RECOMMENDATIO
   });
 }
 
-// 기본 confirmSelection. 의존성 해결 결과를 표로 출력한 뒤 사용자에게 진행/다시 고르기를 묻는다.
+// 한 블럭 ID를 catalog에서 풀어 "id (name): user_desc" 한 줄로 만든다(ADR 0031 결정 3).
+function describeBlockLine(catalog, id) {
+  const detail = lookupBlockDetail(catalog, id);
+  const desc = truncateOneLine(detail.user_desc, 70);
+  if (desc) return `  - ${detail.id} (${detail.name}): ${desc}`;
+  return `  - ${detail.id} (${detail.name})`;
+}
+
+// 기본 confirmSelection. 의존성 해결 결과를 catalog lookup으로 한국어 풀이해 보여준다(ADR 0031 결정 3).
+// 그 뒤 사용자에게 진행/다시 고르기를 묻는다.
 // 'proceed'를 돌려주면 산출물 작성, 'redo'를 돌려주면 picker 다시 띄움(ADR 0029 결정 3).
-async function defaultConfirmSelection({ resolved, blockIds, log = console.log } = {}) {
+async function defaultConfirmSelection({ resolved, blockIds, catalog, log = console.log } = {}) {
+  const cat = catalog || { blocks: [] };
   log('');
   log('선택을 마쳤어요. 함께 들어갈 자리를 정리했어요.');
   log('');
-  log(`  선택한 자리: ${blockIds.length}개 (${blockIds.join(', ') || '(없음)'})`);
-  log(`  자동 추가: ${resolved.autoAdded.length}개 (${resolved.autoAdded.join(', ') || '(없음)'})`);
-  log(
-    `  영향받는 자리: ${resolved.affected.length}개 (${resolved.affected.join(', ') || '(없음)'})`,
-  );
-  const prereqNames = (resolved.prerequisites || []).map((p) => p.name || p.id || '?');
-  log(`  필요한 준비물: ${prereqNames.length}개 (${prereqNames.join(', ') || '(없음)'})`);
+  log(`선택한 자리 ${blockIds.length}개`);
+  if (blockIds.length) {
+    for (const id of blockIds) log(describeBlockLine(cat, id));
+  } else {
+    log('  - (없음)');
+  }
+  log('');
+  log(`자동 추가 ${resolved.autoAdded.length}개 (선택한 자리가 함께 필요로 하는 자리예요)`);
+  if (resolved.autoAdded.length) {
+    for (const id of resolved.autoAdded) log(describeBlockLine(cat, id));
+  } else {
+    log('  - (없음)');
+  }
+  log('');
+  log(`영향받는 자리 ${resolved.affected.length}개 (선택한 자리가 영향을 주는 자리예요)`);
+  if (resolved.affected.length) {
+    for (const id of resolved.affected) log(describeBlockLine(cat, id));
+  } else {
+    log('  - (없음)');
+  }
+  log('');
+  const prereqs = resolved.prerequisites || [];
+  log(`필요한 준비물 ${prereqs.length}개`);
+  if (prereqs.length) {
+    for (const p of prereqs) {
+      const name = p?.name || p?.id || '?';
+      const enables = Array.isArray(p?.enables) ? p.enables.join(', ') : '';
+      log(`  - ${name} (해당 자리: ${enables || '없음'})`);
+    }
+  } else {
+    log('  - (없음)');
+  }
   log('');
   return select({
     message: '이대로 다음 단계로 갈까요?',
@@ -293,7 +347,7 @@ export async function interactiveSmelt({
       throw new Error('한 개 이상의 블럭을 골라주세요');
     }
     const resolved = resolveAll(blockIds, catalog);
-    const decision = await confirmSelection({ resolved, blockIds, log });
+    const decision = await confirmSelection({ resolved, blockIds, catalog, log });
     if (decision === 'proceed') {
       return runSmelt({ cwd, blockIds, recommendation, now });
     }

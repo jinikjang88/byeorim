@@ -466,6 +466,77 @@ test('runSmelt에 recommendation을 안 넘겨도 부산물은 빈 추천으로 
   });
 });
 
+// ── ADR 0031: picker 그룹화와 confirm 상세화 ─────
+
+test('interactiveSmelt: picker가 받는 catalog에 worlds/bundles가 살아있다(picker 그룹화 자리)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    let receivedCatalog = null;
+    const pickBlocks = async ({ catalog }) => {
+      receivedCatalog = catalog;
+      return [catalog.blocks[0].id];
+    };
+    await interactiveSmelt({
+      cwd,
+      pickBlocks,
+      confirmSelection: proceedConfirm,
+      log: silentLog,
+    });
+    // commerce 카탈로그가 worlds 5개와 bundles 12개 안팎을 가짐(데이터 의존, 섹션 8 노트)
+    assert.ok(Array.isArray(receivedCatalog.worlds));
+    assert.ok(receivedCatalog.worlds.length >= 1);
+    assert.ok(Array.isArray(receivedCatalog.bundles));
+  });
+});
+
+test('interactiveSmelt: confirmSelection이 catalog 인자를 받는다(상세화 자리)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    let received = null;
+    const confirmSelection = async (args) => {
+      received = args;
+      return 'proceed';
+    };
+    await interactiveSmelt({
+      cwd,
+      pickBlocks: async () => ['order'],
+      confirmSelection,
+      log: silentLog,
+    });
+    // confirmSelection이 catalog를 받아 lookup으로 한국어 풀이를 할 수 있다(ADR 0031 결정 3)
+    assert.ok(received.catalog, 'confirmSelection은 catalog 인자를 받아야 한다');
+    assert.ok(Array.isArray(received.catalog.blocks));
+    // commerce 카탈로그의 order 블럭이 존재
+    const order = received.catalog.blocks.find((b) => b.id === 'order');
+    assert.ok(order, 'catalog에 order 블럭이 있어야 한다');
+    assert.equal(typeof order.name, 'string');
+    assert.equal(typeof order.user_desc, 'string');
+  });
+});
+
+test('interactiveSmelt: confirmSelection이 받는 resolved에 자동 추가/영향이 ID 배열로 들어있다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    let received = null;
+    const confirmSelection = async (args) => {
+      received = args;
+      return 'proceed';
+    };
+    await interactiveSmelt({
+      cwd,
+      pickBlocks: async () => ['refund'],
+      confirmSelection,
+      log: silentLog,
+    });
+    assert.ok(Array.isArray(received.resolved.autoAdded));
+    // refund는 commerce 카탈로그에서 payment를 requires로 끌어온다
+    assert.ok(received.resolved.autoAdded.includes('payment'));
+    // confirmSelection이 catalog로 ID를 한국어로 풀 수 있다
+    const payment = received.catalog.blocks.find((b) => b.id === 'payment');
+    assert.ok(payment, 'payment 블럭이 catalog에 있어야 한다');
+  });
+});
+
 // 작은 헬퍼: yaml.dump 대신 단언 명료하게 쓰기 위한 자리
 import { writeFileSync as fsWrite } from 'node:fs';
 function writeFileSyncFromYaml(path, obj) {
