@@ -207,15 +207,16 @@ prospectCmd
 program
   .command('smelt')
   .alias('sml')
-  .description('제련. 의도 추출, 블럭 선택, 의존성 해결')
-  .argument('[block-ids...]', '선택할 블럭 ID(생략 시 인터랙티브 모드)')
+  .description('제련. 블럭 선택(AI 추천 + 의존성 해결 + 검토)')
+  .argument('[block-ids...]', '선택할 블럭 ID(생략 시 인터랙티브 모드, ADR 0029)')
   .action(async (blockIds) => {
     try {
       const cwd = process.cwd();
+      const adapter = selectAdapter();
       const result =
         Array.isArray(blockIds) && blockIds.length > 0
           ? await runSmelt({ cwd, blockIds })
-          : await interactiveSmelt({ cwd });
+          : await interactiveSmelt({ cwd, adapter });
       console.log(`선택한 블럭: ${result.selected.join(', ')}`);
       if (result.autoAdded.length > 0) {
         console.log(`자동 추가된 블럭(requires): ${result.autoAdded.join(', ')}`);

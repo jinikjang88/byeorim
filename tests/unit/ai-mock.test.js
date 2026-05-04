@@ -192,6 +192,69 @@ test('generateRealityCheck: 인자 없이 호출해도 6영역 표준 시드를 
   assert.equal(result.legal_warnings.length, 0);
 });
 
+// ── recommendBlocks (ADR 0029 + docs/specs/block-recommendation.md) ─────────────
+
+test('recommendBlocks: priority=required 블럭이 먼저, 부족분은 catalog 순서로 채워 5개', async () => {
+  const adapter = createMockAdapter();
+  const catalog = {
+    blocks: [
+      { id: 'b1', name: 'B1', user_desc: '...' },
+      { id: 'b2', name: 'B2', user_desc: '...', priority: 'required' },
+      { id: 'b3', name: 'B3', user_desc: '...' },
+      { id: 'b4', name: 'B4', user_desc: '...', priority: 'required' },
+      { id: 'b5', name: 'B5', user_desc: '...' },
+      { id: 'b6', name: 'B6', user_desc: '...' },
+      { id: 'b7', name: 'B7', user_desc: '...' },
+    ],
+  };
+  const result = await adapter.recommendBlocks({ answers: { what: '쇼핑몰' }, catalog });
+  // required 둘이 먼저 + 부족분 채워 5개
+  assert.deepEqual(result.recommended.slice(0, 2), ['b2', 'b4']);
+  assert.equal(result.recommended.length, 5);
+  // reason은 모든 추천에 들어있다
+  for (const id of result.recommended) {
+    assert.equal(typeof result.reasons[id], 'string');
+    assert.ok(result.reasons[id].length > 0);
+  }
+  assert.match(result.reasons.b2, /핵심/);
+});
+
+test('recommendBlocks: 결정적이다(같은 입력은 같은 출력)', async () => {
+  const adapter = createMockAdapter();
+  const catalog = { blocks: [{ id: 'a', name: 'A', user_desc: '...' }] };
+  const a = await adapter.recommendBlocks({ answers: { what: '쇼핑' }, catalog });
+  const b = await adapter.recommendBlocks({ answers: { what: '쇼핑' }, catalog });
+  assert.deepEqual(a, b);
+});
+
+test('recommendBlocks: 빈 catalog는 빈 추천을 돌려준다', async () => {
+  const adapter = createMockAdapter();
+  const a = await adapter.recommendBlocks({ answers: { what: 'x' }, catalog: { blocks: [] } });
+  assert.deepEqual(a, { recommended: [], reasons: {} });
+  const b = await adapter.recommendBlocks({ answers: {}, catalog: {} });
+  assert.deepEqual(b, { recommended: [], reasons: {} });
+});
+
+test('recommendBlocks: 인자 없이 호출해도 빈 결과', async () => {
+  const adapter = createMockAdapter();
+  const result = await adapter.recommendBlocks();
+  assert.deepEqual(result, { recommended: [], reasons: {} });
+});
+
+test('recommendBlocks: 너무 많으면 앞 10개로 자른다', async () => {
+  const adapter = createMockAdapter();
+  const catalog = {
+    blocks: Array.from({ length: 15 }, (_, i) => ({
+      id: `b${i}`,
+      name: `B${i}`,
+      user_desc: '...',
+      priority: 'required', // 15개 모두 required로
+    })),
+  };
+  const result = await adapter.recommendBlocks({ answers: {}, catalog });
+  assert.equal(result.recommended.length, 10);
+});
+
 // ── extractSchema (ADR 0023) ─────────────────────────────────
 
 test('extractSchema: create operation은 request와 response를 모두 가진다', async () => {

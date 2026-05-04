@@ -143,6 +143,31 @@ export function createMockAdapter() {
         suggested_template: suggestTemplate(combined),
       };
     },
+    // ADR 0029 + docs/specs/block-recommendation.md의 recommendBlocks.
+    // 결정적 휴리스틱: priority='required' 블럭을 먼저, 부족하면 catalog 순서대로 채워 5개,
+    // 너무 많으면 앞 10개로 자른다. answers는 mock에서 결과에 영향 안 줌(결정성 보장).
+    async recommendBlocks({ answers: _answers, catalog } = {}) {
+      const blocks = Array.isArray(catalog?.blocks) ? catalog.blocks : [];
+      if (!blocks.length) return { recommended: [], reasons: {} };
+      const required = blocks.filter((b) => b && b.priority === 'required');
+      const others = blocks.filter((b) => !b || b.priority !== 'required');
+      const picked = [...required];
+      for (const b of others) {
+        if (picked.length >= 5) break;
+        picked.push(b);
+      }
+      const limited = picked.slice(0, 10);
+      const recommended = limited.map((b) => b.id).filter((id) => typeof id === 'string');
+      const reasons = {};
+      for (const b of limited) {
+        if (typeof b?.id !== 'string') continue;
+        reasons[b.id] =
+          b.priority === 'required'
+            ? '카탈로그가 핵심으로 표시한 자리'
+            : '카탈로그 순서 기준 추천(mock)';
+      }
+      return { recommended, reasons };
+    },
     // ADR 0003 + docs/specs/reality-check.md의 generateRealityCheck.
     // 6영역 표준 시드 질문을 그대로 돌려주고 observation은 빈 문자열, legal_warnings는 빈 배열.
     // 실제 도메인 관찰은 LLM 어댑터가 한다. mock은 결정성과 형식만 보장.

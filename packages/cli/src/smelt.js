@@ -1,16 +1,18 @@
 // beoreum smelt. 사용자가 고른 블럭에서 의존성을 해결해 두 산출물을 만든다.
-// ADR 0007의 자리, ADR 0010의 두 파일 형식, ADR 0003의 동행 톤(답하지 못한 질문 허용)을 따른다.
+// ADR 0007의 자리, ADR 0010의 두 파일 형식, ADR 0003의 동행 톤(답하지 못한 질문 허용),
+// ADR 0029의 블럭 추천 + 선택 검토를 따른다.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { checkbox } from '@inquirer/prompts';
+import { checkbox, select } from '@inquirer/prompts';
 import { resolveAll } from '@beoreum/core';
 import { loadCatalog } from '@beoreum/catalog';
 
 const SCHEMA_VERSION = 1;
 const STAGE = 'smelt';
 const NEXT_STAGE = 'shape';
+const EMPTY_RECOMMENDATION = { recommended: [], reasons: {} };
 
 function ensureFile(path, hint) {
   if (!existsSync(path)) {
@@ -29,6 +31,17 @@ function ensureStage(state, expected) {
       `현재 단계가 ${expected}가 아닙니다(현재: ${state.current_stage}). 단계 순서대로 진행해주세요`,
     );
   }
+}
+
+// intent.yml에서 사용자 답변(user_answers)을 읽는다(ADR 0026 schema_version 2).
+// 옛 schema_version 1 파일은 user_answers가 없으므로 빈 객체로 폴백한다.
+// recommendBlocks가 빈 객체로도 안전하게 도는 결을 따라간다(graceful degradation).
+function readIntent(intentFile) {
+  const intent = yaml.load(readFileSync(intentFile, 'utf8'));
+  if (!intent || typeof intent !== 'object') return { user_answers: {} };
+  const answers =
+    intent.user_answers && typeof intent.user_answers === 'object' ? intent.user_answers : {};
+  return { user_answers: answers, source: intent.source };
 }
 
 function ensureBlockIdsExist(blockIds, catalog) {
@@ -77,6 +90,18 @@ function advanceState(state, stage) {
     current_stage: NEXT_STAGE,
     completed_stages: completed.includes(stage) ? completed : [...completed, stage],
   };
+}
+
+// 어댑터에서 추천을 얻는다. 어댑터가 없거나 recommendBlocks 미구현이면 빈 추천(ADR 0029 결정 4).
+async function fetchRecommendation({ adapter, answers, catalog, log }) {
+  if (!adapter || typeof adapter.recommendBlocks !== 'function') {
+    log('이번 흐름은 AI 추천 없이 진행됩니다(어댑터가 추천을 지원하지 않음).');
+    return EMPTY_RECOMMENDATION;
+  }
+  const result = await adapter.recommendBlocks({ answers, catalog });
+  const recommended = Array.isArray(result?.recommended) ? result.recommended : [];
+  const reasons = result?.reasons && typeof result.reasons === 'object' ? result.reasons : {};
+  return { recommended, reasons };
 }
 
 // runSmelt는 smelt 단계의 본체. 사용자가 고른 블럭 ID 배열로 의존성 해결을 돌리고
@@ -136,13 +161,24 @@ export async function runSmelt({ cwd, blockIds, now } = {}) {
 }
 
 // 기본 picker. @inquirer/prompts의 checkbox로 카탈로그 블럭을 ID + name으로 보여준다.
+// 추천 블럭은 [추천] prefix와 한 줄 이유로 강조한다(ADR 0029 결정 2).
 // 식별자(블럭 ID)를 보존해 다음 단계 메시지와 결을 맞춘다(ADR 0011 결정 4).
-async function defaultPickBlocks(catalog) {
-  const choices = catalog.blocks.map((block) => ({
-    name: `${block.id} — ${block.name}`,
-    value: block.id,
-    description: block.user_desc,
-  }));
+async function defaultPickBlocks({ catalog, recommendation = EMPTY_RECOMMENDATION } = {}) {
+  const recommendedSet = new Set(recommendation.recommended || []);
+  const reasons = recommendation.reasons || {};
+  const choices = catalog.blocks.map((block) => {
+    const isRec = recommendedSet.has(block.id);
+    const reason = reasons[block.id];
+    let label = `${block.id} — ${block.name}`;
+    if (isRec) {
+      label = reason ? `[추천] ${label} (이유: ${reason})` : `[추천] ${label}`;
+    }
+    return {
+      name: label,
+      value: block.id,
+      description: block.user_desc,
+    };
+  });
   return checkbox({
     message: '어떤 블럭을 만들고 싶으세요? (스페이스로 선택, 엔터로 확정)',
     choices,
@@ -150,16 +186,51 @@ async function defaultPickBlocks(catalog) {
   });
 }
 
+// 기본 confirmSelection. 의존성 해결 결과를 표로 출력한 뒤 사용자에게 진행/다시 고르기를 묻는다.
+// 'proceed'를 돌려주면 산출물 작성, 'redo'를 돌려주면 picker 다시 띄움(ADR 0029 결정 3).
+async function defaultConfirmSelection({ resolved, blockIds, log = console.log } = {}) {
+  log('');
+  log('선택을 마쳤어요. 함께 들어갈 자리를 정리했어요.');
+  log('');
+  log(`  선택한 자리: ${blockIds.length}개 (${blockIds.join(', ') || '(없음)'})`);
+  log(`  자동 추가: ${resolved.autoAdded.length}개 (${resolved.autoAdded.join(', ') || '(없음)'})`);
+  log(
+    `  영향받는 자리: ${resolved.affected.length}개 (${resolved.affected.join(', ') || '(없음)'})`,
+  );
+  const prereqNames = (resolved.prerequisites || []).map((p) => p.name || p.id || '?');
+  log(`  필요한 준비물: ${prereqNames.length}개 (${prereqNames.join(', ') || '(없음)'})`);
+  log('');
+  return select({
+    message: '이대로 다음 단계로 갈까요?',
+    choices: [
+      { name: '예, 진행', value: 'proceed' },
+      { name: '아니오, 다시 고를게요', value: 'redo' },
+    ],
+    default: 'proceed',
+  });
+}
+
 // interactiveSmelt는 인자 없이 들어온 사용자에게 블럭 picker를 띄우고 runSmelt로 위임한다.
-// picker는 의존성 주입(ADR 0011 결정 5)이라 단위 테스트가 결정적이다.
+// adapter가 주어지면 prospect 답변 기반 추천(ADR 0029)으로 picker를 강조한다.
+// confirmSelection 단계가 'redo'를 돌려주면 picker로 돌아가 다시 고른다.
 //
 // 입력:
-//   cwd         - 프로젝트 루트 절대 경로
-//   pickBlocks  - async (catalog) => string[] 반환하는 함수. 기본은 @inquirer checkbox
-//   now         - 테스트용 결정적 시각(선택)
+//   cwd               - 프로젝트 루트 절대 경로
+//   adapter           - AiAdapter(선택). recommendBlocks를 부르는 자리
+//   pickBlocks        - async ({ catalog, recommendation }) => string[]. 기본은 @inquirer checkbox
+//   confirmSelection  - async ({ resolved, blockIds, log }) => 'proceed'|'redo'. 기본은 select
+//   now               - 테스트용 결정적 시각(선택)
+//   log               - 콘솔 출력 함수(선택)
 //
 // 반환: runSmelt와 같은 형태
-export async function interactiveSmelt({ cwd, pickBlocks = defaultPickBlocks, now } = {}) {
+export async function interactiveSmelt({
+  cwd,
+  adapter,
+  pickBlocks = defaultPickBlocks,
+  confirmSelection = defaultConfirmSelection,
+  now,
+  log = console.log,
+} = {}) {
   if (!cwd) throw new Error('interactiveSmelt({ cwd })가 필요합니다');
 
   const beoreumDir = join(cwd, '.beoreum');
@@ -175,11 +246,22 @@ export async function interactiveSmelt({ cwd, pickBlocks = defaultPickBlocks, no
   ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
 
   const catalog = loadCatalog(catalogFile);
-  const blockIds = await pickBlocks(catalog);
+  const { user_answers: answers } = readIntent(intentFile);
+  const recommendation = await fetchRecommendation({ adapter, answers, catalog, log });
 
-  if (!Array.isArray(blockIds) || blockIds.length === 0) {
-    throw new Error('한 개 이상의 블럭을 골라주세요');
+  // picker → resolveAll → confirm 루프. confirm이 'redo'면 다시.
+  // 사용자 의지로 무한 루프 가능(차단 자리 없음, 동행 톤).
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const blockIds = await pickBlocks({ catalog, recommendation });
+    if (!Array.isArray(blockIds) || blockIds.length === 0) {
+      throw new Error('한 개 이상의 블럭을 골라주세요');
+    }
+    const resolved = resolveAll(blockIds, catalog);
+    const decision = await confirmSelection({ resolved, blockIds, log });
+    if (decision === 'proceed') {
+      return runSmelt({ cwd, blockIds, now });
+    }
+    log('알겠어요. 다시 골라볼게요.');
   }
-
-  return runSmelt({ cwd, blockIds, now });
 }

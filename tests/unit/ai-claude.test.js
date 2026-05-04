@@ -40,7 +40,7 @@ function schemaResponse(parsed) {
   return { parsed_output: parsed, content: [] };
 }
 
-test('claude 어댑터는 name이 claude이고 네 메서드를 가진다', () => {
+test('claude 어댑터는 name이 claude이고 다섯 메서드를 가진다', () => {
   const client = makeFakeClient(() => intentResponse({}));
   const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
   assert.equal(adapter.name, 'claude');
@@ -48,6 +48,7 @@ test('claude 어댑터는 name이 claude이고 네 메서드를 가진다', () =
   assert.equal(typeof adapter.extractSchema, 'function');
   assert.equal(typeof adapter.generateCatalog, 'function');
   assert.equal(typeof adapter.generateRealityCheck, 'function');
+  assert.equal(typeof adapter.recommendBlocks, 'function');
 });
 
 test('extractIntent: parsed_output 7항목을 그대로 결과 모양으로 반환한다', async () => {
@@ -469,4 +470,84 @@ test('generateRealityCheck: structured output schema가 6영역과 legal_warning
       'two_sided_market',
     ].sort(),
   );
+});
+
+// ── recommendBlocks (ADR 0029 + docs/specs/block-recommendation.md) ─────────
+
+function recommendResponse(parsed) {
+  return { parsed_output: parsed, content: [] };
+}
+
+test('recommendBlocks: parsed_output을 받아 catalog에 있는 ID만 통과시킨다(안전망)', async () => {
+  // Given: AI가 catalog에 있는 b1과 없는 ghost를 함께 추천
+  const client = makeFakeClient(() =>
+    recommendResponse({
+      recommended: ['b1', 'ghost', 'b2'],
+      reasons: { b1: 'r1', ghost: 'r-ghost', b2: 'r2' },
+    }),
+  );
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.recommendBlocks({
+    answers: { what: 'x' },
+    catalog: {
+      blocks: [
+        { id: 'b1', name: 'B1' },
+        { id: 'b2', name: 'B2' },
+      ],
+    },
+  });
+  // Then: ghost는 걸러지고 b1, b2만 남는다
+  assert.deepEqual(result.recommended, ['b1', 'b2']);
+  assert.equal(result.reasons.b1, 'r1');
+  assert.equal(result.reasons.b2, 'r2');
+  assert.equal(result.reasons.ghost, undefined);
+});
+
+test('recommendBlocks: max_tokens가 2048이고 system 프롬프트가 추천 결을 가진다', async () => {
+  const client = makeFakeClient(() => recommendResponse({ recommended: [], reasons: {} }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.recommendBlocks({ answers: {}, catalog: { blocks: [] } });
+  const req = client.captured[0];
+  assert.equal(req.max_tokens, 2048);
+  assert.match(req.system[0].text, /추천/);
+  assert.match(req.system[0].text, /priority='required'/);
+});
+
+test('recommendBlocks: user 메시지에 answers와 compact catalog(blocks만)가 들어간다', async () => {
+  const client = makeFakeClient(() => recommendResponse({ recommended: [], reasons: {} }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.recommendBlocks({
+    answers: { what: '쇼핑몰', who: '단골' },
+    catalog: {
+      worlds: [{ id: 'w-x', title: 'X', description: 'unused' }],
+      blocks: [{ id: 'b1', name: 'B1', user_desc: 'd1', priority: 'required' }],
+      cascades: [{ trigger: 'b1', ask_questions: [] }], // 추천에 안 씀
+    },
+  });
+  const parsed = JSON.parse(client.captured[0].messages[0].content);
+  assert.equal(parsed.answers.what, '쇼핑몰');
+  assert.equal(parsed.catalog.blocks[0].id, 'b1');
+  assert.equal(parsed.catalog.blocks[0].priority, 'required');
+  // worlds나 cascades는 추천 호출에 안 보낸다(토큰 절약)
+  assert.equal(parsed.catalog.worlds, undefined);
+  assert.equal(parsed.catalog.cascades, undefined);
+});
+
+test('recommendBlocks: structured output schema가 recommended/reasons를 required로 가진다', async () => {
+  const client = makeFakeClient(() => recommendResponse({ recommended: [], reasons: {} }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.recommendBlocks({ answers: {}, catalog: { blocks: [] } });
+  const schema = client.captured[0].output_config.format.schema;
+  assert.deepEqual(schema.required.sort(), ['reasons', 'recommended'].sort());
+  assert.equal(schema.additionalProperties, false);
+});
+
+test('recommendBlocks: parsed_output이 recommended를 안 줘도 빈 배열로 안전하게 폴백', async () => {
+  const client = makeFakeClient(() => recommendResponse({})); // 빈 객체
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.recommendBlocks({
+    answers: {},
+    catalog: { blocks: [{ id: 'b1', name: 'B1' }] },
+  });
+  assert.deepEqual(result, { recommended: [], reasons: {} });
 });

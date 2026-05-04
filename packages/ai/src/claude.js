@@ -39,6 +39,36 @@ const INTENT_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 
 
 추측을 강요하지 않는다. 답변이 모두 비어있으면 suggested_template은 null이다.`;
 
+// ADR 0029 + docs/specs/block-recommendation.md. 사용자 답변과 카탈로그를 보고 추천 블럭을 돌려준다.
+// smelt picker가 [추천] prefix와 한 줄 이유로 강조하는 자리.
+const RECOMMEND_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스에서 어떤 블럭부터 시작하면 좋을지 추천하는 도우미다.
+입력으로 7항목 답변(answers)과 카탈로그(catalog)를 받는다.
+catalog의 blocks 배열을 보고 사용자 도메인에 가장 어울리는 5~7개를 골라준다.
+
+규칙.
+- 사용자의 what(만들고 싶은 것)과 직접 연결된 블럭을 가장 먼저
+- 사용자의 why(만드는 이유)를 푸는 자리가 있는 블럭을 그 다음
+- 카탈로그 블럭의 priority='required' 자리는 도메인 핵심이라 우대 가능
+- 사용자가 답하지 않은 항목은 추측하지 않는다(빈 자리는 빈 자리로)
+- 추천은 5~7개. 너무 많으면(>10) 비기술 창업자에게 압도. 추천 못 할 자리는 비운다
+- catalog.blocks에 없는 ID는 절대 추천하지 않는다
+
+이유는 한 줄(50자 이내). 단정형보다 가능성형 결("핵심 흐름이에요" 보다 "핵심 흐름으로 보여요").
+마케팅 카피 형용사("강력한", "획기적인") 금지.
+사용자 답변의 단어를 인용하면 더 친근.
+
+추측을 강요하지 않는다. 사용자 답변이 모두 비어있거나 도메인이 모호하면 빈 추천(recommended=[])도 옳다.`;
+
+const RECOMMEND_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    recommended: { type: 'array', items: { type: 'string' } },
+    reasons: { type: 'object' },
+  },
+  required: ['recommended', 'reasons'],
+  additionalProperties: false,
+};
+
 // ADR 0003 + docs/specs/reality-check.md. 6영역 Reality Check 자리.
 // 사용자 도메인에 대한 두 번째 시각. 동행 톤 유지, prospect 단계에서는 강한 신호 안 씀.
 const REALITY_CHECK_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 시장 가치를 함께 보는 도우미다.
@@ -431,6 +461,56 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
         suggested_template:
           typeof parsed.suggested_template === 'string' ? parsed.suggested_template : null,
       };
+    },
+    async recommendBlocks({ answers, catalog } = {}) {
+      const a = answers || {};
+      // catalog 전체를 user 메시지로 보내면 토큰 비용이 큰 자리가 있다.
+      // 추천에 필요한 자리(blocks의 id/name/user_desc/priority)만 잘라 보낸다.
+      const blocks = Array.isArray(catalog?.blocks) ? catalog.blocks : [];
+      const compactBlocks = blocks.map((b) => ({
+        id: b?.id,
+        name: b?.name,
+        user_desc: b?.user_desc,
+        priority: b?.priority,
+      }));
+      const userText = JSON.stringify(
+        {
+          answers: {
+            what: typeof a.what === 'string' ? a.what : '',
+            who: typeof a.who === 'string' ? a.who : '',
+            when: typeof a.when === 'string' ? a.when : '',
+            where: typeof a.where === 'string' ? a.where : '',
+            why: typeof a.why === 'string' ? a.why : '',
+            how_use: typeof a.how_use === 'string' ? a.how_use : '',
+            how_manage: typeof a.how_manage === 'string' ? a.how_manage : '',
+          },
+          catalog: { blocks: compactBlocks },
+        },
+        null,
+        2,
+      );
+      const request = buildRequest({
+        model: resolvedModel,
+        system: RECOMMEND_SYSTEM_PROMPT,
+        userText,
+        outputSchema: RECOMMEND_OUTPUT_SCHEMA,
+        maxTokens: 2048,
+      });
+      const message = await callParse(request);
+      const parsed = extractParsedOutput(message);
+      // catalog에 없는 ID는 안전망으로 걸러낸다(어댑터 입장에서 추가 보정).
+      const known = new Set(blocks.map((b) => b?.id).filter((id) => typeof id === 'string'));
+      const recommended = Array.isArray(parsed.recommended)
+        ? parsed.recommended.filter((id) => known.has(id))
+        : [];
+      const reasons = {};
+      if (parsed.reasons && typeof parsed.reasons === 'object') {
+        for (const id of recommended) {
+          const r = parsed.reasons[id];
+          if (typeof r === 'string' && r.trim()) reasons[id] = r;
+        }
+      }
+      return { recommended, reasons };
     },
     async generateRealityCheck({ answers, catalog } = {}) {
       const a = answers || {};

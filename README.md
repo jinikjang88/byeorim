@@ -11,7 +11,7 @@
 | 단계 | 한국어 | 명령어 | 별칭 | 하는 일 |
 |------|--------|--------|------|---------|
 | 0 | 탐광 | `beoreum prospect` | `prs` | 7항목 동행 질문, 카탈로그 선택, Reality Check 6영역 |
-| 1 | 제련 | `beoreum smelt` | `sml` | 의도 추출, 블럭 선택, 의존성 해결 |
+| 1 | 제련 | `beoreum smelt` | `sml` | AI 추천 + 블럭 선택 + 의존성 해결 + 검토 |
 | 2 | 빚다 | `beoreum shape` | `shp` | 아키텍처 결정과 ADR 기록 |
 | 3 | 단조 | `beoreum forge` | `frg` | 계약 우선 정의(contracts.yml) |
 | 4 | 다듬 | `beoreum temper` | `tmr` | Given-When-Then 테스트 의도 |
@@ -37,6 +37,16 @@ node bin/beoreum.js prospect
 ```
 
 다이어리(`.beoreum/project/diary.md`)에는 두 머리가 자리한다. `prospect 의도에서 미뤄둔 질문`은 7항목에서 비운 자리, `Reality Check에서 미뤄둔 질문`은 6영역의 모든 질문. Reality Check 리포트는 `.beoreum/project/reality-check.md`에서 영역별 AI 관찰과 함께 본다.
+
+## 제련 한 번 돌려보기
+
+prospect가 끝나면 smelt가 같은 카탈로그 위에서 블럭을 고르는 자리다. AI 어댑터가 prospect 답변을 보고 어울리는 블럭을 추천하고(ADR 0029), picker에서 [추천] 라벨로 강조한다. 사용자가 선택하면 의존성 해결 결과(자동 추가, 영향받는 자리, 준비물)를 한 화면에서 검토한 뒤 진행할지 다시 고를지 정한다.
+
+```bash
+node bin/beoreum.js smelt
+```
+
+mock 어댑터는 카탈로그가 핵심으로 표시한 블럭(priority='required')을 우선 추천하고, 그 외에는 카탈로그 순서대로 5개를 채운다. claude 어댑터를 쓰면 사용자 도메인에 맞춘 추천을 받는다(LLM 호출 한 번 더 추가).
 
 ### 외부 AI로 더 자세한 카탈로그 받기 (ADR 0028)
 

@@ -85,6 +85,15 @@
  */
 
 /**
+ * Smelt 단계의 블럭 추천 결과(ADR 0029 + docs/specs/block-recommendation.md).
+ *
+ * @typedef {object} BlockRecommendation
+ * @property {string[]} recommended - 추천 블럭 ID 배열(우선순위 순, 최대 10개)
+ * @property {{[blockId: string]: string}} reasons - 블럭 ID별 짧은 한국어 추천 이유
+ *   - reasons의 키는 recommended의 ID 부분집합. 모든 추천에 이유가 있어야 하지는 않음
+ */
+
+/**
  * AI 어댑터. 구현체는 createMockAdapter, createClaudeAdapter 같은 팩토리 함수가 만든다.
  *
  * @typedef {object} AiAdapter
@@ -96,6 +105,9 @@
  * @property {(args: { answers: ProspectAnswers, catalog: Catalog }) => Promise<RealityCheckReport>} generateRealityCheck
  *   - 7항목 답변과 카탈로그를 받아 Reality Check 6영역 리포트를 만든다(ADR 0003 + docs/specs/reality-check.md).
  *     동행 톤(답을 강요하지 않음). 강한 신호는 prospect 단계에서 안 쓰고 legal_warnings로 모아둔다
+ * @property {(args: { answers: ProspectAnswers, catalog: Catalog }) => Promise<BlockRecommendation>} [recommendBlocks]
+ *   - 사용자 답변과 카탈로그를 받아 추천 블럭과 이유를 돌려준다(ADR 0029).
+ *     선택 메서드. 어댑터가 구현 안 하면 smelt가 빈 추천으로 진행(graceful degradation)
  * @property {({ block: object, operation: string }) => Promise<ExtractedSchema>} extractSchema
  */
 

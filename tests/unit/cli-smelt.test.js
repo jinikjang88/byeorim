@@ -171,62 +171,173 @@ test('필수 인자 누락은 한국어로 거부한다', async () => {
   await assert.rejects(runSmelt({ cwd: '/tmp', blockIds: [] }), /blockIds.*필요합니다/);
 });
 
-// ── interactiveSmelt: ADR 0011 picker 의존성 주입 ─────────────────────────
+// ── interactiveSmelt: ADR 0011 picker 의존성 주입 + ADR 0029 추천/검토 ──────────
+
+const proceedConfirm = async () => 'proceed';
+const silentLog = () => {};
 
 test('interactiveSmelt: picker가 고른 블럭으로 smelt가 끝까지 동작한다', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: prospect까지 완료
     await setupReadyForSmelt(cwd);
-    // mock picker는 카탈로그를 받아 고정된 블럭 ID 한 개를 돌려준다
-    const pickBlocks = async (catalog) => {
-      assert.ok(Array.isArray(catalog.blocks), 'picker는 카탈로그를 받아야 한다');
+    const pickBlocks = async ({ catalog }) => {
+      assert.ok(Array.isArray(catalog.blocks), 'picker는 catalog를 받아야 한다');
       return ['order'];
     };
-    // When: 인자 없이 인터랙티브 흐름
-    const result = await interactiveSmelt({ cwd, pickBlocks });
-    // Then: runSmelt와 같은 결과 형태
+    const result = await interactiveSmelt({
+      cwd,
+      pickBlocks,
+      confirmSelection: proceedConfirm,
+      log: silentLog,
+    });
     assert.deepEqual(result.selected, ['order']);
     assert.equal(result.nextStage, 'shape');
   });
 });
 
-test('interactiveSmelt: picker가 카탈로그 전체를 받아 선택지에 ID와 이름이 모두 들어있다', async () => {
+test('interactiveSmelt: picker가 카탈로그 전체와 추천을 받는다(ADR 0029)', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: prospect까지 완료
     await setupReadyForSmelt(cwd);
-    let receivedCatalog = null;
-    const pickBlocks = async (catalog) => {
-      receivedCatalog = catalog;
-      return [catalog.blocks[0].id];
+    let received = null;
+    const pickBlocks = async (args) => {
+      received = args;
+      return [args.catalog.blocks[0].id];
     };
-    // When
-    await interactiveSmelt({ cwd, pickBlocks });
-    // Then: 카탈로그가 그대로 전달됐고, 첫 블럭이 id와 name을 모두 가진다
-    //       (ADR 0011 결정 4: 식별자 보존 + 사람이 읽는 이름 함께)
-    assert.ok(receivedCatalog.blocks.length > 0);
-    assert.equal(typeof receivedCatalog.blocks[0].id, 'string');
-    assert.equal(typeof receivedCatalog.blocks[0].name, 'string');
+    await interactiveSmelt({
+      cwd,
+      pickBlocks,
+      confirmSelection: proceedConfirm,
+      log: silentLog,
+    });
+    assert.ok(received.catalog.blocks.length > 0);
+    assert.equal(typeof received.catalog.blocks[0].id, 'string');
+    assert.ok(received.recommendation, 'picker는 recommendation을 받아야 한다');
+    assert.ok(Array.isArray(received.recommendation.recommended));
+    assert.equal(typeof received.recommendation.reasons, 'object');
+  });
+});
+
+test('interactiveSmelt: adapter가 주어지면 recommendBlocks가 호출되고 결과가 picker로 전달된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    let recCalled = false;
+    const adapter = {
+      ...createMockAdapter(),
+      async recommendBlocks({ answers, catalog }) {
+        recCalled = true;
+        assert.equal(typeof answers, 'object');
+        assert.ok(Array.isArray(catalog.blocks));
+        return { recommended: ['order'], reasons: { order: '핵심으로 보여요' } };
+      },
+    };
+    let pickerSawRec = null;
+    const pickBlocks = async ({ recommendation }) => {
+      pickerSawRec = recommendation;
+      return ['order'];
+    };
+    await interactiveSmelt({
+      cwd,
+      adapter,
+      pickBlocks,
+      confirmSelection: proceedConfirm,
+      log: silentLog,
+    });
+    assert.equal(recCalled, true);
+    assert.deepEqual(pickerSawRec.recommended, ['order']);
+    assert.equal(pickerSawRec.reasons.order, '핵심으로 보여요');
+  });
+});
+
+test('interactiveSmelt: adapter가 recommendBlocks 미구현이면 빈 추천으로 진행한다(ADR 0029 결정 4)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    const adapter = { name: 'noop' }; // recommendBlocks 없음
+    let pickerSawRec = null;
+    const pickBlocks = async ({ recommendation }) => {
+      pickerSawRec = recommendation;
+      return ['order'];
+    };
+    const logs = [];
+    await interactiveSmelt({
+      cwd,
+      adapter,
+      pickBlocks,
+      confirmSelection: proceedConfirm,
+      log: (m) => logs.push(m),
+    });
+    assert.deepEqual(pickerSawRec.recommended, []);
+    assert.deepEqual(pickerSawRec.reasons, {});
+    assert.ok(
+      logs.some((m) => /AI 추천 없이 진행/.test(m)),
+      '추천 미지원 안내 한국어 한 줄이 있어야 한다',
+    );
+  });
+});
+
+test('interactiveSmelt: confirmSelection이 redo면 picker가 다시 호출된다(ADR 0029 결정 3)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    let pickCount = 0;
+    const pickBlocks = async () => {
+      pickCount += 1;
+      // 첫 번째는 cart, 두 번째는 order로 다른 자리를 골라준다
+      return pickCount === 1 ? ['cart'] : ['order'];
+    };
+    let confirmCount = 0;
+    const confirmSelection = async () => {
+      confirmCount += 1;
+      // 첫 번째는 redo, 두 번째는 proceed
+      return confirmCount === 1 ? 'redo' : 'proceed';
+    };
+    const result = await interactiveSmelt({
+      cwd,
+      pickBlocks,
+      confirmSelection,
+      log: silentLog,
+    });
+    assert.equal(pickCount, 2, 'picker가 두 번 호출되어야 한다');
+    assert.equal(confirmCount, 2, 'confirmSelection이 두 번 호출되어야 한다');
+    assert.deepEqual(result.selected, ['order']);
+  });
+});
+
+test('interactiveSmelt: confirmSelection이 받는 인자에 resolved와 blockIds가 들어있다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    let received = null;
+    const confirmSelection = async (args) => {
+      received = args;
+      return 'proceed';
+    };
+    await interactiveSmelt({
+      cwd,
+      pickBlocks: async () => ['refund'],
+      confirmSelection,
+      log: silentLog,
+    });
+    assert.deepEqual(received.blockIds, ['refund']);
+    assert.ok(Array.isArray(received.resolved.autoAdded));
+    // refund는 commerce 카탈로그에서 payment를 requires로 끌어온다
+    assert.ok(received.resolved.autoAdded.includes('payment'));
   });
 });
 
 test('interactiveSmelt: picker가 빈 배열을 돌려주면 한국어 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: prospect까지 완료
     await setupReadyForSmelt(cwd);
     const pickBlocks = async () => [];
-    // When/Then: 한 개 이상 골라 달라는 안내
-    await assert.rejects(interactiveSmelt({ cwd, pickBlocks }), /한 개 이상의 블럭을 골라주세요/);
+    await assert.rejects(
+      interactiveSmelt({ cwd, pickBlocks, confirmSelection: proceedConfirm, log: silentLog }),
+      /한 개 이상의 블럭을 골라주세요/,
+    );
   });
 });
 
 test('interactiveSmelt: picker가 카탈로그에 없는 ID를 돌려줘도 runSmelt가 거부한다', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: prospect까지 완료
     await setupReadyForSmelt(cwd);
     const pickBlocks = async () => ['ghost-block'];
-    // When/Then: 가상 ID는 검증에 걸린다(picker가 신뢰할 수 없는 자리에서도 안전망)
     await assert.rejects(
-      interactiveSmelt({ cwd, pickBlocks }),
+      interactiveSmelt({ cwd, pickBlocks, confirmSelection: proceedConfirm, log: silentLog }),
       /카탈로그에 없는 블럭 ID가 있습니다/,
     );
   });
@@ -234,16 +345,16 @@ test('interactiveSmelt: picker가 카탈로그에 없는 ID를 돌려줘도 runS
 
 test('interactiveSmelt: 단계 검증이 picker 호출 전에 일어난다', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: init만 한 자리(current_stage = prospect)
     runInit({ cwd });
     let pickerCalled = false;
     const pickBlocks = async () => {
       pickerCalled = true;
       return ['order'];
     };
-    // When/Then: 단계 불일치로 거부되고 picker는 호출되지 않는다.
-    //           사용자가 블럭을 고른 뒤 거부당하는 일을 막는 자리
-    await assert.rejects(interactiveSmelt({ cwd, pickBlocks }), /현재 단계가 smelt가 아닙니다/);
+    await assert.rejects(
+      interactiveSmelt({ cwd, pickBlocks, confirmSelection: proceedConfirm, log: silentLog }),
+      /현재 단계가 smelt가 아닙니다/,
+    );
     assert.equal(pickerCalled, false, 'picker는 단계 검증 통과 후에만 호출되어야 한다');
   });
 });
@@ -251,3 +362,43 @@ test('interactiveSmelt: 단계 검증이 picker 호출 전에 일어난다', asy
 test('interactiveSmelt: cwd 누락은 한국어로 거부한다', async () => {
   await assert.rejects(interactiveSmelt({}), /cwd.*필요합니다/);
 });
+
+test('interactiveSmelt: intent.yml schema_version 1 폴백(user_answers 없음)도 빈 답변으로 진행한다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSmelt(cwd);
+    // intent.yml을 schema_version 1 결로 덮어쓴다(user_answers 없음)
+    const intentFile = join(cwd, '.beoreum', 'project', 'intent.yml');
+    const oldIntent = {
+      schema_version: 1,
+      created_at: '2025-12-01T00:00:00.000Z',
+      user_input: '쇼핑몰 만들어줘',
+      source: 'template:commerce',
+      extracted: { what: '쇼핑몰', who: '', why: '' },
+      reality_check_status: 'pending',
+    };
+    writeFileSyncFromYaml(intentFile, oldIntent);
+    let answersSeen = null;
+    const adapter = {
+      ...createMockAdapter(),
+      async recommendBlocks({ answers }) {
+        answersSeen = answers;
+        return { recommended: [], reasons: {} };
+      },
+    };
+    await interactiveSmelt({
+      cwd,
+      adapter,
+      pickBlocks: async () => ['order'],
+      confirmSelection: proceedConfirm,
+      log: silentLog,
+    });
+    // user_answers가 없어도 빈 객체로 폴백
+    assert.deepEqual(answersSeen, {});
+  });
+});
+
+// 작은 헬퍼: yaml.dump 대신 단언 명료하게 쓰기 위한 자리
+import { writeFileSync as fsWrite } from 'node:fs';
+function writeFileSyncFromYaml(path, obj) {
+  fsWrite(path, yaml.dump(obj, { sortKeys: false }), 'utf8');
+}
