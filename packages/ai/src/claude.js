@@ -266,6 +266,36 @@ const SCHEMA_SYSTEM_PROMPT = `너는 한 도메인 블럭의 한 operation에 �
 
 블럭의 도메인 의미를 보고 그 블럭다운 필드를 추정한다. 예시: 주문 블럭의 create는 quantity, item_id 같은 필드를 가질 것. 모르면 generic 필드(name, description)로 둔다.`;
 
+// ADR 0036. temper의 test_code 자리를 architecture.language별 프레임워크 코드로 채운다.
+// system prompt는 도메인 무관(CLAUDE.md 섹션 8). 블럭/endpoint/시나리오 정보는 user 메시지로 들어감.
+const TEST_CODE_SYSTEM_PROMPT = `너는 한 시나리오의 테스트 코드를 짜는 도우미다.
+
+입력으로 다음을 받는다.
+- block: { id, name, user_desc?, tech_desc? } - 도메인 블럭 정보
+- endpoint: { operation, method, path, description? } - HTTP 엔드포인트
+- scenario: { kind, given, when, then } - 한국어 Given-When-Then 시나리오
+- architecture: { language, database, api_style, architecture_pattern } - 사용자가 shape에서 고른 4개 결정
+
+너의 일은 architecture.language에 맞는 테스트 코드 한 자리를 짜는 것이다. 시나리오 GWT 텍스트의 의도를
+코드 단언으로 옮긴다. 출력은 test_code 문자열 한 자리.
+
+언어별 프레임워크 표(이번 출시 표준).
+
+- node → node:test (표준 라이브러리) + supertest로 HTTP 호출. import 결: \`import test from 'node:test'; import assert from 'node:assert'; import request from 'supertest';\`
+- java → JUnit 5 + RestAssured 또는 Spring Boot Test. \`@Test\` 메서드 한 개, \`given().when().then()\` 결
+- python → pytest + httpx 또는 FastAPI TestClient. \`def test_...():\` 함수 한 개
+
+architecture.language가 위 셋이 아니거나 비어있으면 의사 코드로 폴백(주석으로 의도 한 줄).
+
+규칙.
+- 한 시나리오에 한 함수 또는 한 \`@Test\`. 빈 자리(import, beforeEach, fixture)는 주석으로 안내
+- 시나리오의 한국어 텍스트(given/when/then)를 함수 이름이나 주석에 인용해 사용자가 추적 쉽게
+- 단언은 endpoint.method/path와 시나리오 then의 status code(create→201, list/get/update/search→200, delete→204)에 맞춤
+- 응답 body 필드의 정확한 이름은 모르면 placeholder(\`<id>\`, \`<name>\`)로 두고 한국어 주석으로 안내
+- 마케팅 카피 형용사("강력한", "획기적인") 금지
+
+test_code는 코드 한 덩어리 문자열. 사용자가 그 자리에 그대로 붙여넣어 시작점을 갖는다.`;
+
 // extractIntent의 구조화된 응답 schema. ADR 0026 결정 1로 7항목 + suggested_template.
 const INTENT_OUTPUT_SCHEMA = {
   type: 'object',
@@ -457,6 +487,16 @@ const SCHEMA_OUTPUT_SCHEMA = {
     response: { anyOf: [SCHEMA_NODE, { type: 'null' }] },
   },
   required: ['request', 'response'],
+  additionalProperties: false,
+};
+
+// ADR 0036. fillTestCode 응답 schema. test_code 한 자리.
+const TEST_CODE_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    test_code: { type: 'string' },
+  },
+  required: ['test_code'],
   additionalProperties: false,
 };
 
@@ -803,6 +843,49 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
         response:
           parsed.response === null || parsed.response === undefined ? null : parsed.response,
       };
+    },
+    // ADR 0036의 fillTestCode. architecture.language에 맞는 프레임워크 코드를 생성.
+    async fillTestCode({ block, endpoint, scenario, architecture } = {}) {
+      const userText = JSON.stringify(
+        {
+          block: {
+            id: block?.id,
+            name: block?.name,
+            user_desc: block?.user_desc,
+            tech_desc: block?.tech_desc,
+          },
+          endpoint: {
+            operation: endpoint?.operation,
+            method: endpoint?.method,
+            path: endpoint?.path,
+            description: endpoint?.description,
+          },
+          scenario: {
+            kind: scenario?.kind,
+            given: scenario?.given,
+            when: scenario?.when,
+            then: scenario?.then,
+          },
+          architecture: {
+            language: architecture?.language,
+            database: architecture?.database,
+            api_style: architecture?.api_style,
+            architecture_pattern: architecture?.architecture_pattern,
+          },
+        },
+        null,
+        2,
+      );
+      const request = buildRequest({
+        model: resolvedModel,
+        system: TEST_CODE_SYSTEM_PROMPT,
+        userText,
+        outputSchema: TEST_CODE_OUTPUT_SCHEMA,
+        maxTokens: 2048,
+      });
+      const message = await callParse(request);
+      const parsed = extractParsedOutput(message);
+      return typeof parsed.test_code === 'string' ? parsed.test_code : '';
     },
   };
 }

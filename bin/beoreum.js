@@ -314,15 +314,20 @@ program
 program
   .command('temper')
   .alias('tmr')
-  .description('다듬. Given-When-Then 테스트 의도 (test-scenarios.yml 생성)')
+  .description('다듬. Given-When-Then 테스트 의도 + AI test_code 채움 (test-scenarios.yml 생성)')
   .action(async () => {
     try {
-      const result = await runTemper({ cwd: process.cwd() });
+      const adapter = selectAdapter();
+      const result = await runTemper({ cwd: process.cwd(), adapter });
       console.log(`테스트 의도를 만들었습니다: ${result.scenariosFile}`);
       console.log(`블럭 ${result.blockCount}개, 시나리오 ${result.scenarioCount}개`);
-      console.log(
-        'test_code가 TODO로 들어있습니다. 코드를 채운 뒤 다음 단계로 가거나, 다음 단계가 자동 채움을 도울 때까지 기다리세요.',
-      );
+      if (result.testCodeFilled) {
+        console.log(`AI가 test_code를 채웠습니다(${adapter.name} 어댑터).`);
+      } else {
+        console.log(
+          'test_code가 TODO로 들어있습니다. 코드를 채운 뒤 다음 단계로 가거나, 어댑터 설정을 확인해주세요.',
+        );
+      }
       console.log(`다음 단계: beoreum ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);

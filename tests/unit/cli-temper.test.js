@@ -218,3 +218,214 @@ test('contracts.yml이 없으면 forge 안내 메시지로 거부한다', async 
 test('cwd 누락은 한국어로 거부한다', async () => {
   await assert.rejects(runTemper({}), /cwd.*필요합니다/);
 });
+
+// ADR 0036: AI 어댑터로 test_code 채움.
+
+test('adapter가 주어지면 모든 시나리오의 test_code를 채운다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: forge까지 끝낸 자리(REST 흐름, order 한 개)
+    runInit({ cwd });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
+    await runSmelt({ cwd, blockIds: ['order'] });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => ({
+        language: 'node',
+        database: 'postgresql',
+        api_style: 'rest',
+        architecture_pattern: 'modular-monolith',
+      }),
+      confirmArchitecture: async () => 'proceed',
+    });
+    await runForge({ cwd });
+    // When
+    const result = await runTemper({ cwd, adapter: createMockAdapter() });
+    // Then: testCodeFilled true, 모든 시나리오의 test_code가 TODO 아님
+    assert.equal(result.testCodeFilled, true);
+    const doc = yaml.load(
+      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+    );
+    for (const block of doc.scenarios) {
+      for (const ep of block.endpoints || []) {
+        for (const s of ep.scenarios || []) {
+          assert.notEqual(s.test_code, 'TODO', '시나리오의 test_code가 채워져야 한다');
+          assert.match(s.test_code, /TODO:.*준비하고.*호출해.*검증한다/);
+        }
+      }
+    }
+  });
+});
+
+test('adapter가 없으면 모든 test_code가 TODO 그대로(후행 호환)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: forge까지 끝낸 자리
+    runInit({ cwd });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
+    await runSmelt({ cwd, blockIds: ['order'] });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => ({
+        language: 'node',
+        database: 'postgresql',
+        api_style: 'rest',
+        architecture_pattern: 'modular-monolith',
+      }),
+      confirmArchitecture: async () => 'proceed',
+    });
+    await runForge({ cwd });
+    // When: adapter 인자 없이 호출
+    const result = await runTemper({ cwd });
+    // Then: testCodeFilled false, 모든 test_code가 TODO
+    assert.equal(result.testCodeFilled, false);
+    const doc = yaml.load(
+      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+    );
+    for (const block of doc.scenarios) {
+      for (const ep of block.endpoints || []) {
+        for (const s of ep.scenarios || []) {
+          assert.equal(s.test_code, 'TODO');
+        }
+      }
+    }
+  });
+});
+
+test('adapter가 fillTestCode 메서드를 구현 안 하면 TODO 그대로(graceful)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: forge까지 끝낸 자리, fillTestCode 없는 부분 어댑터
+    runInit({ cwd });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
+    await runSmelt({ cwd, blockIds: ['order'] });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => ({
+        language: 'node',
+        database: 'postgresql',
+        api_style: 'rest',
+        architecture_pattern: 'modular-monolith',
+      }),
+      confirmArchitecture: async () => 'proceed',
+    });
+    await runForge({ cwd });
+    const partialAdapter = { name: 'partial' };
+    // When
+    const result = await runTemper({ cwd, adapter: partialAdapter });
+    // Then
+    assert.equal(result.testCodeFilled, false);
+    const doc = yaml.load(
+      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+    );
+    for (const block of doc.scenarios) {
+      for (const ep of block.endpoints || []) {
+        for (const s of ep.scenarios || []) {
+          assert.equal(s.test_code, 'TODO');
+        }
+      }
+    }
+  });
+});
+
+test('어댑터의 fillTestCode가 빈 문자열을 돌려주면 test_code는 TODO 유지', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: forge까지 끝낸 자리
+    runInit({ cwd });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
+    await runSmelt({ cwd, blockIds: ['order'] });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => ({
+        language: 'node',
+        database: 'postgresql',
+        api_style: 'rest',
+        architecture_pattern: 'modular-monolith',
+      }),
+      confirmArchitecture: async () => 'proceed',
+    });
+    await runForge({ cwd });
+    const emptyAdapter = {
+      name: 'empty',
+      async fillTestCode() {
+        return '';
+      },
+    };
+    // When
+    const result = await runTemper({ cwd, adapter: emptyAdapter });
+    // Then: testCodeFilled true(어댑터는 호출됨)지만 test_code는 TODO 유지
+    assert.equal(result.testCodeFilled, true);
+    const doc = yaml.load(
+      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+    );
+    for (const block of doc.scenarios) {
+      for (const ep of block.endpoints || []) {
+        for (const s of ep.scenarios || []) {
+          assert.equal(s.test_code, 'TODO');
+        }
+      }
+    }
+  });
+});
+
+test('fillTestCode에 block/endpoint/scenario/architecture 인자가 모두 전달된다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: forge까지 끝낸 자리
+    runInit({ cwd });
+    await runProspect({
+      cwd,
+      answers: { what: '쇼핑몰' },
+      adapter: createMockAdapter(),
+      log: () => {},
+    });
+    await runSmelt({ cwd, blockIds: ['order'] });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => ({
+        language: 'node',
+        database: 'postgresql',
+        api_style: 'rest',
+        architecture_pattern: 'modular-monolith',
+      }),
+      confirmArchitecture: async () => 'proceed',
+    });
+    await runForge({ cwd });
+    const captured = [];
+    const inspectingAdapter = {
+      name: 'inspect',
+      async fillTestCode(args) {
+        captured.push(args);
+        return '// inspect';
+      },
+    };
+    // When
+    await runTemper({ cwd, adapter: inspectingAdapter });
+    // Then: 매 호출에 4개 인자가 전달됨
+    assert.ok(captured.length > 0, '시나리오마다 호출되어야 한다');
+    for (const args of captured) {
+      assert.ok(args.block, 'block이 전달된다');
+      assert.ok(args.endpoint, 'endpoint가 전달된다');
+      assert.ok(args.scenario, 'scenario가 전달된다');
+      assert.ok(args.architecture, 'architecture가 전달된다');
+      assert.equal(args.architecture.language, 'node');
+      assert.equal(args.architecture.api_style, 'rest');
+    }
+  });
+});

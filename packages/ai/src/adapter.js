@@ -155,6 +155,10 @@
  *   - 사용자 답변과 카탈로그, 사용자가 고른 블럭을 받아 4개 아키텍처 결정에 추천을 돌려준다(ADR 0032).
  *     선택 메서드. 어댑터가 구현 안 하면 shape가 빈 추천으로 진행(graceful degradation)
  * @property {({ block: object, operation: string }) => Promise<ExtractedSchema>} extractSchema
+ * @property {(args: { block: object, endpoint: object, scenario: object, architecture: ArchitectureChoices }) => Promise<string>} [fillTestCode]
+ *   - temper 시나리오의 test_code 자리를 채운다(ADR 0036).
+ *     선택 메서드. 어댑터가 구현 안 하면 runTemper가 TODO로 폴백(graceful degradation).
+ *     출력은 한 시나리오의 test_code 문자열. 빈 문자열도 허용(못 채울 자리)
  */
 
 // 이 파일은 타입 계약만 담는다. 구현은 mock.js, claude.js 등 어댑터별 파일에 둔다

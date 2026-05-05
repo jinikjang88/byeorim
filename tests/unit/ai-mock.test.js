@@ -399,3 +399,67 @@ test('extractSchema: 출력이 깊은 복사라 호출 자리에서 변경해도
   const b = await adapter.extractSchema({ block: {}, operation: 'create' });
   assert.equal(b.request.properties.injected, undefined);
 });
+
+// ADR 0036 fillTestCode
+
+test('fillTestCode: GWT 텍스트를 인용한 의도 한 줄 주석을 돌려준다', async () => {
+  const adapter = createMockAdapter();
+  const code = await adapter.fillTestCode({
+    block: { id: 'order', name: '주문' },
+    endpoint: { operation: 'create', method: 'POST', path: '/orders' },
+    scenario: {
+      kind: 'happy_path',
+      given: '유효한 주문 입력 데이터가 준비되어 있다',
+      when: 'POST /orders로 주문 생성을 요청한다',
+      then: '201 응답과 함께 새 식별자가 돌아온다',
+    },
+    architecture: { language: 'node' },
+  });
+  assert.match(code, /^\/\/ TODO:/);
+  assert.match(code, /유효한 주문 입력 데이터가 준비되어 있다을 준비하고/);
+  assert.match(code, /POST \/orders로 주문 생성을 요청한다을 호출해/);
+  assert.match(code, /201 응답과 함께 새 식별자가 돌아온다을 검증한다/);
+});
+
+test('fillTestCode: 결정적이다(같은 입력은 같은 출력)', async () => {
+  const adapter = createMockAdapter();
+  const args = {
+    block: { id: 'a', name: 'A' },
+    endpoint: { operation: 'list', method: 'GET', path: '/a' },
+    scenario: { kind: 'happy_path', given: 'g', when: 'w', then: 't' },
+    architecture: { language: 'java' },
+  };
+  const a = await adapter.fillTestCode(args);
+  const b = await adapter.fillTestCode(args);
+  assert.equal(a, b);
+});
+
+test('fillTestCode: 시나리오 GWT가 모두 비어있으면 빈 문자열', async () => {
+  const adapter = createMockAdapter();
+  const code = await adapter.fillTestCode({
+    block: { id: 'a', name: 'A' },
+    endpoint: { operation: 'unknown', method: 'GET', path: '/a' },
+    scenario: { kind: 'happy_path', given: '', when: '', then: '' },
+    architecture: { language: 'node' },
+  });
+  assert.equal(code, '');
+});
+
+test('fillTestCode: architecture.language와 무관하게 결정적', async () => {
+  const adapter = createMockAdapter();
+  const base = {
+    block: { id: 'a', name: 'A' },
+    endpoint: { operation: 'create', method: 'POST', path: '/a' },
+    scenario: { kind: 'happy_path', given: 'g', when: 'w', then: 't' },
+  };
+  const node = await adapter.fillTestCode({ ...base, architecture: { language: 'node' } });
+  const java = await adapter.fillTestCode({ ...base, architecture: { language: 'java' } });
+  // mock은 언어 무관 결이라 출력이 같다(언어별 분기는 claude의 자리)
+  assert.equal(node, java);
+});
+
+test('fillTestCode: 인자 없이 호출해도 빈 문자열로 안전', async () => {
+  const adapter = createMockAdapter();
+  const code = await adapter.fillTestCode();
+  assert.equal(code, '');
+});

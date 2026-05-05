@@ -269,5 +269,21 @@ export function createMockAdapter() {
         response: schemas.response ? structuredClone(schemas.response) : null,
       };
     },
+    // ADR 0036의 fillTestCode. 시나리오 GWT 텍스트를 인용한 의도 한 줄 주석을 돌려준다.
+    // 도메인 무관(CLAUDE.md 섹션 8). 결정적: 같은 입력에 같은 출력.
+    // _block과 _endpoint는 미래의 실제 LLM 어댑터가 도메인 추론에 사용할 자리.
+    async fillTestCode({
+      block: _block,
+      endpoint: _endpoint,
+      scenario,
+      architecture: _architecture,
+    } = {}) {
+      const s = scenario || {};
+      const given = (s.given || '').trim();
+      const when = (s.when || '').trim();
+      const then = (s.then || '').trim();
+      if (!given && !when && !then) return '';
+      return `// TODO: ${given}을 준비하고 ${when}을 호출해 ${then}을 검증한다`;
+    },
   };
 }

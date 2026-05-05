@@ -40,7 +40,7 @@ function schemaResponse(parsed) {
   return { parsed_output: parsed, content: [] };
 }
 
-test('claude 어댑터는 name이 claude이고 여섯 메서드를 가진다', () => {
+test('claude 어댑터는 name이 claude이고 일곱 메서드를 가진다', () => {
   const client = makeFakeClient(() => intentResponse({}));
   const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
   assert.equal(adapter.name, 'claude');
@@ -50,6 +50,7 @@ test('claude 어댑터는 name이 claude이고 여섯 메서드를 가진다', (
   assert.equal(typeof adapter.generateRealityCheck, 'function');
   assert.equal(typeof adapter.recommendBlocks, 'function');
   assert.equal(typeof adapter.recommendArchitecture, 'function');
+  assert.equal(typeof adapter.fillTestCode, 'function');
 });
 
 test('extractIntent: parsed_output 7항목을 그대로 결과 모양으로 반환한다', async () => {
@@ -712,4 +713,98 @@ test('recommendArchitecture: parsed_output이 recommended를 안 줘도 빈 객�
     selectedBlocks: {},
   });
   assert.deepEqual(result, { recommended: {}, reasons: {} });
+});
+
+// ADR 0036 fillTestCode
+
+function testCodeResponse(testCode) {
+  return { parsed_output: { test_code: testCode }, content: [] };
+}
+
+test('fillTestCode: parsed_output의 test_code 문자열을 그대로 반환한다', async () => {
+  const client = makeFakeClient(() =>
+    testCodeResponse("import test from 'node:test';\ntest('주문 생성', () => { /* TODO */ });"),
+  );
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const code = await adapter.fillTestCode({
+    block: { id: 'order', name: '주문' },
+    endpoint: { operation: 'create', method: 'POST', path: '/orders' },
+    scenario: { kind: 'happy_path', given: 'g', when: 'w', then: 't' },
+    architecture: { language: 'node', database: 'postgresql', api_style: 'rest' },
+  });
+  assert.match(code, /import test from 'node:test'/);
+  assert.match(code, /주문 생성/);
+});
+
+test('fillTestCode: parsed_output에 test_code가 없으면 빈 문자열로 폴백', async () => {
+  const client = makeFakeClient(() => ({ parsed_output: {}, content: [] }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const code = await adapter.fillTestCode({
+    block: { id: 'a' },
+    endpoint: { operation: 'list' },
+    scenario: { kind: 'happy_path' },
+    architecture: { language: 'node' },
+  });
+  assert.equal(code, '');
+});
+
+test('fillTestCode: user 메시지에 block/endpoint/scenario/architecture가 JSON으로 들어간다', async () => {
+  const client = makeFakeClient(() => testCodeResponse('// code'));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.fillTestCode({
+    block: { id: 'order', name: '주문', user_desc: '고객 주문', tech_desc: '주문 처리' },
+    endpoint: {
+      operation: 'create',
+      method: 'POST',
+      path: '/orders',
+      description: '주문 생성',
+    },
+    scenario: {
+      kind: 'happy_path',
+      given: '유효한 주문 입력',
+      when: 'POST /orders 호출',
+      then: '201 응답',
+    },
+    architecture: {
+      language: 'node',
+      database: 'postgresql',
+      api_style: 'rest',
+      architecture_pattern: 'modular-monolith',
+    },
+  });
+  const parsed = JSON.parse(client.captured[0].messages[0].content);
+  assert.equal(parsed.block.id, 'order');
+  assert.equal(parsed.block.name, '주문');
+  assert.equal(parsed.endpoint.operation, 'create');
+  assert.equal(parsed.endpoint.method, 'POST');
+  assert.equal(parsed.scenario.given, '유효한 주문 입력');
+  assert.equal(parsed.scenario.then, '201 응답');
+  assert.equal(parsed.architecture.language, 'node');
+  assert.equal(parsed.architecture.api_style, 'rest');
+});
+
+test('fillTestCode: max_tokens 2048로 호출한다', async () => {
+  const client = makeFakeClient(() => testCodeResponse('// code'));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.fillTestCode({
+    block: { id: 'a' },
+    endpoint: { operation: 'create' },
+    scenario: { kind: 'happy_path' },
+    architecture: { language: 'node' },
+  });
+  assert.equal(client.captured[0].max_tokens, 2048);
+});
+
+test('fillTestCode: output_config의 schema가 test_code required로 강제된다', async () => {
+  const client = makeFakeClient(() => testCodeResponse('// code'));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.fillTestCode({
+    block: { id: 'a' },
+    endpoint: { operation: 'create' },
+    scenario: { kind: 'happy_path' },
+    architecture: { language: 'node' },
+  });
+  const schema = client.captured[0].output_config.format.schema;
+  assert.deepEqual(schema.required, ['test_code']);
+  assert.equal(schema.properties.test_code.type, 'string');
 });
