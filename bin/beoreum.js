@@ -299,6 +299,11 @@ program
       } else {
         console.log('schema가 TODO로 들어있습니다. 계약을 직접 채운 뒤 다음 단계로 가세요.');
       }
+      if (result.contractsReviewPromptFile) {
+        console.log(
+          '더 자세한 계약 검토를 원하시면 .beoreum/project/prompts/contracts-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0035).',
+        );
+      }
       console.log(`다음 단계: beoreum ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);

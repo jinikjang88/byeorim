@@ -2,14 +2,16 @@
 // contracts.yml(API 계약)을 만든다. ADR 0007의 자리, ADR 0013의 형식과 매핑 정책을 따른다.
 // ADR 0023의 옵셔널 어댑터로 schema를 채운다.
 // ADR 0034의 인터랙티브 검토 흐름을 interactiveForge로 박는다.
+// ADR 0035의 외부 검토 프롬프트 부산물(contracts-review-prompt.md)을 자동 생성한다.
 // runForge는 비대화 호환 자리로 그대로 유지(테스트와 자동화에서 사용).
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { select } from '@inquirer/prompts';
 import { loadCatalog } from '@beoreum/catalog';
 import { formatContractsSummary } from './forge-picker-helpers.js';
+import { buildContractsReviewPromptMarkdown } from './forge-prompt.js';
 
 const SCHEMA_VERSION = 1;
 const STAGE = 'forge';
@@ -160,14 +162,18 @@ async function fillSchemasWithAdapter(contracts, blockMap, adapter) {
 }
 
 // forge의 입력 자리들을 한 번에 읽고 검증한다. ADR 0013의 입력 의존성과 단계 검증을 한 자리에 모은다.
-// 반환: { archApiStyle, builtIds, catalog, blockMap, beoreumDir, state, paths }
+// intent.yml과 architecture.yml은 contracts.yml 작성에는 직접 안 쓰이지만 외부 검토 프롬프트(ADR 0035)에 함께 담는다.
+// 반환: { architecture, archApiStyle, answers, selectedBlocks, builtIds, catalog, blockMap, state, paths }
 function loadForgeInputs(cwd) {
   const beoreumDir = join(cwd, '.beoreum');
   const stateFile = join(beoreumDir, 'state.yml');
+  const intentFile = join(beoreumDir, 'project', 'intent.yml');
   const archFile = join(beoreumDir, 'project', 'architecture.yml');
   const selectedFile = join(beoreumDir, 'project', 'selected-blocks.yml');
   const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
   const contractsFile = join(beoreumDir, 'project', 'contracts.yml');
+  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  const contractsReviewPromptFile = join(promptsDir, 'contracts-review-prompt.md');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
@@ -176,8 +182,8 @@ function loadForgeInputs(cwd) {
   ensureFile(selectedFile, '먼저 beoreum smelt를 실행해주세요');
   ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
 
-  const arch = yaml.load(readFileSync(archFile, 'utf8')) || {};
-  const archApiStyle = arch.api_style;
+  const architecture = yaml.load(readFileSync(archFile, 'utf8')) || {};
+  const archApiStyle = architecture.api_style;
   if (!SUPPORTED_ARCH_API_STYLES.has(archApiStyle)) {
     throw new Error(
       `architecture.yml의 api_style이 "${archApiStyle}"입니다. 지금 출시의 forge는 REST만 지원합니다.\n` +
@@ -185,20 +191,31 @@ function loadForgeInputs(cwd) {
     );
   }
 
-  const selected = yaml.load(readFileSync(selectedFile, 'utf8')) || {};
+  const selectedBlocks = yaml.load(readFileSync(selectedFile, 'utf8')) || {};
   // ADR 0013 결정 5: selected를 먼저, auto_added를 그 다음 순서로
-  const builtIds = [...(selected.selected || []), ...(selected.auto_added || [])];
+  const builtIds = [...(selectedBlocks.selected || []), ...(selectedBlocks.auto_added || [])];
 
   const catalog = loadCatalog(catalogFile);
   const blockMap = new Map(catalog.blocks.map((b) => [b.id, b]));
 
+  // intent.yml은 부산물(외부 검토 프롬프트)에만 쓰인다. 없거나 user_answers가 비어있으면 빈 객체로 폴백.
+  let answers = {};
+  if (existsSync(intentFile)) {
+    const intent = yaml.load(readFileSync(intentFile, 'utf8')) || {};
+    answers =
+      intent.user_answers && typeof intent.user_answers === 'object' ? intent.user_answers : {};
+  }
+
   return {
+    architecture,
     archApiStyle,
+    answers,
+    selectedBlocks,
     builtIds,
     catalog,
     blockMap,
     state,
-    paths: { stateFile, contractsFile },
+    paths: { stateFile, contractsFile, promptsDir, contractsReviewPromptFile },
   };
 }
 
@@ -323,7 +340,8 @@ async function defaultConfirmContracts({
 //   now              - 테스트용 결정적 시각(선택)
 //   log              - 콘솔 출력 함수(선택)
 //
-// 반환: runForge와 같은 모양 { contractsFile, contracts, blockCount, endpointCount, schemaFilled, nextStage }
+// 반환: { contractsFile, contractsReviewPromptFile, contracts, blockCount, endpointCount, schemaFilled, nextStage }
+// runForge와 비교해 contractsReviewPromptFile이 추가된다(ADR 0035 부산물 자리).
 export async function interactiveForge({
   cwd,
   adapter = null,
@@ -368,8 +386,24 @@ export async function interactiveForge({
         now,
       });
       writeContractsAndAdvance({ paths: inputs.paths, state: inputs.state, doc });
+
+      // 외부 AI 검토 프롬프트 부산물(ADR 0035 결정 1). 사용자가 외부 AI에 붙여넣어 자세히 검토받는 자리.
+      mkdirSync(inputs.paths.promptsDir, { recursive: true });
+      writeFileSync(
+        inputs.paths.contractsReviewPromptFile,
+        buildContractsReviewPromptMarkdown({
+          answers: inputs.answers,
+          catalog: inputs.catalog,
+          selectedBlocks: inputs.selectedBlocks,
+          architecture: inputs.architecture,
+          contracts,
+        }),
+        'utf8',
+      );
+
       return {
         contractsFile: inputs.paths.contractsFile,
+        contractsReviewPromptFile: inputs.paths.contractsReviewPromptFile,
         contracts,
         blockCount,
         endpointCount,

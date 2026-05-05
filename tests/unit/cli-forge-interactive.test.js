@@ -1,9 +1,9 @@
-// interactiveForge 단위 테스트. ADR 0034(forge 인터랙티브 검토 흐름).
-// 검토 화면 표시는 forge-picker-helpers.test.js에서 따로 검증.
+// interactiveForge 단위 테스트. ADR 0034(forge 인터랙티브 검토 흐름) + ADR 0035(외부 검토 프롬프트).
+// 검토 화면 표시는 forge-picker-helpers.test.js, 프롬프트 합성은 cli-forge-prompt.test.js에서 따로 검증.
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
@@ -227,6 +227,84 @@ test('현재 단계가 forge가 아니면 한국어 메시지로 거부한다', 
     runInit({ cwd });
     // When/Then
     await assert.rejects(interactiveForge({ cwd, log: () => {} }), /현재 단계가 forge가 아닙니다/);
+  });
+});
+
+test('proceed 시 contracts-review-prompt.md 부산물이 생성된다(ADR 0035)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: shape까지 끝낸 자리
+    await setupReadyForForge(cwd, ['order']);
+    // When
+    const result = await interactiveForge({
+      cwd,
+      adapter: createMockAdapter(),
+      confirmContracts: async () => 'proceed',
+      log: () => {},
+    });
+    // Then: 결과에 부산물 경로가 들어있고 실제 파일이 생성됨
+    assert.ok(result.contractsReviewPromptFile);
+    assert.equal(
+      result.contractsReviewPromptFile,
+      join(cwd, '.beoreum', 'project', 'prompts', 'contracts-review-prompt.md'),
+    );
+    assert.equal(existsSync(result.contractsReviewPromptFile), true);
+    const md = readFileSync(result.contractsReviewPromptFile, 'utf8');
+    // 헤더와 검토 셋이 들어있다
+    assert.match(md, /# 계약 검토 프롬프트/);
+    assert.match(md, /1\. endpoint 누락\/과다/);
+    assert.match(md, /2\. schema 도메인 적합성/);
+    assert.match(md, /3\. 시작 무게/);
+  });
+});
+
+test('부산물에 7항목 답변, 카탈로그, 선택 블럭, 아키텍처, contracts가 모두 담긴다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: shape까지 끝낸 자리(prospect 답변에 what이 들어있음)
+    await setupReadyForForge(cwd, ['order']);
+    // When
+    const result = await interactiveForge({
+      cwd,
+      adapter: createMockAdapter(),
+      confirmContracts: async () => 'proceed',
+      log: () => {},
+    });
+    const md = readFileSync(result.contractsReviewPromptFile, 'utf8');
+    // Then: 5개 섹션 헤더가 모두 보임
+    assert.match(md, /## 사용자 7항목 답변/);
+    assert.match(md, /## 카탈로그 전체 블럭/);
+    assert.match(md, /## 사용자가 고른 블럭/);
+    assert.match(md, /## 4개 아키텍처 결정/);
+    assert.match(md, /## 자동 생성된 API 계약/);
+    // 7항목에서 what이 노출
+    assert.match(md, /- what: 쇼핑몰/);
+    // 아키텍처 결정값 노출
+    assert.match(md, /- 언어: node/);
+    assert.match(md, /- API 형태: rest/);
+    // 선택한 블럭(order)이 노출
+    assert.match(md, /- order/);
+  });
+});
+
+test('redo 후 proceed에서도 부산물이 마지막 contracts로 갱신된다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: 두 번째 라운드에서 proceed
+    await setupReadyForForge(cwd, ['order']);
+    let calls = 0;
+    // When
+    const result = await interactiveForge({
+      cwd,
+      adapter: createMockAdapter(),
+      confirmContracts: async () => {
+        calls += 1;
+        return calls === 1 ? 'redo' : 'proceed';
+      },
+      log: () => {},
+    });
+    // Then: 부산물이 한 번만 만들어지고 endpoint 개수가 contracts와 일치
+    assert.ok(existsSync(result.contractsReviewPromptFile));
+    const md = readFileSync(result.contractsReviewPromptFile, 'utf8');
+    // endpoint 5개 블럭 헤더가 보임(order는 resource)
+    assert.match(md, /endpoint 5개/);
   });
 });
 

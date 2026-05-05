@@ -9,6 +9,7 @@ export { runSmelt, interactiveSmelt } from './src/smelt.js';
 export { interactiveShape } from './src/shape.js';
 export { buildArchitectureReviewPromptMarkdown } from './src/shape-prompt.js';
 export { runForge, interactiveForge } from './src/forge.js';
+export { buildContractsReviewPromptMarkdown } from './src/forge-prompt.js';
 export { runTemper } from './src/temper.js';
 export { runSet } from './src/set.js';
 export { runInspect } from './src/inspect.js';

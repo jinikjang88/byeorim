@@ -13,7 +13,7 @@
 | 0 | 탐광 | `beoreum prospect` | `prs` | 7항목 동행 질문, 카탈로그 선택, Reality Check 6영역 |
 | 1 | 제련 | `beoreum smelt` | `sml` | AI 추천 + 블럭 선택 + 의존성 해결 + 검토 |
 | 2 | 빚다 | `beoreum shape` | `shp` | AI 추천 + 4개 아키텍처 결정 + 검토 |
-| 3 | 단조 | `beoreum forge` | `frg` | 계약 우선 정의(contracts.yml) |
+| 3 | 단조 | `beoreum forge` | `frg` | AI schema 채움 + 계약 검토 + 외부 검토 프롬프트 |
 | 4 | 다듬 | `beoreum temper` | `tmr` | Given-When-Then 테스트 의도 |
 | 5 | 세움 | `beoreum set` | `set` | 산출물 합성과 코드 스켈레톤 생성 |
 | 6 | 비춤 | `beoreum inspect` | `ins` | 6영역 다관점 리뷰 |
