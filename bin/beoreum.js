@@ -11,7 +11,7 @@ import {
   runSmelt,
   interactiveSmelt,
   interactiveShape,
-  runForge,
+  interactiveForge,
   runTemper,
   runSet,
   runInspect,
@@ -286,11 +286,12 @@ program
 program
   .command('forge')
   .alias('frg')
-  .description('단조. 계약 우선 정의 (contracts.yml 생성, AI가 schema 채움)')
+  .description('단조. 계약 우선 정의(contracts.yml 생성, AI가 schema 채움, 검토)')
   .action(async () => {
     try {
       const adapter = selectAdapter();
-      const result = await runForge({ cwd: process.cwd(), adapter });
+      const result = await interactiveForge({ cwd: process.cwd(), adapter });
+      console.log('');
       console.log(`계약을 만들었습니다: ${result.contractsFile}`);
       console.log(`블럭 ${result.blockCount}개, 엔드포인트 ${result.endpointCount}개`);
       if (result.schemaFilled) {

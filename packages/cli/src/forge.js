@@ -1,11 +1,15 @@
 // beoreum forge. architecture.yml + selected-blocks.yml + catalog.yml을 입력으로
 // contracts.yml(API 계약)을 만든다. ADR 0007의 자리, ADR 0013의 형식과 매핑 정책을 따른다.
-// 사용자 입력이 없는 변환 단계라 인터랙티브 picker가 없다.
+// ADR 0023의 옵셔널 어댑터로 schema를 채운다.
+// ADR 0034의 인터랙티브 검토 흐름을 interactiveForge로 박는다.
+// runForge는 비대화 호환 자리로 그대로 유지(테스트와 자동화에서 사용).
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
+import { select } from '@inquirer/prompts';
 import { loadCatalog } from '@beoreum/catalog';
+import { formatContractsSummary } from './forge-picker-helpers.js';
 
 const SCHEMA_VERSION = 1;
 const STAGE = 'forge';
@@ -16,6 +20,10 @@ const SUPPORTED_ARCH_API_STYLES = new Set(['rest']);
 
 // block.api_style의 default. ADR 0013 결정 3(api_style이 없으면 resource로 본다).
 const DEFAULT_BLOCK_API_STYLE = 'resource';
+
+// 결정적 어댑터의 이름 집합. ADR 0034 결정 3의 안내 문구 표시 자리에서 사용.
+// mock 어댑터는 같은 입력에 같은 출력이라 redo가 같은 결과를 만든다.
+const DETERMINISTIC_ADAPTER_NAMES = new Set(['mock']);
 
 const TODO = 'TODO';
 
@@ -151,18 +159,9 @@ async function fillSchemasWithAdapter(contracts, blockMap, adapter) {
   }
 }
 
-// runForge는 forge 단계의 본체. 입력 파일을 읽어 contracts.yml을 만든다.
-//
-// 입력:
-//   cwd      - 프로젝트 루트 절대 경로
-//   adapter  - AI 어댑터(옵셔널). 주어지면 각 endpoint의 schema를 extractSchema로 채움.
-//              없으면 모든 schema가 TODO 문자열로 남는다(기존 동작 유지).
-//   now      - 테스트용 결정적 시각(선택)
-//
-// 반환: { contractsFile, contracts, blockCount, endpointCount, schemaFilled, nextStage }
-export async function runForge({ cwd, adapter = null, now } = {}) {
-  if (!cwd) throw new Error('runForge({ cwd })가 필요합니다');
-
+// forge의 입력 자리들을 한 번에 읽고 검증한다. ADR 0013의 입력 의존성과 단계 검증을 한 자리에 모은다.
+// 반환: { archApiStyle, builtIds, catalog, blockMap, beoreumDir, state, paths }
+function loadForgeInputs(cwd) {
   const beoreumDir = join(cwd, '.beoreum');
   const stateFile = join(beoreumDir, 'state.yml');
   const archFile = join(beoreumDir, 'project', 'architecture.yml');
@@ -187,45 +186,197 @@ export async function runForge({ cwd, adapter = null, now } = {}) {
   }
 
   const selected = yaml.load(readFileSync(selectedFile, 'utf8')) || {};
+  // ADR 0013 결정 5: selected를 먼저, auto_added를 그 다음 순서로
   const builtIds = [...(selected.selected || []), ...(selected.auto_added || [])];
 
   const catalog = loadCatalog(catalogFile);
   const blockMap = new Map(catalog.blocks.map((b) => [b.id, b]));
 
-  // ADR 0013 결정 5: selected를 먼저, auto_added를 그 다음 순서로
+  return {
+    archApiStyle,
+    builtIds,
+    catalog,
+    blockMap,
+    state,
+    paths: { stateFile, contractsFile },
+  };
+}
+
+// contracts 배열을 만든다(adapter가 있으면 schema 채움까지). 디스크에는 안 쓴다.
+// 반환: { contracts, schemaFilled }
+async function buildContracts({ builtIds, blockMap, adapter }) {
   const contracts = builtIds
     .map((id) => blockMap.get(id))
     .filter(Boolean)
     .map((block) => buildBlockContract(block));
 
-  // adapter가 주어지면 schema TODO를 실제 schema로 채운다(ADR 0023).
   let schemaFilled = false;
   if (adapter && typeof adapter.extractSchema === 'function') {
     await fillSchemasWithAdapter(contracts, blockMap, adapter);
     schemaFilled = true;
   }
+  return { contracts, schemaFilled };
+}
 
-  const doc = {
+function buildContractsDoc({ archApiStyle, contracts, now }) {
+  return {
     schema_version: SCHEMA_VERSION,
     created_at: (now || new Date()).toISOString(),
     architecture_api_style: archApiStyle,
     contracts,
   };
+}
 
-  writeFileSync(contractsFile, yaml.dump(doc, { sortKeys: false }), 'utf8');
-  writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
+function writeContractsAndAdvance({ paths, state, doc }) {
+  writeFileSync(paths.contractsFile, yaml.dump(doc, { sortKeys: false }), 'utf8');
+  writeFileSync(
+    paths.stateFile,
+    yaml.dump(advanceState(state, STAGE), { sortKeys: false }),
+    'utf8',
+  );
+}
 
-  const endpointCount = contracts.reduce(
+function countEndpoints(contracts) {
+  return contracts.reduce(
     (sum, c) => sum + (Array.isArray(c.endpoints) ? c.endpoints.length : 0),
     0,
   );
+}
+
+// runForge는 forge 단계의 비대화 본체. 입력 파일을 읽어 contracts.yml을 만든다.
+// 후행 호환을 위해 시그니처와 동작을 ADR 0023 시점 그대로 유지한다(ADR 0034 결정 4).
+//
+// 입력:
+//   cwd      - 프로젝트 루트 절대 경로
+//   adapter  - AI 어댑터(옵셔널). 주어지면 각 endpoint의 schema를 extractSchema로 채움.
+//              없으면 모든 schema가 TODO 문자열로 남는다.
+//   now      - 테스트용 결정적 시각(선택)
+//
+// 반환: { contractsFile, contracts, blockCount, endpointCount, schemaFilled, nextStage }
+export async function runForge({ cwd, adapter = null, now } = {}) {
+  if (!cwd) throw new Error('runForge({ cwd })가 필요합니다');
+
+  const inputs = loadForgeInputs(cwd);
+  const { contracts, schemaFilled } = await buildContracts({
+    builtIds: inputs.builtIds,
+    blockMap: inputs.blockMap,
+    adapter,
+  });
+  const doc = buildContractsDoc({
+    archApiStyle: inputs.archApiStyle,
+    contracts,
+    now,
+  });
+  writeContractsAndAdvance({ paths: inputs.paths, state: inputs.state, doc });
 
   return {
-    contractsFile,
+    contractsFile: inputs.paths.contractsFile,
     contracts,
     blockCount: contracts.length,
-    endpointCount,
+    endpointCount: countEndpoints(contracts),
     schemaFilled,
     nextStage: NEXT_STAGE,
   };
+}
+
+// 기본 confirmContracts. 검토 화면을 보여주고 진행/다시 select(ADR 0034 결정 1, 3).
+async function defaultConfirmContracts({
+  contracts,
+  blockCount,
+  endpointCount,
+  adapter,
+  schemaFilled,
+  adapterIsDeterministic,
+  log = console.log,
+} = {}) {
+  log('');
+  log(
+    formatContractsSummary({
+      contracts,
+      blockCount,
+      endpointCount,
+      adapter,
+      schemaFilled,
+      adapterIsDeterministic,
+    }),
+  );
+  log('');
+  return select({
+    message: '이대로 가실래요?',
+    choices: [
+      { name: '예, 다음 단계로', value: 'proceed' },
+      { name: '아니오, 다시 만들게요', value: 'redo' },
+    ],
+    default: 'proceed',
+  });
+}
+
+// interactiveForge는 forge 단계의 인터랙티브 본체(ADR 0034).
+// build → confirm 루프. confirm이 'redo'면 build를 다시(adapter 재호출 포함).
+// confirmContracts는 의존성 주입(ADR 0011 결정 5).
+//
+// 입력:
+//   cwd              - 프로젝트 루트 절대 경로
+//   adapter          - AiAdapter(선택). schema 채움 자리
+//   confirmContracts - async ({ contracts, blockCount, endpointCount, adapter, schemaFilled, adapterIsDeterministic, log })
+//                      => 'proceed'|'redo'. 기본은 select
+//   now              - 테스트용 결정적 시각(선택)
+//   log              - 콘솔 출력 함수(선택)
+//
+// 반환: runForge와 같은 모양 { contractsFile, contracts, blockCount, endpointCount, schemaFilled, nextStage }
+export async function interactiveForge({
+  cwd,
+  adapter = null,
+  confirmContracts = defaultConfirmContracts,
+  now,
+  log = console.log,
+} = {}) {
+  if (!cwd) throw new Error('interactiveForge({ cwd })가 필요합니다');
+
+  const inputs = loadForgeInputs(cwd);
+  const adapterIsDeterministic = !!(adapter && DETERMINISTIC_ADAPTER_NAMES.has(adapter.name));
+
+  // 어댑터 미구현 시 안내 한 줄(ADR 0034 결정 4). 검토 화면 헤더에서도 같은 결로 안내.
+  if (!adapter || typeof adapter.extractSchema !== 'function') {
+    log('이번 흐름은 schema 자동 채움 없이 진행됩니다(어댑터가 schema 채움을 지원하지 않음).');
+  }
+
+  // build → confirm 루프. 사용자 의지로 무한 루프 가능(차단 자리 없음, 동행 톤).
+  while (true) {
+    const { contracts, schemaFilled } = await buildContracts({
+      builtIds: inputs.builtIds,
+      blockMap: inputs.blockMap,
+      adapter,
+    });
+    const blockCount = contracts.length;
+    const endpointCount = countEndpoints(contracts);
+
+    const decision = await confirmContracts({
+      contracts,
+      blockCount,
+      endpointCount,
+      adapter,
+      schemaFilled,
+      adapterIsDeterministic,
+      log,
+    });
+
+    if (decision === 'proceed') {
+      const doc = buildContractsDoc({
+        archApiStyle: inputs.archApiStyle,
+        contracts,
+        now,
+      });
+      writeContractsAndAdvance({ paths: inputs.paths, state: inputs.state, doc });
+      return {
+        contractsFile: inputs.paths.contractsFile,
+        contracts,
+        blockCount,
+        endpointCount,
+        schemaFilled,
+        nextStage: NEXT_STAGE,
+      };
+    }
+    log('알겠어요. 다시 만들어볼게요.');
+  }
 }
