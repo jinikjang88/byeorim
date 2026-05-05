@@ -47,7 +47,11 @@ async function setupReadyForInspect(cwd, blockIds = ['order']) {
     log: () => {},
   });
   await runSmelt({ cwd, blockIds });
-  await interactiveShape({ cwd, askArchitecture: async () => REST_CHOICES });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => REST_CHOICES,
+    confirmArchitecture: async () => 'proceed',
+  });
   await runForge({ cwd });
   await runTemper({ cwd });
   await runSet({ cwd });

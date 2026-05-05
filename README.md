@@ -12,7 +12,7 @@
 |------|--------|--------|------|---------|
 | 0 | 탐광 | `beoreum prospect` | `prs` | 7항목 동행 질문, 카탈로그 선택, Reality Check 6영역 |
 | 1 | 제련 | `beoreum smelt` | `sml` | AI 추천 + 블럭 선택 + 의존성 해결 + 검토 |
-| 2 | 빚다 | `beoreum shape` | `shp` | 아키텍처 결정과 ADR 기록 |
+| 2 | 빚다 | `beoreum shape` | `shp` | AI 추천 + 4개 아키텍처 결정 + 검토 |
 | 3 | 단조 | `beoreum forge` | `frg` | 계약 우선 정의(contracts.yml) |
 | 4 | 다듬 | `beoreum temper` | `tmr` | Given-When-Then 테스트 의도 |
 | 5 | 세움 | `beoreum set` | `set` | 산출물 합성과 코드 스켈레톤 생성 |
@@ -54,6 +54,24 @@ picker는 카탈로그의 시각 구조 그대로 보여준다(ADR 0031). 세계
 
 smelt가 끝나면 부산물로 `.beoreum/project/prompts/block-review-prompt.md`가 자리잡는다. 사용자가 고른 블럭 + 의존성 결과 + 카탈로그 전체 + AI 추천이 한 자리에 묶여 있어 외부 AI(Claude.ai/ChatGPT/Gemini 등)에 그대로 붙여넣으면 "잘 맞는 부분, 빠진 자리, 시작 무게"를 자세히 검토받는다. 응답은 자유 형식이라 사용자가 읽고 selected-blocks.yml을 다듬거나 smelt를 다시 돌릴 수 있다.
 
+## 빚기 한 번 돌려보기
+
+smelt가 끝나면 shape에서 4개 핵심 결정(언어, 저장소, API 형태, 코드 구조)을 묻는다. ADR 0012가 박은 표준 옵션 안에서만 고른다. AI 어댑터가 prospect 답변과 smelt에서 고른 블럭을 보고 어울리는 자리에 [추천] 라벨을 붙이고, 옵션을 선택할 때 한국어 풀이가 description으로 보인다(ADR 0032).
+
+```bash
+node bin/beoreum.js shape
+```
+
+4개 결정을 다 고른 뒤 한 번 멈춘다. 확정 요약을 보여주고 "이대로 갈까요? / 다시 고를게요" 두 갈래로 묻는다. 다시 고르면 4개를 처음부터. 진행하면 `.beoreum/project/architecture.yml`에 평면 키-값으로 저장한다. cascade 답안(decisions.yml)은 맥락 요약으로만 보여주고 architecture.yml에 직접 복사하지 않는다(ADR 0012 결정 3).
+
+mock 어댑터는 답변 도메인과 무관하게 흔한 시작 자리(node/postgresql/rest/monolith)를 결정적으로 추천한다. claude 어댑터는 사용자 답변과 선택 블럭을 보고 도메인에 맞춘 추천을 준다. 비표준 식별자가 LLM에서 흘러나오면 어댑터가 안전망으로 비운다.
+
+picker가 시작될 때 사용자가 어디서 와서 무엇을 빚는지 한 단락 요약이 먼저 나온다(고른 블럭 수, 자동 추가, 외부 준비물, cascade 결정 답변 현황). 4개 결정 옵션마다 한 줄 트레이드오프 풀이가 description으로 항상 보인다. 추천 자리는 user 시점 이유가 description으로 우선 노출되고, 다른 옵션은 옵션의 트레이드오프가 그 자리에 박힌다. 4개 결정을 다 고른 뒤 confirm 화면에 한국어 이름과 트레이드오프 한 줄이 함께 나온다.
+
+### 외부 AI로 아키텍처 더 자세히 검토받기 (ADR 0033)
+
+shape가 끝나면 부산물로 `.beoreum/project/prompts/architecture-review-prompt.md`가 자리잡는다. 7항목 답변 + 카탈로그 전체 + 사용자가 고른 블럭 + 4개 결정과 12개 표준 옵션 표 + AI 추천(두 시점)이 한 자리에 묶여 있어 외부 AI(Claude.ai/ChatGPT/Gemini 등)에 그대로 붙여넣으면 "도메인 적합성, 결정 사이 트레이드오프, 시작 무게"를 자세히 검토받는다. 응답은 자유 형식이라 사용자가 읽고 architecture.yml을 다듬거나 shape를 다시 돌릴 수 있다.
+
 ### 외부 AI로 더 자세한 카탈로그 받기 (ADR 0028)
 
 prospect가 끝나면 부산물로 `.beoreum/project/prompts/catalog-prompt.md`가 자리잡는다. API 키 없이 Claude.ai, ChatGPT, Gemini 같은 외부 AI에 그 프롬프트를 그대로 붙여넣어 더 자세한 카탈로그를 받을 수 있다. 응답을 yml 파일로 저장한 뒤 다음 명령으로 가져온다.
@@ -72,7 +90,7 @@ node bin/beoreum.js prospect 동네 빵집 단골 주문 앱
 
 ## AI 어댑터 설정
 
-`prospect`와 `forge` 단계는 AI 어댑터를 부른다. 기본은 `mock`이라 네트워크 호출도 비용도 없다. 흐름만 따라가 보고 싶다면 환경 변수를 건드리지 않아도 된다.
+`prospect`, `smelt`, `shape`, `forge` 단계는 AI 어댑터를 부른다. 기본은 `mock`이라 네트워크 호출도 비용도 없다. 흐름만 따라가 보고 싶다면 환경 변수를 건드리지 않아도 된다.
 
 실제 LLM을 쓰려면 환경 변수를 둔다.
 

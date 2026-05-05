@@ -249,10 +249,11 @@ program
 program
   .command('shape')
   .alias('shp')
-  .description('빚다. 아키텍처 결정과 ADR 기록')
+  .description('빚다. 아키텍처 결정(AI 추천 + 검토)과 ADR 기록')
   .action(async () => {
     try {
-      const result = await interactiveShape({ cwd: process.cwd() });
+      const adapter = selectAdapter();
+      const result = await interactiveShape({ cwd: process.cwd(), adapter });
       const { context, choices } = result;
       console.log('');
       console.log('맥락 요약');
@@ -270,6 +271,11 @@ program
       console.log(`  API: ${choices.api_style}`);
       console.log(`  구조: ${choices.architecture_pattern}`);
       console.log(`기록 자리: ${result.architectureFile}`);
+      if (result.architectureReviewPromptFile) {
+        console.log(
+          '더 자세한 아키텍처 검토를 원하시면 .beoreum/project/prompts/architecture-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0033).',
+        );
+      }
       console.log(`다음 단계: beoreum ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);

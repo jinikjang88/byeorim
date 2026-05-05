@@ -176,6 +176,33 @@ export function createMockAdapter() {
       }
       return { recommended, reasons };
     },
+    // ADR 0032 + docs/specs/architecture-recommendation.md의 recommendArchitecture.
+    // 결정적 휴리스틱: ADR 0012의 4개 결정에 첫 옵션을 추천한다(node/postgresql/rest/monolith).
+    // answers와 selectedBlocks는 mock에서 결과에 영향 안 줌(결정성 보장).
+    // reasons는 두 시점({user, dev}) 객체. 모든 시점이 같은 한 줄로 결정성을 유지.
+    async recommendArchitecture({
+      answers: _answers,
+      catalog: _catalog,
+      selectedBlocks: _selectedBlocks,
+    } = {}) {
+      const recommended = {
+        language: 'node',
+        database: 'postgresql',
+        api_style: 'rest',
+        architecture_pattern: 'monolith',
+      };
+      const reasonText = {
+        user: '흔히 시작하는 자리로 골라봤어요(자동 추천이라 도메인은 못 봐요)',
+        dev: 'mock heuristic: ADR 0012 default option',
+      };
+      const reasons = {
+        language: { ...reasonText },
+        database: { ...reasonText },
+        api_style: { ...reasonText },
+        architecture_pattern: { ...reasonText },
+      };
+      return { recommended, reasons };
+    },
     // ADR 0003 + docs/specs/reality-check.md의 generateRealityCheck.
     // 6영역 표준 시드 질문을 그대로 돌려주고 observation은 빈 문자열, legal_warnings는 빈 배열.
     // 실제 도메인 관찰은 LLM 어댑터가 한다. mock은 결정성과 형식만 보장.

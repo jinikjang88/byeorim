@@ -49,6 +49,7 @@ async function setupReadyForTemper(cwd, blockIds = ['order']) {
   await interactiveShape({
     cwd,
     askArchitecture: async () => REST_CHOICES,
+    confirmArchitecture: async () => 'proceed',
   });
   await runForge({ cwd });
 }

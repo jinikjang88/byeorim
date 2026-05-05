@@ -103,7 +103,11 @@ test('7단계 끝까지 가면 is_done=true, 모든 단계가 completed', async 
       log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
-    await interactiveShape({ cwd, askArchitecture: async () => REST_CHOICES });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => REST_CHOICES,
+      confirmArchitecture: async () => 'proceed',
+    });
     await runForge({ cwd });
     await runTemper({ cwd });
     await runSet({ cwd });

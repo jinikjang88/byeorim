@@ -48,6 +48,7 @@ async function setupReadyForForge(cwd, blockIds = ['order'], apiStyle = 'rest') 
   await interactiveShape({
     cwd,
     askArchitecture: async () => ({ ...REST_CHOICES, api_style: apiStyle }),
+    confirmArchitecture: async () => 'proceed',
   });
 }
 

@@ -102,6 +102,101 @@ const RECOMMEND_OUTPUT_SCHEMA = {
   additionalProperties: false,
 };
 
+// ADR 0032 + docs/specs/architecture-recommendation.md.
+// 사용자 답변과 카탈로그, 사용자가 고른 블럭을 보고 4개 아키텍처 결정에 추천을 돌려준다.
+// shape picker는 reasons[key].user만 보여주고, dev는 후속 부산물 자리에서.
+// system 프롬프트에 ADR 0012의 4개 결정 옵션 표를 박아 cache 적중을 노린다(ADR 0024).
+const RECOMMEND_ARCH_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 아키텍처 결정을 추천하는 도우미다.
+입력으로 7항목 답변(answers), 카탈로그(catalog), 사용자가 고른 블럭(selectedBlocks)을 받는다.
+
+다음 네 자리에 추천을 돌려준다(ADR 0012의 표준 옵션 식별자만 사용).
+
+- language: node | java | python
+- database: postgresql | mysql | sqlite | mongodb
+- api_style: rest | graphql | rpc
+- architecture_pattern: monolith | modular-monolith | microservices
+
+규칙.
+- 위 표준 식별자(소문자) 외의 값은 절대 돌려주지 않는다
+- 사용자가 답하지 않은 항목은 추측하지 않는다(빈 자리는 빈 자리로). 어떤 결정에 추천 못 할 자리가 있으면 그 키를 비워둔다(전부 비어있어도 됨)
+- selectedBlocks의 selected/auto_added/affected를 보고 도메인에 어울리는 자리를 고른다
+  - 예: 결제/주문/예약 같은 거래성 블럭이 있으면 관계형 데이터베이스(postgresql/mysql) 쪽
+  - 예: 블럭이 5개 안팎이면 단순한 구조(monolith). 10개 이상이면 modular-monolith
+- 답변의 who(누가 사용)와 where(어디서 사용)이 다양하면 api_style을 rest로(보편)
+
+이유는 두 시점으로 나눠 적는다(ADR 0030의 결을 그대로 따름).
+
+reasons[결정키].user: 비개발자(1순위 사용자, 카페 사장님/학원 원장님)가 읽는 자리.
+- 일상 한국어. 단축어 풀어쓰기. 다음 단어들은 절대 그대로 쓰지 말고 풀어 적는다.
+  - PG → "결제대행사"
+  - DTO → "데이터 모양" 또는 "주고받을 정보의 모양"
+  - API → "프로그램 사이의 약속"
+  - REST → "웹 표준 방식"
+  - CRUD → "만들고 보고 고치고 지우는 자리"
+  - SDK → "도구 묶음"
+  - JWT → "로그인 증명"
+  - OAuth → "다른 서비스 계정으로 로그인"
+- 두세 줄 가능. 사용자 답변(answers의 what/why 등)의 단어를 인용하면 친근
+- 단정형보다 가능성형 결("가장 흔한 자리예요"보다 "가장 흔한 자리로 보여요")
+- 마케팅 카피 형용사("강력한", "획기적인", "본질적인") 금지
+
+reasons[결정키].dev: 개발자(3순위 사용자)가 읽는 자리.
+- 정확한 기술 용어 OK. PG, DTO, API, REST, CRUD 같은 단축어 사용 가능
+- 한 줄 권장. 트레이드오프, 운영 부담, 의존성을 짚을 수 있음
+
+두 시점 모두 비어있을 수 있다. 한 시점만 채워도 OK.
+
+추측을 강요하지 않는다. 사용자 답변과 선택 블럭이 모호하면 빈 추천(recommended={})도 옳다.`;
+
+const ARCH_REASON_SCHEMA = {
+  type: 'object',
+  properties: {
+    user: { type: 'string' },
+    dev: { type: 'string' },
+  },
+  required: ['user', 'dev'],
+};
+
+// recommendArchitecture의 출력 schema. 4개 결정 키는 각각 선택적(필수 아님).
+// reasons도 각 키가 선택적. additionalProperties는 막아 비표준 키가 흘러들지 않게 한다.
+const RECOMMEND_ARCH_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    recommended: {
+      type: 'object',
+      properties: {
+        language: { type: 'string' },
+        database: { type: 'string' },
+        api_style: { type: 'string' },
+        architecture_pattern: { type: 'string' },
+      },
+      additionalProperties: false,
+    },
+    reasons: {
+      type: 'object',
+      properties: {
+        language: ARCH_REASON_SCHEMA,
+        database: ARCH_REASON_SCHEMA,
+        api_style: ARCH_REASON_SCHEMA,
+        architecture_pattern: ARCH_REASON_SCHEMA,
+      },
+      additionalProperties: false,
+    },
+  },
+  required: ['recommended', 'reasons'],
+  additionalProperties: false,
+};
+
+// ADR 0012 결정 1의 표준 옵션 식별자. 어댑터 안전망에서 비표준 값을 거를 때 쓴다.
+// shape.js의 VALID_VALUES와 같은 자리이지만, 어댑터는 core/cli에 의존하지 않으므로
+// 한 번 더 박아둔다(중복 비용보다 의존성 경계를 지키는 결).
+const ARCH_VALID_VALUES = {
+  language: new Set(['node', 'java', 'python']),
+  database: new Set(['postgresql', 'mysql', 'sqlite', 'mongodb']),
+  api_style: new Set(['rest', 'graphql', 'rpc']),
+  architecture_pattern: new Set(['monolith', 'modular-monolith', 'microservices']),
+};
+
 // ADR 0003 + docs/specs/reality-check.md. 6영역 Reality Check 자리.
 // 사용자 도메인에 대한 두 번째 시각. 동행 톤 유지, prospect 단계에서는 강한 신호 안 씀.
 const REALITY_CHECK_SYSTEM_PROMPT = `너는 사용자가 만들고 싶은 서비스의 시장 가치를 함께 보는 도우미다.
@@ -550,6 +645,74 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
             // 옛 어댑터 응답이 string으로 올 자리(미래 호환). user 시점으로 폴백.
             reasons[id] = { user: r, dev: '' };
           }
+        }
+      }
+      return { recommended, reasons };
+    },
+    async recommendArchitecture({ answers, catalog, selectedBlocks } = {}) {
+      const a = answers || {};
+      // catalog 전체를 보내면 토큰 비용이 큰 자리가 있다. 추천에 필요한 자리(blocks의 id/name/user_desc/priority)만 잘라 보낸다.
+      const blocks = Array.isArray(catalog?.blocks) ? catalog.blocks : [];
+      const compactBlocks = blocks.map((b) => ({
+        id: b?.id,
+        name: b?.name,
+        user_desc: b?.user_desc,
+        priority: b?.priority,
+      }));
+      const sb = selectedBlocks || {};
+      const userText = JSON.stringify(
+        {
+          answers: {
+            what: typeof a.what === 'string' ? a.what : '',
+            who: typeof a.who === 'string' ? a.who : '',
+            when: typeof a.when === 'string' ? a.when : '',
+            where: typeof a.where === 'string' ? a.where : '',
+            why: typeof a.why === 'string' ? a.why : '',
+            how_use: typeof a.how_use === 'string' ? a.how_use : '',
+            how_manage: typeof a.how_manage === 'string' ? a.how_manage : '',
+          },
+          catalog: { blocks: compactBlocks },
+          selectedBlocks: {
+            selected: Array.isArray(sb.selected) ? sb.selected : [],
+            auto_added: Array.isArray(sb.auto_added) ? sb.auto_added : [],
+            affected: Array.isArray(sb.affected) ? sb.affected : [],
+            prerequisites: Array.isArray(sb.prerequisites) ? sb.prerequisites : [],
+          },
+        },
+        null,
+        2,
+      );
+      const request = buildRequest({
+        model: resolvedModel,
+        system: RECOMMEND_ARCH_SYSTEM_PROMPT,
+        userText,
+        outputSchema: RECOMMEND_ARCH_OUTPUT_SCHEMA,
+        maxTokens: 2048,
+      });
+      const message = await callParse(request);
+      const parsed = extractParsedOutput(message);
+      // 비표준 값은 안전망으로 비운다. ADR 0012 결정 1의 표준 식별자만 통과(ADR 0032 결정 1).
+      const recommended = {};
+      const rawRecommended =
+        parsed.recommended && typeof parsed.recommended === 'object' ? parsed.recommended : {};
+      for (const key of Object.keys(ARCH_VALID_VALUES)) {
+        const value = rawRecommended[key];
+        if (typeof value === 'string' && ARCH_VALID_VALUES[key].has(value)) {
+          recommended[key] = value;
+        }
+      }
+      // reasons는 { user, dev } 객체 모양. 옛 string 모양도 user 시점으로 폴백(미래 호환).
+      const reasons = {};
+      const rawReasons = parsed.reasons && typeof parsed.reasons === 'object' ? parsed.reasons : {};
+      for (const key of Object.keys(recommended)) {
+        const r = rawReasons[key];
+        if (r && typeof r === 'object') {
+          reasons[key] = {
+            user: typeof r.user === 'string' ? r.user : '',
+            dev: typeof r.dev === 'string' ? r.dev : '',
+          };
+        } else if (typeof r === 'string' && r.trim()) {
+          reasons[key] = { user: r, dev: '' };
         }
       }
       return { recommended, reasons };

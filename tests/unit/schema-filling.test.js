@@ -48,7 +48,11 @@ async function setupWithSchemaFill(cwd, blockIds, language) {
     log: () => {},
   });
   await runSmelt({ cwd, blockIds });
-  await interactiveShape({ cwd, askArchitecture: async () => choices });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => choices,
+    confirmArchitecture: async () => 'proceed',
+  });
   await runForge({ cwd, adapter: createMockAdapter() }); // adapter 주입
   await runTemper({ cwd });
   await runSet({ cwd });
@@ -72,6 +76,7 @@ test('forge가 adapter로 contracts.yml의 schema를 채운다', async () => {
         api_style: 'rest',
         architecture_pattern: 'modular-monolith',
       }),
+      confirmArchitecture: async () => 'proceed',
     });
     const result = await runForge({ cwd, adapter: createMockAdapter() });
     assert.equal(result.schemaFilled, true);
@@ -104,6 +109,7 @@ test('forge에 adapter 없으면 schema는 TODO 그대로(기존 동작 보존)'
         api_style: 'rest',
         architecture_pattern: 'modular-monolith',
       }),
+      confirmArchitecture: async () => 'proceed',
     });
     const result = await runForge({ cwd }); // adapter 없음
     assert.equal(result.schemaFilled, false);

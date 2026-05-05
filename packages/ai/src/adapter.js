@@ -103,6 +103,40 @@
  */
 
 /**
+ * Smelt 단계의 산출물(selected-blocks.yml의 모양, ADR 0010).
+ * shape의 recommendArchitecture가 입력으로 받는다(ADR 0032).
+ *
+ * @typedef {object} SelectedBlocks
+ * @property {string[]} selected - 사용자가 명시적으로 고른 블럭 ID
+ * @property {string[]} auto_added - requires 의존성으로 자동 추가된 블럭 ID
+ * @property {string[]} affected - affects 의존성으로 영향받는 블럭 ID
+ * @property {Array<{name: string, enables: string[]}>} prerequisites - 외부 준비물
+ */
+
+/**
+ * Shape 단계의 4개 핵심 결정. ADR 0012 결정 1의 표준 옵션 식별자(소문자).
+ *
+ * @typedef {object} ArchitectureChoices
+ * @property {'node'|'java'|'python'} language
+ * @property {'postgresql'|'mysql'|'sqlite'|'mongodb'} database
+ * @property {'rest'|'graphql'|'rpc'} api_style
+ * @property {'monolith'|'modular-monolith'|'microservices'} architecture_pattern
+ */
+
+/**
+ * Shape 단계의 아키텍처 추천 결과(ADR 0032 + docs/specs/architecture-recommendation.md).
+ *
+ * @typedef {object} ArchitectureRecommendation
+ * @property {Partial<ArchitectureChoices>} recommended - 4개 결정 키별 추천 값(부분 가능)
+ *   - 추천 값은 ADR 0012의 표준 옵션 식별자만. 비표준 값은 어댑터 본체에서 안전망으로 비움
+ *   - 어떤 결정에 추천 못 할 자리가 있으면 그 키는 비워둠(전부 비어있어도 됨)
+ * @property {Partial<{[K in keyof ArchitectureChoices]: RecommendationReason}>} reasons
+ *   - 결정 키별 두 시점 이유({user, dev})
+ *   - reasons의 키는 recommended의 키 부분집합. 모든 추천에 이유가 있어야 하지는 않음
+ *   - picker는 reasons[key].user만 보여줌(ADR 0032 결정 2). dev는 후속 부산물 자리에서만
+ */
+
+/**
  * AI 어댑터. 구현체는 createMockAdapter, createClaudeAdapter 같은 팩토리 함수가 만든다.
  *
  * @typedef {object} AiAdapter
@@ -117,6 +151,9 @@
  * @property {(args: { answers: ProspectAnswers, catalog: Catalog }) => Promise<BlockRecommendation>} [recommendBlocks]
  *   - 사용자 답변과 카탈로그를 받아 추천 블럭과 이유를 돌려준다(ADR 0029).
  *     선택 메서드. 어댑터가 구현 안 하면 smelt가 빈 추천으로 진행(graceful degradation)
+ * @property {(args: { answers: ProspectAnswers, catalog: Catalog, selectedBlocks: SelectedBlocks }) => Promise<ArchitectureRecommendation>} [recommendArchitecture]
+ *   - 사용자 답변과 카탈로그, 사용자가 고른 블럭을 받아 4개 아키텍처 결정에 추천을 돌려준다(ADR 0032).
+ *     선택 메서드. 어댑터가 구현 안 하면 shape가 빈 추천으로 진행(graceful degradation)
  * @property {({ block: object, operation: string }) => Promise<ExtractedSchema>} extractSchema
  */
 

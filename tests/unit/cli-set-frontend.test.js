@@ -45,7 +45,11 @@ async function setupReadyForSet(cwd, blockIds) {
     log: () => {},
   });
   await runSmelt({ cwd, blockIds });
-  await interactiveShape({ cwd, askArchitecture: async () => NODE_CHOICES });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => NODE_CHOICES,
+    confirmArchitecture: async () => 'proceed',
+  });
   await runForge({ cwd });
   await runTemper({ cwd });
 }
@@ -232,6 +236,7 @@ test('frontend는 architecture.language와 무관하게 항상 생성된다', as
     await interactiveShape({
       cwd,
       askArchitecture: async () => ({ ...NODE_CHOICES, language: 'java' }),
+      confirmArchitecture: async () => 'proceed',
     });
     await runForge({ cwd });
     await runTemper({ cwd });

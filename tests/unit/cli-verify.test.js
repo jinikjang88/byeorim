@@ -47,7 +47,11 @@ async function setupReadyForVerify(cwd, blockIds = ['order'], choices = NODE_CHO
     log: () => {},
   });
   await runSmelt({ cwd, blockIds });
-  await interactiveShape({ cwd, askArchitecture: async () => choices });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => choices,
+    confirmArchitecture: async () => 'proceed',
+  });
   await runForge({ cwd });
   await runTemper({ cwd });
   await runSet({ cwd });

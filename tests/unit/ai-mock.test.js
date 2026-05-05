@@ -274,6 +274,83 @@ test('recommendBlocks: 너무 많으면 앞 10개로 자른다', async () => {
   assert.equal(result.recommended.length, 10);
 });
 
+// ── recommendArchitecture (ADR 0032 + docs/specs/architecture-recommendation.md) ─────────────
+
+test('recommendArchitecture: 4개 결정에 ADR 0012의 첫 옵션을 추천한다', async () => {
+  const adapter = createMockAdapter();
+  const result = await adapter.recommendArchitecture({
+    answers: { what: '쇼핑몰' },
+    catalog: { blocks: [] },
+    selectedBlocks: { selected: ['order'], auto_added: [], affected: [], prerequisites: [] },
+  });
+  assert.deepEqual(result.recommended, {
+    language: 'node',
+    database: 'postgresql',
+    api_style: 'rest',
+    architecture_pattern: 'monolith',
+  });
+});
+
+test('recommendArchitecture: 4개 결정 모두에 두 시점 reasons가 채워진다', async () => {
+  const adapter = createMockAdapter();
+  const result = await adapter.recommendArchitecture({
+    answers: {},
+    catalog: { blocks: [] },
+    selectedBlocks: {},
+  });
+  for (const key of ['language', 'database', 'api_style', 'architecture_pattern']) {
+    assert.equal(typeof result.reasons[key], 'object');
+    assert.equal(typeof result.reasons[key].user, 'string');
+    assert.equal(typeof result.reasons[key].dev, 'string');
+    assert.ok(result.reasons[key].user.length > 0, `${key}의 user 시점이 비어있음`);
+    assert.ok(result.reasons[key].dev.length > 0, `${key}의 dev 시점이 비어있음`);
+  }
+  // user 시점은 일상어, dev 시점은 기술 용어
+  assert.match(result.reasons.language.user, /골라봤어요|자리|봤어요/);
+  assert.match(result.reasons.language.dev, /heuristic|ADR/i);
+});
+
+test('recommendArchitecture: 결정적이다(같은 입력은 같은 출력)', async () => {
+  const adapter = createMockAdapter();
+  const a = await adapter.recommendArchitecture({
+    answers: { what: '쇼핑' },
+    catalog: { blocks: [] },
+    selectedBlocks: { selected: ['x'] },
+  });
+  const b = await adapter.recommendArchitecture({
+    answers: { what: '쇼핑' },
+    catalog: { blocks: [] },
+    selectedBlocks: { selected: ['x'] },
+  });
+  assert.deepEqual(a, b);
+});
+
+test('recommendArchitecture: 인자 없이 호출해도 표준 옵션을 돌려준다', async () => {
+  const adapter = createMockAdapter();
+  const result = await adapter.recommendArchitecture();
+  assert.equal(result.recommended.language, 'node');
+  assert.equal(result.recommended.database, 'postgresql');
+  assert.equal(result.recommended.api_style, 'rest');
+  assert.equal(result.recommended.architecture_pattern, 'monolith');
+});
+
+test('recommendArchitecture: answers와 selectedBlocks와 무관하게 결정성 보장', async () => {
+  const adapter = createMockAdapter();
+  // 도메인 다른 두 입력
+  const a = await adapter.recommendArchitecture({
+    answers: { what: '쇼핑' },
+    catalog: { blocks: [{ id: 'order', priority: 'required' }] },
+    selectedBlocks: { selected: ['order'], auto_added: ['payment'] },
+  });
+  const b = await adapter.recommendArchitecture({
+    answers: { what: '예약' },
+    catalog: { blocks: [{ id: 'booking' }] },
+    selectedBlocks: { selected: ['booking'] },
+  });
+  // mock은 입력을 보지 않으므로 같은 결과
+  assert.deepEqual(a.recommended, b.recommended);
+});
+
 // ── extractSchema (ADR 0023) ─────────────────────────────────
 
 test('extractSchema: create operation은 request와 response를 모두 가진다', async () => {

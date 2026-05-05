@@ -40,7 +40,7 @@ function schemaResponse(parsed) {
   return { parsed_output: parsed, content: [] };
 }
 
-test('claude 어댑터는 name이 claude이고 다섯 메서드를 가진다', () => {
+test('claude 어댑터는 name이 claude이고 여섯 메서드를 가진다', () => {
   const client = makeFakeClient(() => intentResponse({}));
   const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
   assert.equal(adapter.name, 'claude');
@@ -49,6 +49,7 @@ test('claude 어댑터는 name이 claude이고 다섯 메서드를 가진다', (
   assert.equal(typeof adapter.generateCatalog, 'function');
   assert.equal(typeof adapter.generateRealityCheck, 'function');
   assert.equal(typeof adapter.recommendBlocks, 'function');
+  assert.equal(typeof adapter.recommendArchitecture, 'function');
 });
 
 test('extractIntent: parsed_output 7항목을 그대로 결과 모양으로 반환한다', async () => {
@@ -579,4 +580,136 @@ test('recommendBlocks: parsed_output이 recommended를 안 줘도 빈 배열로 
     catalog: { blocks: [{ id: 'b1', name: 'B1' }] },
   });
   assert.deepEqual(result, { recommended: [], reasons: {} });
+});
+
+// ── recommendArchitecture (ADR 0032 + docs/specs/architecture-recommendation.md) ─────────
+
+function archResponse(parsed) {
+  return { parsed_output: parsed, content: [] };
+}
+
+test('recommendArchitecture: parsed_output을 받아 표준 식별자만 통과시킨다(안전망)', async () => {
+  // Given: AI가 비표준 값(kotlin, redis)과 표준 값을 함께 돌려준다
+  const client = makeFakeClient(() =>
+    archResponse({
+      recommended: {
+        language: 'kotlin', // 비표준
+        database: 'postgresql', // 표준
+        api_style: 'rest', // 표준
+        architecture_pattern: 'serverless', // 비표준
+      },
+      reasons: {
+        language: { user: '버려질', dev: 'discarded' },
+        database: { user: '관계형', dev: 'pg' },
+        api_style: { user: '웹 표준', dev: 'rest' },
+        architecture_pattern: { user: '버려질', dev: 'discarded' },
+      },
+    }),
+  );
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.recommendArchitecture({
+    answers: {},
+    catalog: { blocks: [] },
+    selectedBlocks: {},
+  });
+  // Then: 비표준은 비워지고 표준만 남는다. reasons도 비표준 키는 비워진다.
+  assert.equal(result.recommended.language, undefined);
+  assert.equal(result.recommended.database, 'postgresql');
+  assert.equal(result.recommended.api_style, 'rest');
+  assert.equal(result.recommended.architecture_pattern, undefined);
+  assert.equal(result.reasons.language, undefined);
+  assert.deepEqual(result.reasons.database, { user: '관계형', dev: 'pg' });
+  assert.equal(result.reasons.architecture_pattern, undefined);
+});
+
+test('recommendArchitecture: 옛 string 형식 reasons는 user 시점으로 폴백된다(미래 호환)', async () => {
+  const client = makeFakeClient(() =>
+    archResponse({
+      recommended: { language: 'node' },
+      reasons: { language: '단순 한 줄 이유' },
+    }),
+  );
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.recommendArchitecture({
+    answers: {},
+    catalog: { blocks: [] },
+    selectedBlocks: {},
+  });
+  assert.deepEqual(result.reasons.language, { user: '단순 한 줄 이유', dev: '' });
+});
+
+test('recommendArchitecture: system 프롬프트에 단축어 풀어쓰기 가이드와 표준 옵션 표가 박혀있다', async () => {
+  const client = makeFakeClient(() => archResponse({ recommended: {}, reasons: {} }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.recommendArchitecture({
+    answers: {},
+    catalog: { blocks: [] },
+    selectedBlocks: {},
+  });
+  const text = client.captured[0].system[0].text;
+  // ADR 0030의 단축어 풀어쓰기(PG → 결제대행사)
+  assert.match(text, /PG → "결제대행사"/);
+  // ADR 0012 결정 1의 4개 키와 옵션
+  assert.match(text, /language: node \| java \| python/);
+  assert.match(text, /database: postgresql \| mysql \| sqlite \| mongodb/);
+  assert.match(text, /api_style: rest \| graphql \| rpc/);
+  assert.match(text, /architecture_pattern: monolith \| modular-monolith \| microservices/);
+  // 두 시점 reasons 가이드
+  assert.match(text, /reasons\[결정키\]\.user/);
+  assert.match(text, /reasons\[결정키\]\.dev/);
+});
+
+test('recommendArchitecture: max_tokens가 2048이고 schema가 recommended/reasons를 required로 가진다', async () => {
+  const client = makeFakeClient(() => archResponse({ recommended: {}, reasons: {} }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.recommendArchitecture({
+    answers: {},
+    catalog: { blocks: [] },
+    selectedBlocks: {},
+  });
+  const req = client.captured[0];
+  assert.equal(req.max_tokens, 2048);
+  const schema = req.output_config.format.schema;
+  assert.deepEqual(schema.required.sort(), ['reasons', 'recommended'].sort());
+  assert.equal(schema.additionalProperties, false);
+});
+
+test('recommendArchitecture: user 메시지에 answers, compact catalog, selectedBlocks가 들어간다', async () => {
+  const client = makeFakeClient(() => archResponse({ recommended: {}, reasons: {} }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.recommendArchitecture({
+    answers: { what: '쇼핑몰', who: '단골' },
+    catalog: {
+      worlds: [{ id: 'w-x', title: 'X' }],
+      blocks: [{ id: 'b1', name: 'B1', user_desc: 'd1', priority: 'required' }],
+      cascades: [{ trigger: 'b1' }], // 추천에 안 씀
+    },
+    selectedBlocks: {
+      selected: ['b1'],
+      auto_added: ['b2'],
+      affected: [],
+      prerequisites: [],
+    },
+  });
+  const parsed = JSON.parse(client.captured[0].messages[0].content);
+  assert.equal(parsed.answers.what, '쇼핑몰');
+  assert.equal(parsed.catalog.blocks[0].id, 'b1');
+  assert.equal(parsed.catalog.blocks[0].priority, 'required');
+  // worlds나 cascades는 추천 호출에 안 보낸다(토큰 절약)
+  assert.equal(parsed.catalog.worlds, undefined);
+  assert.equal(parsed.catalog.cascades, undefined);
+  // selectedBlocks는 정규화되어 들어간다
+  assert.deepEqual(parsed.selectedBlocks.selected, ['b1']);
+  assert.deepEqual(parsed.selectedBlocks.auto_added, ['b2']);
+});
+
+test('recommendArchitecture: parsed_output이 recommended를 안 줘도 빈 객체로 안전하게 폴백', async () => {
+  const client = makeFakeClient(() => archResponse({})); // 빈 객체
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.recommendArchitecture({
+    answers: {},
+    catalog: { blocks: [] },
+    selectedBlocks: {},
+  });
+  assert.deepEqual(result, { recommended: {}, reasons: {} });
 });

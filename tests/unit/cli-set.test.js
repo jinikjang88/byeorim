@@ -51,6 +51,7 @@ async function setupReadyForSet(cwd, blockIds = ['order']) {
   await interactiveShape({
     cwd,
     askArchitecture: async () => REST_CHOICES,
+    confirmArchitecture: async () => 'proceed',
   });
   await runForge({ cwd });
   await runTemper({ cwd });
@@ -146,7 +147,11 @@ test('답한 결정과 빈 결정이 별도 섹션으로 들어간다', async ()
         return null;
       },
     });
-    await interactiveShape({ cwd, askArchitecture: async () => REST_CHOICES });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => REST_CHOICES,
+      confirmArchitecture: async () => 'proceed',
+    });
     await runForge({ cwd });
     await runTemper({ cwd });
     // When
@@ -244,7 +249,11 @@ test('test-scenarios.yml이 없으면 temper 안내 메시지로 거부한다', 
       log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
-    await interactiveShape({ cwd, askArchitecture: async () => REST_CHOICES });
+    await interactiveShape({
+      cwd,
+      askArchitecture: async () => REST_CHOICES,
+      confirmArchitecture: async () => 'proceed',
+    });
     await runForge({ cwd });
     // temper 건너뜀: 강제로 stage를 set로 옮긴다
     const stateFile = join(cwd, '.beoreum', 'state.yml');

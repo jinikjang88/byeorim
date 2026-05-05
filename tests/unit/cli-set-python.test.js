@@ -45,7 +45,11 @@ async function setupReadyForSet(cwd, blockIds) {
     log: () => {},
   });
   await runSmelt({ cwd, blockIds });
-  await interactiveShape({ cwd, askArchitecture: async () => PYTHON_CHOICES });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => PYTHON_CHOICES,
+    confirmArchitecture: async () => 'proceed',
+  });
   await runForge({ cwd });
   await runTemper({ cwd });
 }
