@@ -39,6 +39,7 @@
 | `beoreum answer` | smelt에서 미뤄둔 질문에 답한다 |
 | `beoreum run` | 만든 Backend + Frontend를 한 번에 띄운다 |
 | `beoreum verify` | 만든 코드가 잘 컴파일되고 테스트가 통과하는지 본다. `--smoke` 옵션을 더하면 실제로 띄워서 살아있는지도 확인 |
+| `beoreum <단계> import-review <응답파일>` | 외부 AI(Claude.ai/ChatGPT/Gemini 등)에서 받은 검토 응답을 다시 가져온다. smelt/shape/forge/temper/inspect 단계에서 모두 같은 결로 동작(아래 "외부 AI에 검토받기" 참고). prospect는 `import-catalog`로 카탈로그 자체를 교체 |
 
 ## 시작하기
 
