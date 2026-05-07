@@ -1,11 +1,13 @@
 // beoreum inspect. 7단계의 마지막. 6영역 다관점 체크리스트와 코드 검수로 inspect-report.md를 만든다.
-// ADR 0007, ADR 0016(6영역과 정적 체크리스트), ADR 0003 결정 3(강한 신호), ADR 0049(정적 규칙 코드 검수)를 따른다.
-// 사용자 입력 없는 변환 단계라 picker 없음.
+// ADR 0007, ADR 0016(6영역과 정적 체크리스트), ADR 0003 결정 3(강한 신호),
+// ADR 0049(정적 규칙 코드 검수), ADR 0050(AI 검수), ADR 0051(외부 검토 + import-review)를 따른다.
+// 사용자 입력 없는 변환 단계라 picker 없음(import-review는 별도 명령).
 
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { runAllRules } from './inspect-rules.js';
+import { buildInspectReviewPromptMarkdown } from './inspect-prompt.js';
 
 const STAGE = 'inspect';
 const DONE_MARKER = 'done';
@@ -103,11 +105,13 @@ const SEVERITY_PREFIX = {
   concern: '✗',
 };
 
-// finding의 source prefix. ADR 0050 결정 8.
-// 'static' → '[정적]', 'ai' → '[AI]'. source 없으면 '[정적]' 폴백(ADR 0049 후행 호환).
+// finding의 source prefix. ADR 0050 결정 8 + ADR 0051 결정 5.
+// 'static' → '[정적]', 'ai' → '[AI]', 'external' → '[외부 AI]'.
+// source 없으면 '[정적]' 폴백(ADR 0049 후행 호환).
 const SOURCE_PREFIX = {
   static: '[정적]',
   ai: '[AI]',
+  external: '[외부 AI]',
 };
 
 // 한 영역에 묶인 finding을 markdown 한 묶음으로 박는다.
@@ -398,23 +402,83 @@ function addFileIfPresent(files, key, path) {
   if (content !== null) files[key] = content;
 }
 
+// inspect-findings.yml 결. ADR 0051 결정 5의 단일 진실 소스.
+// findings: { static: [...], ai: [...], external: [...] }
+function loadInspectFindingsFile(findingsFile) {
+  if (!existsSync(findingsFile)) return null;
+  try {
+    return yaml.load(readFileSync(findingsFile, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// 기존 yml에서 external 섹션만 보존해 가져온다. 없으면 빈 배열.
+function loadExternalFindings(findingsFile) {
+  const doc = loadInspectFindingsFile(findingsFile);
+  if (!doc || !doc.findings) return [];
+  const ext = doc.findings.external;
+  return Array.isArray(ext) ? ext.map((f) => ({ ...f, source: 'external' })) : [];
+}
+
+// inspect-findings.yml 박기. ADR 0051 결정 5.
+function writeInspectFindingsFile({
+  findingsFile,
+  now,
+  staticFindings,
+  aiFindings,
+  externalFindings,
+}) {
+  const doc = {
+    schema_version: 1,
+    generated_at: (now || new Date()).toISOString(),
+    findings: {
+      static: staticFindings.map(stripSource),
+      ai: aiFindings.map(stripSource),
+      external: externalFindings.map(stripSource),
+    },
+  };
+  writeFileSync(findingsFile, yaml.dump(doc, { sortKeys: false }), 'utf8');
+  return doc;
+}
+
+// yml에 박힐 때 source 필드는 빼고 박는다(섹션 자체가 출처라 중복).
+function stripSource(f) {
+  const { source: _source, ...rest } = f;
+  return rest;
+}
+
+// yml에서 finding을 읽어올 때 source를 채운다.
+function annotateSource(findings, source) {
+  return (findings || []).map((f) => ({ ...f, source }));
+}
+
 // runInspect는 7단계의 마지막 단계의 본체.
-// 자기 점검 체크리스트(ADR 0016) + 정적 규칙 코드 검수(ADR 0049) + AI 검수(ADR 0050)를 합쳐
-// inspect-report.md를 만들고 state.yml의 current_stage를 'done'으로 갱신한다.
+// 자기 점검 체크리스트(ADR 0016) + 정적 규칙 코드 검수(ADR 0049) + AI 검수(ADR 0050) + 보존된 외부 검토(ADR 0051)를 합쳐
+// inspect-findings.yml(단일 진실 소스)에 저장하고 inspect-report.md를 derive,
+// inspect-review-prompt.md(외부 검토 부산물)를 박고 state.yml을 'done'으로 갱신한다.
 //
 // 입력:
 //   cwd      - 프로젝트 루트 절대 경로
 //   now      - 테스트용 결정적 시각(선택)
 //   adapter  - AI 어댑터(선택, ADR 0050 결정 5). adapter.inspectCode가 있으면 호출
 //
-// 반환: { reportFile, areaCount, questionCount, findingCount, staticFindingCount, aiFindingCount,
-//         concernCount, aiCalled, aiFailed, aiError, isDone }
+// 반환: {
+//   reportFile, findingsFile, promptFile,
+//   areaCount, questionCount, findingCount,
+//   staticFindingCount, aiFindingCount, externalFindingCount,
+//   concernCount, aiCalled, aiFailed, aiError, isDone
+// }
 export async function runInspect({ cwd, now, adapter } = {}) {
   if (!cwd) throw new Error('runInspect({ cwd })가 필요합니다');
 
   const beoreumDir = join(cwd, '.beoreum');
+  const projectDir = join(beoreumDir, 'project');
   const stateFile = join(beoreumDir, 'state.yml');
-  const reportFile = join(beoreumDir, 'project', 'inspect-report.md');
+  const reportFile = join(projectDir, 'inspect-report.md');
+  const findingsFile = join(projectDir, 'inspect-findings.yml');
+  const promptsDir = join(projectDir, 'prompts');
+  const promptFile = join(promptsDir, 'inspect-review-prompt.md');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
@@ -433,7 +497,6 @@ export async function runInspect({ cwd, now, adapter } = {}) {
     try {
       const input = buildInspectInput({ beoreumDir, architecture });
       aiFindings = await adapter.inspectCode(input);
-      // 어댑터가 source 필드를 안 박았을 자리에 대비한 폴백.
       aiFindings = (aiFindings || []).map((f) => ({ source: 'ai', ...f }));
     } catch (err) {
       aiFailed = true;
@@ -442,24 +505,74 @@ export async function runInspect({ cwd, now, adapter } = {}) {
     }
   }
 
-  const findings = [...staticFindings, ...aiFindings];
+  // ADR 0051 결정 5: 기존 yml의 external 섹션을 보존해서 합친다.
+  const externalFindings = loadExternalFindings(findingsFile);
 
+  // 단일 진실 소스 yml에 저장(static + ai 갱신, external 보존)
+  writeInspectFindingsFile({
+    findingsFile,
+    now,
+    staticFindings,
+    aiFindings,
+    externalFindings,
+  });
+
+  // inspect-report.md는 yml에서 derive
+  const findings = [...staticFindings, ...aiFindings, ...externalFindings];
   writeFileSync(reportFile, buildReport(now, findings, aiError), 'utf8');
+
+  // ADR 0051: 외부 검토 프롬프트 부산물
+  mkdirSync(promptsDir, { recursive: true });
+  const input = buildInspectInput({ beoreumDir, architecture });
+  writeFileSync(promptFile, buildInspectReviewPromptMarkdown(input), 'utf8');
+
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
 
   const questionCount = INSPECT_AREAS.reduce((sum, a) => sum + a.questions.length, 0);
 
   return {
     reportFile,
+    findingsFile,
+    promptFile,
     areaCount: INSPECT_AREAS.length,
     questionCount,
     findingCount: findings.length,
     staticFindingCount: staticFindings.length,
     aiFindingCount: aiFindings.length,
+    externalFindingCount: externalFindings.length,
     concernCount: countConcerns(findings),
     aiCalled,
     aiFailed,
     aiError,
     isDone: true,
+  };
+}
+
+// rebuildInspectReport는 inspect-findings.yml에서 inspect-report.md를 다시 만든다.
+// import-review가 yml만 갱신한 뒤 호출하는 결.
+// state는 안 건드리고 report만 갱신.
+export function rebuildInspectReport({ cwd, now } = {}) {
+  if (!cwd) throw new Error('rebuildInspectReport({ cwd })가 필요합니다');
+  const beoreumDir = join(cwd, '.beoreum');
+  const findingsFile = join(beoreumDir, 'project', 'inspect-findings.yml');
+  const reportFile = join(beoreumDir, 'project', 'inspect-report.md');
+  const doc = loadInspectFindingsFile(findingsFile);
+  if (!doc || !doc.findings) {
+    throw new Error(
+      'inspect-findings.yml이 없거나 비어있습니다. 먼저 beoreum inspect를 실행해주세요',
+    );
+  }
+  const staticF = annotateSource(doc.findings.static, 'static');
+  const aiF = annotateSource(doc.findings.ai, 'ai');
+  const extF = annotateSource(doc.findings.external, 'external');
+  const findings = [...staticF, ...aiF, ...extF];
+  writeFileSync(reportFile, buildReport(now, findings, null), 'utf8');
+  return {
+    reportFile,
+    findingCount: findings.length,
+    staticFindingCount: staticF.length,
+    aiFindingCount: aiF.length,
+    externalFindingCount: extF.length,
+    concernCount: countConcerns(findings),
   };
 }

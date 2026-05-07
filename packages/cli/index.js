@@ -13,15 +13,19 @@ export { buildContractsReviewPromptMarkdown } from './src/forge-prompt.js';
 export { applyForgeReview } from './src/forge-import.js';
 export {
   parseReviewResponse,
+  parseFindingsResponse,
   validateForgeChange,
   validateTemperChange,
+  validateInspectFinding,
 } from './src/review-response-parser.js';
 export { runTemper, interactiveTemper } from './src/temper.js';
 export { buildScenariosReviewPromptMarkdown } from './src/temper-prompt.js';
 export { applyTemperReview } from './src/temper-import.js';
 export { runSet } from './src/set.js';
-export { runInspect } from './src/inspect.js';
+export { runInspect, rebuildInspectReport } from './src/inspect.js';
 export { runAllRules } from './src/inspect-rules.js';
+export { buildInspectReviewPromptMarkdown } from './src/inspect-prompt.js';
+export { applyInspectReview } from './src/inspect-import.js';
 export { interactiveAnswer } from './src/answer.js';
 export { runStatus } from './src/status.js';
 export { runVerify } from './src/verify.js';

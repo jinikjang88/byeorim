@@ -21,6 +21,7 @@ import {
   runStatus,
   runVerify,
   runRun,
+  applyInspectReview,
 } from '@beoreum/cli';
 import { selectAdapter } from '@beoreum/ai';
 
@@ -451,17 +452,21 @@ program
     }
   });
 
-program
+const inspectCmd = program
   .command('inspect')
   .alias('ins')
-  .description('비춤. 6영역 자기 점검 + 정적 규칙 코드 검수(ADR 0049) + AI 검수(ADR 0050)')
+  .description(
+    '비춤. 6영역 자기 점검 + 정적 규칙 코드 검수(ADR 0049) + AI 검수(ADR 0050) + 외부 검토 부산물(ADR 0051)',
+  )
   .action(async () => {
     try {
       const adapter = selectAdapter();
       const result = await runInspect({ cwd: process.cwd(), adapter });
       console.log(`체크리스트와 코드 검수 결과를 만들었습니다: ${result.reportFile}`);
+      console.log(`단일 진실 소스(yml): ${result.findingsFile}`);
+      console.log(`외부 검토 프롬프트 부산물: ${result.promptFile}`);
       console.log(
-        `영역 ${result.areaCount}개, 질문 ${result.questionCount}개, 코드 검수 ${result.findingCount}건(정적 ${result.staticFindingCount}, AI ${result.aiFindingCount})`,
+        `영역 ${result.areaCount}개, 질문 ${result.questionCount}개, 코드 검수 ${result.findingCount}건(정적 ${result.staticFindingCount}, AI ${result.aiFindingCount}, 외부 ${result.externalFindingCount})`,
       );
       if (result.aiFailed) {
         console.log('');
@@ -484,10 +489,31 @@ program
         );
       }
       console.log('');
+      console.log(
+        `외부 AI 검수: ${result.promptFile}을 claude.ai/ChatGPT/Gemini에 붙여넣고 받은 응답을 \`beoreum inspect import-review <응답파일>\`로 다시 가져옵니다(ADR 0051).`,
+      );
+      console.log('');
       console.log('7단계 흐름이 끝났습니다.');
       console.log(
         '체크리스트를 채워가며 출시를 준비하세요. 답하지 못한 질문은 다이어리에 남겨두세요.',
       );
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  });
+
+// inspect 보조 명령(ADR 0051). 외부 AI에서 받은 검수 응답을 inspect-findings.yml의 external 섹션에 반영.
+// 예: beoreum inspect import-review ./response.md
+inspectCmd
+  .command('import-review')
+  .description(
+    '외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 검수 응답을 inspect-findings.yml에 반영(ADR 0051)',
+  )
+  .argument('<file>', '가져올 응답 마크다운 파일 경로')
+  .action(async (file) => {
+    try {
+      await applyInspectReview({ cwd: process.cwd(), responsePath: file });
     } catch (err) {
       console.error(err.message);
       process.exit(1);
