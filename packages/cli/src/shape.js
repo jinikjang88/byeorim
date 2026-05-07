@@ -362,7 +362,6 @@ export async function interactiveShape({
   });
 
   // ask → confirm 루프. confirm이 'redo'면 다시. 사용자 의지로 무한 루프 가능(차단 자리 없음, 동행 톤).
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const choices = await askArchitecture({ context, recommendation, log });
     ensureChoicesValid(choices);
