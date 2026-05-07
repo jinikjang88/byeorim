@@ -3,11 +3,15 @@
 // ADR 0023의 옵셔널 어댑터로 schema를 채운다.
 // ADR 0034의 인터랙티브 검토 흐름을 interactiveForge로 박는다.
 // ADR 0035의 외부 검토 프롬프트 부산물(contracts-review-prompt.md)을 자동 생성한다.
+// ADR 0041로 path 결을 복수형 default로 갱신(pluralize 라이브러리, 마지막 단어 복수화).
+// ADR 0042로 block.path 옵셔널 override를 추가(카탈로그 작성자가 정밀 조정 가능).
+// ADR 0044로 'singleton' api_style 추가(/me, /account 같은 한 자리 자원, GET/PATCH/DELETE).
 // runForge는 비대화 호환 자리로 그대로 유지(테스트와 자동화에서 사용).
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
+import pluralize from 'pluralize';
 import { select } from '@inquirer/prompts';
 import { loadCatalog } from '@beoreum/catalog';
 import { formatContractsSummary } from './forge-picker-helpers.js';
@@ -48,14 +52,44 @@ function ensureStage(state, expected) {
   }
 }
 
+// ASCII 영문 segment(하이픈 분리 가능)인지 본다. 비ASCII(한국어 등)는 복수화 폴백 자리(ADR 0041 결정 3).
+const ASCII_SEGMENT_REGEX = /^[a-z][a-z0-9-]*$/;
+
+// 하이픈으로 분리된 segment의 마지막 단어를 복수화한다(ADR 0041 결정 2).
+// 예: order → orders, cancel-return → cancel-returns, product-search → product-searches.
+function pluralizeSegment(segment) {
+  const parts = segment.split('-');
+  parts[parts.length - 1] = pluralize(parts[parts.length - 1]);
+  return parts.join('-');
+}
+
 // block ID에서 path 세그먼트를 만든다. 언더스코어를 하이픈으로 바꿔 REST 관례를 따른다(ADR 0013 결정 3).
+// ASCII 영문이면 마지막 단어를 복수화(ADR 0041), 그 외(한국어 등)는 단수형 그대로 폴백.
 function pathFromBlockId(blockId) {
-  return `/${blockId.replace(/_/g, '-')}`;
+  const segment = blockId.replace(/_/g, '-');
+  if (!ASCII_SEGMENT_REGEX.test(segment)) {
+    return `/${segment}`;
+  }
+  return `/${pluralizeSegment(segment)}`;
+}
+
+// 한 블럭의 base path를 결정한다(ADR 0042).
+// block.path가 있으면 그대로 사용(카탈로그 작성자가 정밀 조정한 자리).
+// 없으면 block.id에서 자동 복수화(ADR 0041 default).
+// 단 singleton은 자동 복수화 안 함(ADR 0044 결정 4). 단수형 default.
+function pathForBlock(block) {
+  if (typeof block.path === 'string' && block.path.length > 0) {
+    return block.path;
+  }
+  if (block.api_style === 'singleton') {
+    return `/${block.id.replace(/_/g, '-')}`;
+  }
+  return pathFromBlockId(block.id);
 }
 
 // resource 블럭의 5개 CRUD endpoint를 만든다. ADR 0013 결정 3 매핑 표.
 function buildResourceEndpoints(block) {
-  const path = pathFromBlockId(block.id);
+  const path = pathForBlock(block);
   const itemPath = `${path}/{id}`;
   const name = block.name;
   return [
@@ -108,8 +142,41 @@ function buildQueryEndpoints(block) {
     {
       operation: 'search',
       method: 'GET',
-      path: pathFromBlockId(block.id),
+      path: pathForBlock(block),
       description: `${block.name} 검색`,
+      request_schema: TODO,
+      response_schema: TODO,
+    },
+  ];
+}
+
+// singleton 블럭의 3개 endpoint(GET/PATCH/DELETE)를 만든다. ADR 0044 결정 2.
+// path는 단수형(/me 같은 자리). {id} 자리 없음.
+function buildSingletonEndpoints(block) {
+  const path = pathForBlock(block);
+  const name = block.name;
+  return [
+    {
+      operation: 'get',
+      method: 'GET',
+      path,
+      description: `${name} 조회`,
+      request_schema: TODO,
+      response_schema: TODO,
+    },
+    {
+      operation: 'update',
+      method: 'PATCH',
+      path,
+      description: `${name} 수정`,
+      request_schema: TODO,
+      response_schema: TODO,
+    },
+    {
+      operation: 'delete',
+      method: 'DELETE',
+      path,
+      description: `${name} 삭제`,
       request_schema: TODO,
       response_schema: TODO,
     },
@@ -129,6 +196,9 @@ function buildBlockContract(block) {
   }
   if (apiStyle === 'query') {
     return { ...base, endpoints: buildQueryEndpoints(block) };
+  }
+  if (apiStyle === 'singleton') {
+    return { ...base, endpoints: buildSingletonEndpoints(block) };
   }
   // resource (default)
   return { ...base, endpoints: buildResourceEndpoints(block) };

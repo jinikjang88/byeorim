@@ -7,6 +7,7 @@ const API_STYLE_LABELS = {
   resource: 'resource',
   query: 'query',
   internal: 'internal',
+  singleton: 'singleton',
 };
 
 // HTTP 메서드를 6자리로 정렬해 path와 줄을 맞춘다.

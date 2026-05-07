@@ -36,7 +36,7 @@ const QUERY_CONTRACT = {
     {
       operation: 'search',
       method: 'GET',
-      path: '/product-search',
+      path: '/product-searches',
       description: '상품 검색',
       request_schema: 'TODO',
       response_schema: 'TODO',

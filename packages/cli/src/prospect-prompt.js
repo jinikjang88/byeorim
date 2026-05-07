@@ -37,7 +37,8 @@ const SYSTEM_TEXT = `너는 사용자가 만들고 싶은 서비스의 도메인
 - dependencies는 명확한 인과만. source/target과 type("requires" 또는 "affects"), reason. 추측은 비운다.
 - cascades는 한 블럭이 트리거됐을 때 사용자에게 더 묻고 싶은 질문(ask_questions). 도메인 상식 기반. 비어도 됨.
 - prerequisites는 외부 조건(비용, 시간, 허가, 인프라). name과 enables 배열. 떠오르지 않으면 빈 배열.
-- ID 패턴: ^[a-z][a-z0-9-]*$. 예: w-customer, b-order, p-permit.
+- ID 패턴: ^[a-z][a-z0-9-]*$. 반드시 영문 소문자/숫자/하이픈만. 한국어 ID는 import에서 거부됩니다(예: 'order' OK, '주문' 거부). ADR 0042
+- block에 옵셔널 path 필드를 박을 수 있어요. 자동 복수화 결과가 어색한 자리(mass noun, 동사형, 싱글톤 자원)를 정밀 조정. 예: shipping → "path: /shipments". ADR 0042
 
 추측을 강요하지 않는다. 사용자 답변에서 근거를 찾지 못한 자리는 비운다(빈 dependencies, cascades, prerequisites).
 시드 템플릿이 주어지면 그 worlds/blocks 구조를 참고하되 사용자 도메인에 맞춰 변형한다.

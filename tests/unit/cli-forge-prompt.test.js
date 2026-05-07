@@ -204,3 +204,24 @@ test('비어있는 contracts는 "(계약이 비어있어요)" 한 줄', () => {
   });
   assert.match(md, /\(계약이 비어있어요\)/);
 });
+
+test('응답 형식 안내 섹션과 4종 변경 형식이 들어있다(ADR 0039)', () => {
+  const md = buildContractsReviewPromptMarkdown({
+    answers: {},
+    catalog: { blocks: [] },
+    selectedBlocks: {},
+    architecture: FIXED_ARCHITECTURE,
+    contracts: [],
+  });
+  // 응답 형식 안내 섹션 헤더
+  assert.match(md, /## 응답 형식 안내/);
+  // 외부 AI에게 ## 제안된 변경 사항 섹션을 추가하라고 안내
+  assert.match(md, /## 제안된 변경 사항/);
+  // 4종 kind가 형식 예시에 등장
+  assert.match(md, /kind: endpoint_add/);
+  assert.match(md, /kind: endpoint_remove/);
+  assert.match(md, /kind: schema_modify/);
+  assert.match(md, /kind: description_modify/);
+  // 코드 펜스가 ```yaml로 안내됨
+  assert.match(md, /```yaml/);
+});

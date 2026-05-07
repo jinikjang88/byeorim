@@ -212,3 +212,167 @@ test('architecture.yml이 없으면 shape 안내 메시지로 거부한다', asy
 test('cwd 누락은 한국어로 거부한다', async () => {
   await assert.rejects(runForge({}), /cwd.*필요합니다/);
 });
+
+// ADR 0041: REST endpoint path 복수형 default.
+
+test('path가 단순 영문 block id에서 복수형으로 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: order 블럭(resource)
+    await setupReadyForForge(cwd, ['order']);
+    // When
+    await runForge({ cwd });
+    // Then: path가 /orders로 박힘(단수형 /order 아님)
+    const order = readContracts(cwd).contracts.find((c) => c.block_id === 'order');
+    const paths = order.endpoints.map((e) => e.path);
+    assert.ok(
+      paths.includes('/orders'),
+      `paths에 /orders가 있어야 한다. 실제: ${JSON.stringify(paths)}`,
+    );
+    assert.ok(paths.includes('/orders/{id}'), `paths에 /orders/{id}가 있어야 한다`);
+    // 단수형이 박히면 안 됨
+    assert.ok(!paths.includes('/order'));
+  });
+});
+
+test('path가 하이픈 복합어에서 마지막 단어만 복수화된다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: cancel-return(resource) — "return"이 마지막 단어
+    await setupReadyForForge(cwd, ['cancel-return']);
+    // When
+    await runForge({ cwd });
+    // Then: /cancel-returns (마지막 return만 복수화. 첫 cancel은 그대로)
+    const cancelReturn = readContracts(cwd).contracts.find((c) => c.block_id === 'cancel-return');
+    const paths = cancelReturn.endpoints.map((e) => e.path);
+    assert.ok(paths.includes('/cancel-returns'));
+    assert.ok(paths.includes('/cancel-returns/{id}'));
+  });
+});
+
+test('path가 불규칙 명사도 올바르게 복수화한다(history → histories)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: order-history(commerce 카탈로그상 resource)
+    await setupReadyForForge(cwd, ['order-history']);
+    // When
+    await runForge({ cwd });
+    // Then: /order-histories (history → histories 불규칙)
+    const oh = readContracts(cwd).contracts.find((c) => c.block_id === 'order-history');
+    const paths = oh.endpoints.map((e) => e.path);
+    assert.ok(
+      paths.some((p) => p === '/order-histories' || p === '/order-histories/{id}'),
+      `paths에 /order-histories 자리가 있어야 한다. 실제: ${JSON.stringify(paths)}`,
+    );
+  });
+});
+
+test('path가 query 블럭도 복수형(product-search → product-searches)', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: product-search(query)
+    await setupReadyForForge(cwd, ['product-search']);
+    // When
+    await runForge({ cwd });
+    // Then: query 블럭의 한 endpoint도 /product-searches
+    const ps = readContracts(cwd).contracts.find((c) => c.block_id === 'product-search');
+    assert.equal(ps.endpoints.length, 1);
+    assert.equal(ps.endpoints[0].path, '/product-searches');
+  });
+});
+
+// ADR 0042: block.path 옵셔널 override.
+
+test('block.path가 있으면 자동 복수화 대신 그 path를 쓴다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: order 블럭(resource). 카탈로그에 path: /custom-orders 박음
+    await setupReadyForForge(cwd, ['order']);
+    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
+    const orderBlock = catalog.blocks.find((b) => b.id === 'order');
+    orderBlock.path = '/custom-orders';
+    writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
+    // When
+    await runForge({ cwd });
+    // Then: 5개 endpoint 모두 /custom-orders 또는 /custom-orders/{id}
+    const order = readContracts(cwd).contracts.find((c) => c.block_id === 'order');
+    const paths = order.endpoints.map((e) => e.path);
+    assert.ok(paths.includes('/custom-orders'));
+    assert.ok(paths.includes('/custom-orders/{id}'));
+    // 자동 복수화 결과(/orders)는 안 박힘
+    assert.ok(!paths.includes('/orders'));
+  });
+});
+
+test('block.path가 query 블럭에도 적용된다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: product-search(query)에 path: /products/search 박음
+    await setupReadyForForge(cwd, ['product-search']);
+    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
+    const psBlock = catalog.blocks.find((b) => b.id === 'product-search');
+    psBlock.path = '/products/search';
+    writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
+    // When
+    await runForge({ cwd });
+    // Then
+    const ps = readContracts(cwd).contracts.find((c) => c.block_id === 'product-search');
+    assert.equal(ps.endpoints[0].path, '/products/search');
+  });
+});
+
+// ADR 0044: singleton api_style.
+
+test('singleton 블럭은 GET/PATCH/DELETE 3개 endpoint로 풀린다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: order 블럭의 api_style을 singleton으로 강제 + path: /me 박음
+    await setupReadyForForge(cwd, ['order']);
+    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
+    const orderBlock = catalog.blocks.find((b) => b.id === 'order');
+    orderBlock.api_style = 'singleton';
+    orderBlock.path = '/me';
+    writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
+    // When
+    await runForge({ cwd });
+    // Then: 3개 endpoint(GET/PATCH/DELETE) 모두 /me에 박힘. {id} 자리 없음
+    const order = readContracts(cwd).contracts.find((c) => c.block_id === 'order');
+    assert.equal(order.api_style, 'singleton');
+    assert.equal(order.endpoints.length, 3);
+    const methods = new Set(order.endpoints.map((e) => e.method));
+    assert.deepEqual(methods, new Set(['GET', 'PATCH', 'DELETE']));
+    for (const ep of order.endpoints) {
+      assert.equal(ep.path, '/me', `${ep.method} 가 /me여야 한다`);
+    }
+    const operations = new Set(order.endpoints.map((e) => e.operation));
+    assert.deepEqual(operations, new Set(['get', 'update', 'delete']));
+  });
+});
+
+test('singleton 블럭에 block.path 없으면 단수형(/account)으로 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForForge(cwd, ['order']);
+    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
+    const orderBlock = catalog.blocks.find((b) => b.id === 'order');
+    orderBlock.api_style = 'singleton';
+    // path 안 박음
+    writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
+    await runForge({ cwd });
+    const order = readContracts(cwd).contracts.find((c) => c.block_id === 'order');
+    // 자동 복수화 안 함. /order 단수형 그대로
+    for (const ep of order.endpoints) {
+      assert.equal(ep.path, '/order');
+    }
+  });
+});
+
+test('block.path가 없는 블럭은 자동 복수화 default로 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    // Given: order에 path 필드 안 박음(commerce 카탈로그 그대로)
+    await setupReadyForForge(cwd, ['order']);
+    // When
+    await runForge({ cwd });
+    // Then: 자동 복수화 default(/orders)
+    const order = readContracts(cwd).contracts.find((c) => c.block_id === 'order');
+    const paths = order.endpoints.map((e) => e.path);
+    assert.ok(paths.includes('/orders'));
+    assert.ok(paths.includes('/orders/{id}'));
+  });
+});

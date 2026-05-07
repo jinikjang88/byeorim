@@ -84,6 +84,9 @@ test('buildCatalogPromptMarkdown은 외부 AI 형식 안내(YAML 출력)를 포�
   assert.match(md, /YAML/);
   // ID 패턴 안내
   assert.match(md, /\^\[a-z\]\[a-z0-9-\]\*\$/);
+  // ADR 0042: 영문 ID 강조 + path 옵셔널 안내
+  assert.match(md, /한국어 ID는 import에서 거부/);
+  assert.match(md, /옵셔널 path 필드/);
 });
 
 test('buildCatalogPromptMarkdown은 비어있는 답변도 안전하게 다룬다', () => {

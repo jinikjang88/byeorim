@@ -96,7 +96,12 @@
         "analogy": { "type": "string" },
         "priority": { "enum": ["required", "optional"] },
         "effort_days": { "type": "number", "minimum": 0 },
-        "api_style": { "enum": ["resource", "query", "internal"] },
+        "api_style": { "enum": ["resource", "query", "internal", "singleton"] },
+        "path": {
+          "type": "string",
+          "pattern": "^/[^\\s?#\\\\<>\"'`]+$",
+          "description": "REST endpoint path 자리. 옵셔널. 비어있으면 block.id에서 자동 복수화(ADR 0041). 자동 결과가 어색한 자리(mass noun, 동사형 복합어, 싱글톤 자원)를 정밀 조정(ADR 0042). i18n 허용(한국어/일본어/중국어 등 Unicode letters, ADR 0043). 거부: 공백, ?, #, \\, <, >, \", ', `"
+        },
         "concerns": {
           "type": "array",
           "items": { "type": "string" }

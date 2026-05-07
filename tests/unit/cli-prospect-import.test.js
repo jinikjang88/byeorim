@@ -144,6 +144,222 @@ test('필수 인자 누락은 한국어로 거부한다', async () => {
   assert.throws(() => importCatalog({ cwd: '/tmp' }), /sourcePath.*필요합니다/);
 });
 
+// ADR 0042: 한국어 ID 카탈로그는 한국어로 풀어쓴 거부 메시지를 받는다.
+
+test('한국어 ID 카탈로그는 외부 AI에 영문 ID로 다시 부탁하라는 안내로 거부된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const koreanIdYaml = `name: 한국어 ID 카탈로그
+domain: korean-id
+worlds:
+  - id: 손님세계
+    title: 손님 세계
+    description: x
+blocks:
+  - id: 주문
+    name: 주문
+    user_desc: 손님이 주문하는 자리
+`;
+    const sourcePath = join(cwd, 'korean-id.yml');
+    writeFileSync(sourcePath, koreanIdYaml, 'utf8');
+    assert.throws(
+      () => importCatalog({ cwd, sourcePath, log: silentLog }),
+      /영문 소문자\/숫자\/하이픈만 쓰세요/,
+    );
+  });
+});
+
+test('block.path 필드가 있는 카탈로그가 import에 통과한다(ADR 0042)', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const yamlWithPath = `name: path 옵셔널 테스트
+domain: path-test
+worlds:
+  - id: w-main
+    title: 메인 세계
+    description: x
+blocks:
+  - id: shipping
+    name: 배송
+    user_desc: 배송 자리
+    api_style: resource
+    path: /shipments
+`;
+    const sourcePath = join(cwd, 'with-path.yml');
+    writeFileSync(sourcePath, yamlWithPath, 'utf8');
+    const result = importCatalog({ cwd, sourcePath, log: silentLog });
+    const catalog = yaml.load(readFileSync(result.catalogFile, 'utf8'));
+    const shipping = catalog.blocks.find((b) => b.id === 'shipping');
+    assert.equal(shipping.path, '/shipments');
+  });
+});
+
+test('block.path에 한국어가 들어와도 import에 통과한다(ADR 0043 i18n)', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const yml = `name: 한국어 path 테스트
+domain: korean-path
+worlds:
+  - id: w-main
+    title: 메인
+    description: x
+blocks:
+  - id: order
+    name: 주문
+    user_desc: x
+    api_style: resource
+    path: /주문
+`;
+    const sourcePath = join(cwd, 'i18n-path.yml');
+    writeFileSync(sourcePath, yml, 'utf8');
+    const result = importCatalog({ cwd, sourcePath, log: silentLog });
+    const catalog = yaml.load(readFileSync(result.catalogFile, 'utf8'));
+    const order = catalog.blocks.find((b) => b.id === 'order');
+    assert.equal(order.path, '/주문');
+  });
+});
+
+test('block.path가 잘못된 형식(공백 들어감)이면 형식 검증에서 거부된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const badPathYaml = `name: 잘못된 path 테스트
+domain: bad-path
+worlds:
+  - id: w-main
+    title: 메인 세계
+    description: x
+blocks:
+  - id: shipping
+    name: 배송
+    user_desc: x
+    path: "/has space"
+`;
+    const sourcePath = join(cwd, 'bad-path.yml');
+    writeFileSync(sourcePath, badPathYaml, 'utf8');
+    assert.throws(() => importCatalog({ cwd, sourcePath, log: silentLog }), /형식 검증에 걸렸어요/);
+  });
+});
+
+// 다른 검증 오류 자리 한국어 풀어쓰기.
+
+test('필수 필드 누락(name)은 한국어 안내로 거부된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    // block의 name 필드가 빠진 카탈로그
+    const yml = `name: x
+domain: x
+worlds:
+  - id: w-main
+    title: 메인 세계
+    description: x
+blocks:
+  - id: order
+    user_desc: 주문 자리
+`;
+    const sourcePath = join(cwd, 'missing-name.yml');
+    writeFileSync(sourcePath, yml, 'utf8');
+    assert.throws(
+      () => importCatalog({ cwd, sourcePath, log: silentLog }),
+      /필수 필드 "name"이?가? 빠져있어요/,
+    );
+  });
+});
+
+test('enum 위반(api_style)은 한국어 안내로 거부된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const yml = `name: x
+domain: x
+worlds:
+  - id: w-main
+    title: x
+    description: x
+blocks:
+  - id: order
+    name: 주문
+    user_desc: x
+    api_style: graphql
+`;
+    const sourcePath = join(cwd, 'bad-enum.yml');
+    writeFileSync(sourcePath, yml, 'utf8');
+    assert.throws(
+      () => importCatalog({ cwd, sourcePath, log: silentLog }),
+      /\[resource, query, internal, singleton\] 중 하나여야 해요/,
+    );
+  });
+});
+
+test('정의되지 않은 필드(추가 속성)는 한국어 안내로 거부된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const yml = `name: x
+domain: x
+worlds:
+  - id: w-main
+    title: x
+    description: x
+blocks:
+  - id: order
+    name: 주문
+    user_desc: x
+    unknown_field: 정의되지 않은 자리
+`;
+    const sourcePath = join(cwd, 'extra-field.yml');
+    writeFileSync(sourcePath, yml, 'utf8');
+    assert.throws(
+      () => importCatalog({ cwd, sourcePath, log: silentLog }),
+      /정의되지 않은 필드 "unknown_field"가 있어요/,
+    );
+  });
+});
+
+test('minItems 위반(worlds 빈 배열)은 한국어 안내로 거부된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const yml = `name: x
+domain: x
+worlds: []
+blocks:
+  - id: order
+    name: 주문
+    user_desc: x
+`;
+    const sourcePath = join(cwd, 'empty-worlds.yml');
+    writeFileSync(sourcePath, yml, 'utf8');
+    assert.throws(
+      () => importCatalog({ cwd, sourcePath, log: silentLog }),
+      /최소 1개 이상 항목이 필요해요/,
+    );
+  });
+});
+
+test('reference 오류(존재하지 않는 block 참조)는 한국어 그대로 노출된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await preparedCwd(cwd);
+    const yml = `name: x
+domain: x
+worlds:
+  - id: w-main
+    title: x
+    description: x
+blocks:
+  - id: order
+    name: 주문
+    user_desc: x
+dependencies:
+  - source: order
+    target: ghost-block
+    type: requires
+`;
+    const sourcePath = join(cwd, 'bad-ref.yml');
+    writeFileSync(sourcePath, yml, 'utf8');
+    assert.throws(
+      () => importCatalog({ cwd, sourcePath, log: silentLog }),
+      /존재하지 않는 block id 참조: ghost-block/,
+    );
+  });
+});
+
 test('교체된 파일이 yml 형식으로 다시 쓰여지고 loadCatalog가 통과한다', async () => {
   await withTempCwd(async (cwd) => {
     await preparedCwd(cwd);
