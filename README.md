@@ -11,12 +11,22 @@
 | 단계 | 한국어 | 명령어 | 별칭 | 하는 일 |
 |------|--------|--------|------|---------|
 | 0 | 탐광 | `beoreum prospect` | `prs` | 7항목 동행 질문, 카탈로그 선택, Reality Check 6영역 |
-| 1 | 제련 | `beoreum smelt` | `sml` | AI 추천 + 블럭 선택 + 의존성 해결 + 검토 |
-| 2 | 빚다 | `beoreum shape` | `shp` | AI 추천 + 4개 아키텍처 결정 + 검토 |
-| 3 | 단조 | `beoreum forge` | `frg` | AI schema 채움 + 계약 검토 + 외부 검토 프롬프트 |
-| 4 | 다듬 | `beoreum temper` | `tmr` | Given-When-Then 테스트 의도 |
-| 5 | 세움 | `beoreum set` | `set` | 산출물 합성과 코드 스켈레톤 생성 |
-| 6 | 비춤 | `beoreum inspect` | `ins` | 6영역 다관점 리뷰 |
+| 1 | 제련 | `beoreum smelt` | `sml` | AI 추천 + 블럭 선택 + 의존성 해결 + 검토 + 외부 검토 부산물 |
+| 2 | 빚다 | `beoreum shape` | `shp` | AI 추천 + 4개 아키텍처 결정 + 검토 + 외부 검토 부산물 |
+| 3 | 단조 | `beoreum forge` | `frg` | AI schema 채움 + 계약 검토 + 외부 검토 부산물 + import-review |
+| 4 | 다듬 | `beoreum temper` | `tmr` | Given-When-Then + AI test_code 채움 + 검토 + 외부 검토 부산물 + import-review |
+| 5 | 세움 | `beoreum set` | `set` | 산출물 합성 + 4 generator(node/java/python/frontend) 코드 스켈레톤 + healthcheck + prod 가드 |
+| 6 | 비춤 | `beoreum inspect` | `ins` | 6영역 자기 점검 + 정적 규칙 코드 검수 + AI 검수 + 외부 검토 부산물 + import-review |
+
+### 단계 외 명령
+
+| 명령어 | 별칭 | 하는 일 |
+|---|---|---|
+| `beoreum init` | - | 현재 디렉토리에 .beoreum/ 작업 공간을 만든다 |
+| `beoreum status` | - | 현재 단계와 답한 결정 현황을 본다 |
+| `beoreum answer` | - | smelt가 남긴 cascade 결정의 빈 자리를 채운다 |
+| `beoreum verify` | - | 생성된 backend/frontend의 install + test 실행. `--smoke` 플래그로 server up → /health → kill까지 |
+| `beoreum run` | - | 생성된 backend + frontend를 한 명령으로 동시 기동(prefix 결합 출력) |
 
 ## 시작하기
 
@@ -71,6 +81,64 @@ picker가 시작될 때 사용자가 어디서 와서 무엇을 빚는지 한 �
 ### 외부 AI로 아키텍처 더 자세히 검토받기 (ADR 0033)
 
 shape가 끝나면 부산물로 `.beoreum/project/prompts/architecture-review-prompt.md`가 자리잡는다. 7항목 답변 + 카탈로그 전체 + 사용자가 고른 블럭 + 4개 결정과 12개 표준 옵션 표 + AI 추천(두 시점)이 한 자리에 묶여 있어 외부 AI(Claude.ai/ChatGPT/Gemini 등)에 그대로 붙여넣으면 "도메인 적합성, 결정 사이 트레이드오프, 시작 무게"를 자세히 검토받는다. 응답은 자유 형식이라 사용자가 읽고 architecture.yml을 다듬거나 shape를 다시 돌릴 수 있다.
+
+## 단조와 다듬 한 번 돌려보기
+
+shape가 끝나면 forge가 contracts.yml(API 계약)을 만든다. AI 어댑터가 각 endpoint의 request/response schema를 도메인에 맞춰 채우고(ADR 0023), 인터랙티브 검토에서 사용자가 결과를 확인한다. 다음 단계 temper가 endpoint마다 Given-When-Then 시나리오를 만들고 AI가 test_code 자리도 같이 채운다(ADR 0036).
+
+```bash
+node bin/beoreum.js forge
+node bin/beoreum.js temper
+```
+
+forge는 부산물로 `.beoreum/project/prompts/contracts-review-prompt.md`(ADR 0035), temper는 `.beoreum/project/prompts/test-scenarios-review-prompt.md`(ADR 0038)를 만든다. 외부 AI에 붙여넣어 더 자세한 검토를 받을 수 있다.
+
+받은 응답을 다시 가져오는 명령은 다음과 같다.
+
+```bash
+node bin/beoreum.js forge import-review ./response.md     # contracts.yml에 반영(ADR 0039)
+node bin/beoreum.js temper import-review ./response.md    # test-scenarios.yml에 반영(ADR 0040)
+```
+
+picker가 변경마다 적용/건너뛰기/모두 적용/모두 건너뛰기/멈추기를 묻는다(ADR 0045). 외부 AI가 잘못된 안내를 줘도 사용자가 검토 후 골라 받을 수 있다.
+
+## 세움 한 번 돌려보기
+
+set은 6단계의 산출물을 한 README 문서로 합성하고, architecture.language에 따라 4개 generator 중 하나(node/java/python)로 backend 코드를 emit한다. frontend는 React + Vite로 항상 emit한다(ADR 0021). 생성된 코드는 단순 스켈레톤이 아니라 ADR 0046의 baseline을 갖춘 실행 가능한 결이다.
+
+```bash
+node bin/beoreum.js set
+```
+
+ADR 0046이 박은 baseline.
+
+- **`/health` endpoint**: 모든 backend가 표준 emit. `beoreum run`과 `verify --smoke`가 의지하는 자리
+- **`.env` + `.env.production` 분리**: dev에서 즉시 동작하는 값 + prod 템플릿. `BEOREUM_DEV_PLACEHOLDER_` 마커가 prod 시크릿이 안 채워졌음을 표시
+- **prod 가드**: NODE_ENV/profile=production에서 placeholder 값이 그대로면 startup 거부. 두 안전망(파일 분리 + 런타임 throw)
+- **in-memory dev DB**: SQLite/H2로 외부 의존성 없이 첫 기동
+- **`.gitignore`**: 시크릿 파일이 git에 안 올라가게
+
+### 만든 서비스 띄워 보기
+
+set이 끝나면 `beoreum run`으로 backend + frontend를 한 명령에 띄울 수 있다(ADR 0047). 두 서버가 한 콘솔에서 `[backend]` / `[frontend]` prefix로 결합 출력되고, backend의 `/health`가 응답할 때 ready 안내가 박힌다.
+
+```bash
+node bin/beoreum.js run
+# Ctrl-C로 두 서버 모두 정리
+
+node bin/beoreum.js run --backend-only   # backend만
+node bin/beoreum.js run --frontend-only  # frontend만
+```
+
+CI나 배포 직전 검증은 `beoreum verify`로(ADR 0022). install + test가 표준이고, `--smoke` 플래그를 더하면 backend를 잠깐 띄워 `/health`까지 두드린다(ADR 0048).
+
+```bash
+node bin/beoreum.js verify          # install + test
+node bin/beoreum.js verify --smoke  # install + test + server up → /health → kill
+
+# smoke timeout이 짧으면(Java gradle bootRun 첫 실행 등):
+BEOREUM_VERIFY_SMOKE_TIMEOUT_MS=120000 node bin/beoreum.js verify --smoke
+```
 
 ### 외부 AI로 더 자세한 카탈로그 받기 (ADR 0028)
 
@@ -131,23 +199,50 @@ node bin/beoreum.js prospect "온라인 책방"
 
 키도 baseURL도 없이 `BEOREUM_AI_ADAPTER=claude`를 켜면 한국어 안내 메시지로 멈춘다. 두 경로 중 하나를 알려준다. 비용 걱정이 있으면 `BEOREUM_AI_ADAPTER`를 지우거나 `mock`으로 두면 된다.
 
-### inspect 단계의 AI 검수
+## 비춤 한 번 돌려보기
 
-7단계의 마지막 `inspect`는 set이 만든 코드를 비춰 6영역(보안/성능/운영/확장성/법적 리스크/시장 재검) 결함을 보고한다. 두 갈래 검수가 있다.
+7단계의 마지막 `inspect`는 set이 만든 코드를 빛에 비춰 6영역(보안/성능/운영/확장성/법적 리스크/시장 재검) 결함을 보고한다. 셋 갈래 검수가 한 결로 합쳐져 inspect-report.md에 박힌다.
 
-- **정적 규칙**: 결정적 baseline 검사(JWT_SECRET 검사, prod placeholder 가드, /health endpoint 등). 어댑터 무관, 항상 동작
-- **AI 검수**: nuanced 도메인-특화 결함(amount 음수 검증, 인증 누락 endpoint, N+1 쿼리, 개인정보 보호 등). claude 어댑터 필요
+```bash
+node bin/beoreum.js inspect
+```
 
-mock 어댑터로 inspect를 실행하면 AI 결과 자리에 placeholder finding이 박힌다. 실제 검수는 claude 어댑터로 받는다. 비기술 창업자라도 Claude Code를 설치한 사용자라면 위 "경로 2"의 ANTHROPIC_BASE_URL로 API 키 없이 AI 검수를 쓸 수 있다.
+세 갈래.
+
+- **정적 규칙(`[정적]`)**: 결정적 baseline 검사. JWT_SECRET startup 검사, prod placeholder 가드, /health endpoint, helmet/cors/rate-limit 등록, .gitignore에 .env 등(ADR 0049). 어댑터 무관, 항상 동작
+- **AI 검수(`[AI]`)**: nuanced 도메인-특화 결함. amount 음수 검증, 인증 누락 endpoint, N+1 쿼리, 개인정보 보호 등(ADR 0050). claude 어댑터 필요
+- **외부 AI 검수(`[외부 AI]`)**: 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 받은 응답을 다시 가져옴(ADR 0051)
+
+inspect-report.md의 한 finding 줄은 `[정적] ✓ JWT_SECRET startup 검사가 박혀 있습니다 (src/server.js)`처럼 출처 prefix + severity prefix + title + 파일 경로 결로 박힌다.
+
+severity가 셋이다.
+
+- **✓ pass**: 검사 통과. 안심
+- **⚠ warning**: 검토 권장. 결함은 아니지만 사용자가 의식적으로 보고 결정할 자리
+- **✗ concern**: 출시 직전 강한 신호. 법적 리스크 또는 명백한 결함. inspect-report.md 머리에 강한 신호 안내
+
+mock 어댑터로 실행하면 AI 자리에 placeholder finding이 박힌다. 실제 검수는 claude 어댑터로. 비기술 창업자라도 Claude Code를 설치한 사용자라면 위 "경로 2"의 ANTHROPIC_BASE_URL로 API 키 없이 AI 검수를 쓸 수 있다.
 
 ```bash
 # Claude Code 브릿지로 inspect의 AI 검수 받기
 export BEOREUM_AI_ADAPTER=claude
 export ANTHROPIC_BASE_URL=http://localhost:3000  # Claude Code 브릿지 URL
-beoreum inspect
+node bin/beoreum.js inspect
 ```
 
-배경은 [ADR 0024](docs/decisions/0024-claude-llm-adapter.md)와 [ADR 0025](docs/decisions/0025-ai-base-url-for-bridge-compatibility.md), [ADR 0049](docs/decisions/0049-inspect-static-rules.md), [ADR 0050](docs/decisions/0050-inspect-ai-review.md)에 정리되어 있다.
+### 외부 AI로 더 자세히 검토받기 (ADR 0051)
+
+inspect가 끝나면 부산물로 `.beoreum/project/prompts/inspect-review-prompt.md`가 자리잡는다. set이 만든 핵심 파일과 메타데이터(intent/architecture/contracts/scenarios)가 한 자리에 묶여 있어 외부 AI에 붙여넣으면 6영역에 대한 자세한 검수를 받는다.
+
+받은 응답을 다시 가져오는 명령.
+
+```bash
+node bin/beoreum.js inspect import-review ./response.md
+```
+
+picker가 finding마다 적용/건너뛰기/모두 적용/모두 건너뛰기/멈추기를 묻는다. 적용한 finding은 `.beoreum/project/inspect-findings.yml`의 external 섹션에 저장되고 inspect-report.md가 재렌더된다. 매 import-review가 external 섹션을 통째로 교체하니 두 번째 외부 AI 검수를 받으면 첫 번째 결과는 사라진다.
+
+배경은 [ADR 0024](docs/decisions/0024-claude-llm-adapter.md), [ADR 0025](docs/decisions/0025-ai-base-url-for-bridge-compatibility.md), [ADR 0049](docs/decisions/0049-inspect-static-rules.md), [ADR 0050](docs/decisions/0050-inspect-ai-review.md), [ADR 0051](docs/decisions/0051-inspect-external-review.md)에 정리되어 있다.
 
 ## 누구를 위한 것인가
 
