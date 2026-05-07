@@ -2,7 +2,7 @@
 // ADR 0007, ADR 0016(6영역과 정적 체크리스트), ADR 0003 결정 3(강한 신호), ADR 0049(정적 규칙 코드 검수)를 따른다.
 // 사용자 입력 없는 변환 단계라 picker 없음.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { runAllRules } from './inspect-rules.js';
@@ -103,16 +103,26 @@ const SEVERITY_PREFIX = {
   concern: '✗',
 };
 
+// finding의 source prefix. ADR 0050 결정 8.
+// 'static' → '[정적]', 'ai' → '[AI]'. source 없으면 '[정적]' 폴백(ADR 0049 후행 호환).
+const SOURCE_PREFIX = {
+  static: '[정적]',
+  ai: '[AI]',
+};
+
 // 한 영역에 묶인 finding을 markdown 한 묶음으로 박는다.
+// 정적 finding이 0개면 ADR 0050 안내 한 줄(미래 자리 결).
+// AI finding과 정적 finding이 섞여 있을 때 출처 prefix로 구분.
 function buildFindingsSection(findings) {
   if (findings.length === 0) {
-    return '_(이 영역은 ADR 0050의 AI 검수에서 보강됩니다)_\n';
+    return '_(코드 검수 결과가 없습니다. claude 어댑터로 inspect를 실행하면 AI 검수가 추가됩니다)_\n';
   }
   return findings
     .map((f) => {
-      const prefix = SEVERITY_PREFIX[f.severity] || '·';
+      const sourcePrefix = SOURCE_PREFIX[f.source] || SOURCE_PREFIX.static;
+      const severityPrefix = SEVERITY_PREFIX[f.severity] || '·';
       const fileSuffix = f.file ? ` _(${f.file})_` : '';
-      return `${prefix} **${f.title}**${fileSuffix}\n  ${f.detail}`;
+      return `${sourcePrefix} ${severityPrefix} **${f.title}**${fileSuffix}\n  ${f.detail}`;
     })
     .join('\n\n');
 }
@@ -130,8 +140,8 @@ function buildAreaSection(area, index, findingsByArea) {
     lines.push(`- [ ] ${q}`);
   }
   lines.push('');
-  // 코드 검수 (ADR 0049)
-  lines.push('### 코드 검수 (정적 규칙)');
+  // 코드 검수 (ADR 0049 정적 + ADR 0050 AI)
+  lines.push('### 코드 검수');
   lines.push('');
   lines.push(buildFindingsSection(findingsByArea[area.title] || []));
   lines.push('');
@@ -153,17 +163,21 @@ function countConcerns(findings) {
   return findings.filter((f) => f.severity === 'concern').length;
 }
 
-function buildReport(now, findings) {
+function buildReport(now, findings, aiError) {
   const createdAt = (now || new Date()).toISOString();
   const concernCount = countConcerns(findings);
   const concernNotice =
     concernCount > 0
       ? `\n> ⚠ concern severity의 결함이 ${concernCount}개 발견되었습니다. 출시 직전 자리이므로 각 영역의 코드 검수 섹션을 보고 결정해주세요.\n`
       : '';
+  // ADR 0050 결정 6: AI 검수 실패 시 한국어 안내 한 줄.
+  const aiErrorNotice = aiError
+    ? `\n> AI 검수가 실패했습니다. 정적 검수만 보고합니다(원인: ${aiError}). claude 어댑터 설정(BEOREUM_AI_ADAPTER, ANTHROPIC_API_KEY 또는 ANTHROPIC_BASE_URL)을 확인해주세요.\n`
+    : '';
   const header = `# Inspect Report
 
 벼름의 마지막 단계 비춤. 도구를 빛에 비춰 결함을 봅니다. 6영역으로 점검합니다.
-${concernNotice}
+${concernNotice}${aiErrorNotice}
 생성 시각: ${createdAt}
 `;
   const findingsByArea = groupFindingsByArea(findings);
@@ -202,15 +216,200 @@ function loadArchitectureSafe(beoreumDir) {
   }
 }
 
-// runInspect는 7단계의 마지막 단계의 본체. 자기 점검 체크리스트(ADR 0016)와 정적 규칙 코드 검수(ADR 0049)로
+function loadYamlSafe(path) {
+  if (!existsSync(path)) return null;
+  try {
+    return yaml.load(readFileSync(path, 'utf8')) || null;
+  } catch {
+    return null;
+  }
+}
+
+function readSafe(path) {
+  if (!existsSync(path)) return null;
+  try {
+    return readFileSync(path, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+// 한 디렉토리의 첫 하위 디렉토리 이름. ADR 0050 결정 2의 features 첫 sample 결.
+function firstSubdir(path) {
+  if (!existsSync(path)) return null;
+  try {
+    // dynamic import 없이 readdirSync 결로 풀어쓴다(이미 readFileSync 결과 같은 결).
+    const dirs = readdirSync(path, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+    return dirs.length > 0 ? dirs[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+// buildInspectInput은 ADR 0050 결정 2의 균형 파일 범위를 모은다.
+// backend 엔트리 + features 첫 sample + frontend 엔트리 + 메타데이터.
+//
+// 입력:
+//   beoreumDir, architecture
+//
+// 반환: { language, files, intent, architecture, contracts, scenarios }
+function buildInspectInput({ beoreumDir, architecture }) {
+  const projectDir = join(beoreumDir, 'project');
+  const generatedDir = join(projectDir, 'generated');
+  const language = architecture && architecture.language;
+  const files = {};
+
+  // backend 엔트리 + features 첫 sample
+  const backendDir = join(generatedDir, 'backend');
+  if (language === 'node' && existsSync(backendDir)) {
+    const srcDir = join(backendDir, 'src');
+    addFileIfPresent(files, 'src/server.js', join(srcDir, 'server.js'));
+    addFileIfPresent(files, 'package.json', join(backendDir, 'package.json'));
+    addFileIfPresent(files, '.env.production', join(backendDir, '.env.production'));
+    const featuresDir = join(srcDir, 'features');
+    const first = firstSubdir(featuresDir);
+    if (first) {
+      const fdir = join(featuresDir, first);
+      for (const name of ['routes.js', 'service.js', 'schemas.js', 'repository.js', 'domain.js']) {
+        addFileIfPresent(files, `src/features/${first}/${name}`, join(fdir, name));
+      }
+    }
+  } else if (language === 'java' && existsSync(backendDir)) {
+    const groupPath = join(backendDir, 'app', 'src', 'main', 'java', 'com', 'example');
+    const pkg = firstSubdir(groupPath);
+    if (pkg) {
+      const javaDir = join(groupPath, pkg);
+      addFileIfPresent(files, `app/.../${pkg}/Application.java`, join(javaDir, 'Application.java'));
+      addFileIfPresent(
+        files,
+        `app/.../${pkg}/HealthController.java`,
+        join(javaDir, 'HealthController.java'),
+      );
+      addFileIfPresent(
+        files,
+        `app/.../${pkg}/config/EnvSecretsValidator.java`,
+        join(javaDir, 'config', 'EnvSecretsValidator.java'),
+      );
+    }
+    addFileIfPresent(
+      files,
+      'app/src/main/resources/application.yml',
+      join(backendDir, 'app', 'src', 'main', 'resources', 'application.yml'),
+    );
+    addFileIfPresent(
+      files,
+      'app/src/main/resources/application-production.yml',
+      join(backendDir, 'app', 'src', 'main', 'resources', 'application-production.yml'),
+    );
+    // 첫 feature 모듈 sample
+    const modulesDir = join(backendDir, 'modules');
+    const firstModule = firstSubdir(modulesDir);
+    if (firstModule && pkg) {
+      const featurePath = join(
+        modulesDir,
+        firstModule,
+        'src',
+        'main',
+        'java',
+        'com',
+        'example',
+        pkg,
+      );
+      const fpkg = firstSubdir(featurePath);
+      if (fpkg) {
+        const fbase = join(featurePath, fpkg);
+        for (const layer of ['domain', 'application', 'infrastructure', 'web']) {
+          const ldir = join(fbase, layer);
+          if (existsSync(ldir)) {
+            try {
+              for (const f of readdirSync(ldir)) {
+                if (f.endsWith('.java')) {
+                  addFileIfPresent(files, `modules/${firstModule}/${layer}/${f}`, join(ldir, f));
+                }
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+    }
+  } else if (language === 'python' && existsSync(backendDir)) {
+    const srcDir = join(backendDir, 'src');
+    const pkg = firstSubdir(srcDir);
+    if (pkg) {
+      const pkgDir = join(srcDir, pkg);
+      addFileIfPresent(files, `src/${pkg}/main.py`, join(pkgDir, 'main.py'));
+      addFileIfPresent(files, `src/${pkg}/config.py`, join(pkgDir, 'config.py'));
+      const featuresDir = join(pkgDir, 'features');
+      const firstFeature = firstSubdir(featuresDir);
+      if (firstFeature) {
+        const fdir = join(featuresDir, firstFeature);
+        for (const name of [
+          'routes.py',
+          'application.py',
+          'schemas.py',
+          'infrastructure.py',
+          'domain.py',
+        ]) {
+          addFileIfPresent(files, `src/${pkg}/features/${firstFeature}/${name}`, join(fdir, name));
+        }
+      }
+    }
+    addFileIfPresent(files, 'pyproject.toml', join(backendDir, 'pyproject.toml'));
+    addFileIfPresent(files, '.env.production', join(backendDir, '.env.production'));
+  }
+
+  // frontend 엔트리 + 첫 feature
+  const frontendDir = join(generatedDir, 'frontend');
+  if (existsSync(frontendDir)) {
+    addFileIfPresent(files, 'frontend/vite.config.ts', join(frontendDir, 'vite.config.ts'));
+    addFileIfPresent(files, 'frontend/index.html', join(frontendDir, 'index.html'));
+    addFileIfPresent(files, 'frontend/.env.production', join(frontendDir, '.env.production'));
+    addFileIfPresent(files, 'frontend/src/main.tsx', join(frontendDir, 'src', 'main.tsx'));
+    addFileIfPresent(files, 'frontend/src/App.tsx', join(frontendDir, 'src', 'App.tsx'));
+    const apiDir = join(frontendDir, 'src', 'api');
+    if (existsSync(apiDir)) {
+      try {
+        const apiFiles = readdirSync(apiDir).filter((f) => f.endsWith('.ts'));
+        if (apiFiles.length > 0) {
+          addFileIfPresent(files, `frontend/src/api/${apiFiles[0]}`, join(apiDir, apiFiles[0]));
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return {
+    language: language || null,
+    files,
+    intent: loadYamlSafe(join(projectDir, 'intent.yml')) || {},
+    architecture: architecture || {},
+    contracts: loadYamlSafe(join(projectDir, 'contracts.yml')) || {},
+    scenarios: loadYamlSafe(join(projectDir, 'test-scenarios.yml')) || {},
+  };
+}
+
+function addFileIfPresent(files, key, path) {
+  const content = readSafe(path);
+  if (content !== null) files[key] = content;
+}
+
+// runInspect는 7단계의 마지막 단계의 본체.
+// 자기 점검 체크리스트(ADR 0016) + 정적 규칙 코드 검수(ADR 0049) + AI 검수(ADR 0050)를 합쳐
 // inspect-report.md를 만들고 state.yml의 current_stage를 'done'으로 갱신한다.
 //
 // 입력:
-//   cwd  - 프로젝트 루트 절대 경로
-//   now  - 테스트용 결정적 시각(선택)
+//   cwd      - 프로젝트 루트 절대 경로
+//   now      - 테스트용 결정적 시각(선택)
+//   adapter  - AI 어댑터(선택, ADR 0050 결정 5). adapter.inspectCode가 있으면 호출
 //
-// 반환: { reportFile, areaCount, questionCount, findingCount, concernCount, isDone }
-export async function runInspect({ cwd, now } = {}) {
+// 반환: { reportFile, areaCount, questionCount, findingCount, staticFindingCount, aiFindingCount,
+//         concernCount, aiCalled, aiFailed, aiError, isDone }
+export async function runInspect({ cwd, now, adapter } = {}) {
   if (!cwd) throw new Error('runInspect({ cwd })가 필요합니다');
 
   const beoreumDir = join(cwd, '.beoreum');
@@ -222,9 +421,30 @@ export async function runInspect({ cwd, now } = {}) {
 
   // ADR 0049: 정적 규칙으로 코드 검수
   const architecture = loadArchitectureSafe(beoreumDir);
-  const findings = runAllRules({ cwd, architecture });
+  const staticFindings = runAllRules({ cwd, architecture });
 
-  writeFileSync(reportFile, buildReport(now, findings), 'utf8');
+  // ADR 0050: AI 어댑터로 nuanced 검수(옵셔널). graceful degrade.
+  let aiFindings = [];
+  let aiCalled = false;
+  let aiFailed = false;
+  let aiError = null;
+  if (adapter && typeof adapter.inspectCode === 'function') {
+    aiCalled = true;
+    try {
+      const input = buildInspectInput({ beoreumDir, architecture });
+      aiFindings = await adapter.inspectCode(input);
+      // 어댑터가 source 필드를 안 박았을 자리에 대비한 폴백.
+      aiFindings = (aiFindings || []).map((f) => ({ source: 'ai', ...f }));
+    } catch (err) {
+      aiFailed = true;
+      aiError = err && err.message ? err.message : String(err);
+      aiFindings = [];
+    }
+  }
+
+  const findings = [...staticFindings, ...aiFindings];
+
+  writeFileSync(reportFile, buildReport(now, findings, aiError), 'utf8');
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
 
   const questionCount = INSPECT_AREAS.reduce((sum, a) => sum + a.questions.length, 0);
@@ -234,7 +454,12 @@ export async function runInspect({ cwd, now } = {}) {
     areaCount: INSPECT_AREAS.length,
     questionCount,
     findingCount: findings.length,
+    staticFindingCount: staticFindings.length,
+    aiFindingCount: aiFindings.length,
     concernCount: countConcerns(findings),
+    aiCalled,
+    aiFailed,
+    aiError,
     isDone: true,
   };
 }

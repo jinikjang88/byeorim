@@ -454,14 +454,29 @@ program
 program
   .command('inspect')
   .alias('ins')
-  .description('비춤. 6영역 자기 점검 + 정적 규칙 코드 검수(ADR 0049)')
+  .description('비춤. 6영역 자기 점검 + 정적 규칙 코드 검수(ADR 0049) + AI 검수(ADR 0050)')
   .action(async () => {
     try {
-      const result = await runInspect({ cwd: process.cwd() });
+      const adapter = selectAdapter();
+      const result = await runInspect({ cwd: process.cwd(), adapter });
       console.log(`체크리스트와 코드 검수 결과를 만들었습니다: ${result.reportFile}`);
       console.log(
-        `영역 ${result.areaCount}개, 질문 ${result.questionCount}개, 코드 검수 ${result.findingCount}건`,
+        `영역 ${result.areaCount}개, 질문 ${result.questionCount}개, 코드 검수 ${result.findingCount}건(정적 ${result.staticFindingCount}, AI ${result.aiFindingCount})`,
       );
+      if (result.aiFailed) {
+        console.log('');
+        console.log(
+          `AI 검수가 실패했습니다(${result.aiError}). claude 어댑터 설정을 확인해주세요.`,
+        );
+      } else if (!result.aiCalled || adapter.name === 'mock') {
+        console.log('');
+        console.log(
+          'AI 검수는 mock placeholder입니다. 실제 검수는 BEOREUM_AI_ADAPTER=claude로 실행하세요.',
+        );
+        console.log(
+          'Claude Code 사용자: ANTHROPIC_BASE_URL=<Claude Code 브릿지 URL>로 API 키 없이 쓸 수 있습니다(ADR 0025).',
+        );
+      }
       if (result.concernCount > 0) {
         console.log('');
         console.log(

@@ -185,8 +185,8 @@ test('정상 흐름이 끝나면 inspect-report.md에 코드 검수 섹션이 �
     assert.ok(result.findingCount > 0, 'finding이 한 개 이상 있어야 한다');
     assert.equal(typeof result.concernCount, 'number');
     const report = readFileSync(result.reportFile, 'utf8');
-    // 6영역마다 "코드 검수" 섹션
-    const matches = report.match(/### 코드 검수 \(정적 규칙\)/g) || [];
+    // 6영역마다 "코드 검수" 섹션 (ADR 0049 정적 + ADR 0050 AI 결과 한 섹션에 섞음)
+    const matches = report.match(/### 코드 검수$/gm) || [];
     assert.equal(matches.length, 6, '6영역 모두 코드 검수 섹션이 있어야 한다');
   });
 });
@@ -216,16 +216,27 @@ test('frontend의 CSP meta와 vite prod 가드가 pass로 박힌다', async () =
   });
 });
 
-test('성능/확장성/법적/시장 재검 영역은 AI 검수 안내 결로 비어있다(ADR 0050 자리)', async () => {
+test('어댑터 없으면 정적 finding만 박힌다(adapter 옵셔널)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    const result = await runInspect({ cwd }); // adapter 없음
+    assert.equal(result.aiCalled, false);
+    assert.equal(result.aiFindingCount, 0);
+    assert.ok(result.staticFindingCount > 0);
+  });
+});
+
+test('정적 finding이 비어있는 영역은 빈 안내 한 줄로 박힌다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
     const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
     const report = readFileSync(reportFile, 'utf8');
-    // 네 영역 머리 다음에 ADR 0050 안내가 한 줄
-    const matches = report.match(/_\(이 영역은 ADR 0050의 AI 검수에서 보강됩니다\)_/g) || [];
-    // 시장 재검은 architecture를 봐도 finding이 없을 수 있음. 최소 3개(성능/확장성/법적/시장 재검 중)
-    assert.ok(matches.length >= 3, `AI 안내가 3개 이상 있어야 한다(실제: ${matches.length})`);
+    // 새 메시지 결
+    const matches =
+      report.match(/_\(코드 검수 결과가 없습니다\. claude 어댑터로 inspect를 실행하면/g) || [];
+    // 4영역(성능/확장성/법적/시장)이 정적 규칙 비어있어 최소 3개
+    assert.ok(matches.length >= 3, `빈 안내가 3개 이상 있어야 한다(실제: ${matches.length})`);
   });
 });
 
@@ -257,5 +268,119 @@ test('finding이 영역별로 grouping되어 표시된다', async () => {
     const securityFindings = report.slice(securityIdx, performanceIdx);
     assert.match(securityFindings, /### 코드 검수/);
     assert.match(securityFindings, /✓/);
+  });
+});
+
+// ── ADR 0050: AI 검수 ─────────────────────────────────
+
+// Mock AI adapter (결정적 6영역 placeholder 반환). createMockAdapter()의 inspectCode와 동등.
+function createTestAiAdapter(findings) {
+  return {
+    name: 'test-ai',
+    async inspectCode() {
+      return findings;
+    },
+  };
+}
+
+test('adapter가 inspectCode를 가지면 AI finding이 추가된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    const adapter = createTestAiAdapter([
+      {
+        area: '법적 리스크',
+        severity: 'concern',
+        title: 'AI: 개인정보 필드가 보호 결 없이 노출됨',
+        detail: 'AI mock detail',
+        source: 'ai',
+      },
+      {
+        area: '성능',
+        severity: 'warning',
+        title: 'AI: N+1 쿼리 가능 자리',
+        detail: 'AI mock detail',
+        source: 'ai',
+      },
+    ]);
+    const result = await runInspect({ cwd, adapter });
+    assert.equal(result.aiCalled, true);
+    assert.equal(result.aiFailed, false);
+    assert.equal(result.aiFindingCount, 2);
+    assert.ok(result.staticFindingCount > 0);
+    // 합산
+    assert.equal(result.findingCount, result.staticFindingCount + result.aiFindingCount);
+  });
+});
+
+test('finding의 source prefix가 [정적]/[AI]로 박힌다(ADR 0050 결정 8)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    const adapter = createTestAiAdapter([
+      {
+        area: '보안',
+        severity: 'concern',
+        title: 'AI: amount 필드에 음수 검증 없음',
+        detail: '결제 도메인의 잠재 결함',
+        file: 'features/payment/schemas.js',
+        source: 'ai',
+      },
+    ]);
+    await runInspect({ cwd, adapter });
+    const report = readFileSync(join(cwd, '.beoreum', 'project', 'inspect-report.md'), 'utf8');
+    // 정적 finding은 [정적] prefix
+    assert.match(report, /\[정적\] ✓.*JWT_SECRET startup 검사/);
+    // AI finding은 [AI] prefix
+    assert.match(report, /\[AI\] ✗.*amount 필드에 음수 검증 없음/);
+  });
+});
+
+test('AI 검수 실패 시 graceful degrade로 정적만 보고하고 안내가 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    const failingAdapter = {
+      name: 'failing',
+      async inspectCode() {
+        throw new Error('네트워크 연결 실패');
+      },
+    };
+    const result = await runInspect({ cwd, adapter: failingAdapter });
+    assert.equal(result.aiCalled, true);
+    assert.equal(result.aiFailed, true);
+    assert.match(result.aiError, /네트워크 연결 실패/);
+    assert.equal(result.aiFindingCount, 0);
+    // 정적 finding은 그대로 박힘
+    assert.ok(result.staticFindingCount > 0);
+    // report 머리에 안내
+    const report = readFileSync(join(cwd, '.beoreum', 'project', 'inspect-report.md'), 'utf8');
+    assert.match(report, /AI 검수가 실패했습니다/);
+    assert.match(report, /네트워크 연결 실패/);
+    assert.match(report, /BEOREUM_AI_ADAPTER/);
+  });
+});
+
+test('어댑터에 inspectCode가 없으면 호출하지 않고 정상 동작', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    const partialAdapter = { name: 'partial' }; // inspectCode 없음
+    const result = await runInspect({ cwd, adapter: partialAdapter });
+    assert.equal(result.aiCalled, false);
+    assert.equal(result.aiFindingCount, 0);
+  });
+});
+
+test('AI finding이 source 필드 없이 와도 source=ai로 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    // source 필드 없이 emit하는 어댑터(미래 어댑터의 깜빡임에 대비)
+    const adapter = {
+      name: 'no-source',
+      async inspectCode() {
+        return [{ area: '운영', severity: 'warning', title: 'AI: no source', detail: 'x' }];
+      },
+    };
+    await runInspect({ cwd, adapter });
+    const report = readFileSync(join(cwd, '.beoreum', 'project', 'inspect-report.md'), 'utf8');
+    // [AI] prefix가 박혀야 함(폴백)
+    assert.match(report, /\[AI\] ⚠.*no source/);
   });
 });

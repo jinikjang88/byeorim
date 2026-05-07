@@ -463,3 +463,53 @@ test('fillTestCode: 인자 없이 호출해도 빈 문자열로 안전', async (
   const code = await adapter.fillTestCode();
   assert.equal(code, '');
 });
+
+// ── ADR 0050: inspectCode ──────────────────────────────
+
+test('inspectCode: 6영역 결정적 placeholder finding 반환', async () => {
+  const adapter = createMockAdapter();
+  const findings = await adapter.inspectCode({
+    language: 'node',
+    files: { 'src/server.js': '// content' },
+    intent: { extracted: { what: '쇼핑몰' } },
+    architecture: { language: 'node' },
+    contracts: {},
+    scenarios: {},
+  });
+  assert.equal(findings.length, 6);
+  const areas = new Set(findings.map((f) => f.area));
+  for (const expected of ['보안', '성능', '운영', '확장성', '법적 리스크', '시장 재검']) {
+    assert.ok(areas.has(expected), `${expected} 영역 finding이 있어야 한다`);
+  }
+});
+
+test('inspectCode: 모든 finding의 source는 ai', async () => {
+  const adapter = createMockAdapter();
+  const findings = await adapter.inspectCode({});
+  for (const f of findings) {
+    assert.equal(f.source, 'ai');
+  }
+});
+
+test('inspectCode: severity는 warning, title에 mock 안내 포함', async () => {
+  const adapter = createMockAdapter();
+  const findings = await adapter.inspectCode({});
+  for (const f of findings) {
+    assert.equal(f.severity, 'warning');
+    assert.match(f.title, /mock/);
+    assert.match(f.detail, /claude 어댑터/);
+  }
+});
+
+test('inspectCode: 결정적 (같은 입력에 같은 출력)', async () => {
+  const adapter = createMockAdapter();
+  const a = await adapter.inspectCode({ language: 'node' });
+  const b = await adapter.inspectCode({ language: 'node' });
+  assert.deepEqual(a, b);
+});
+
+test('inspectCode: 인자 없이 호출해도 6개 finding으로 안전', async () => {
+  const adapter = createMockAdapter();
+  const findings = await adapter.inspectCode();
+  assert.equal(findings.length, 6);
+});

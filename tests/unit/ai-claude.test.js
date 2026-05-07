@@ -40,7 +40,7 @@ function schemaResponse(parsed) {
   return { parsed_output: parsed, content: [] };
 }
 
-test('claude 어댑터는 name이 claude이고 일곱 메서드를 가진다', () => {
+test('claude 어댑터는 name이 claude이고 여덟 메서드를 가진다', () => {
   const client = makeFakeClient(() => intentResponse({}));
   const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
   assert.equal(adapter.name, 'claude');
@@ -51,6 +51,7 @@ test('claude 어댑터는 name이 claude이고 일곱 메서드를 가진다', (
   assert.equal(typeof adapter.recommendBlocks, 'function');
   assert.equal(typeof adapter.recommendArchitecture, 'function');
   assert.equal(typeof adapter.fillTestCode, 'function');
+  assert.equal(typeof adapter.inspectCode, 'function');
 });
 
 test('extractIntent: parsed_output 7항목을 그대로 결과 모양으로 반환한다', async () => {
@@ -807,4 +808,80 @@ test('fillTestCode: output_config의 schema가 test_code required로 강제된�
   const schema = client.captured[0].output_config.format.schema;
   assert.deepEqual(schema.required, ['test_code']);
   assert.equal(schema.properties.test_code.type, 'string');
+});
+
+// ── ADR 0050: inspectCode ──────────────────────────────
+
+function inspectResponse(findings) {
+  return { parsed_output: { findings }, content: [] };
+}
+
+const SAMPLE_INSPECT_INPUT = {
+  language: 'node',
+  files: { 'src/server.js': 'import Fastify from "fastify";\nconst app = Fastify();' },
+  intent: { extracted: { what: '쇼핑몰' } },
+  architecture: { language: 'node', database: 'postgresql' },
+  contracts: { contracts: [{ block_id: 'order', name: '주문', endpoints: [] }] },
+  scenarios: { scenarios: [] },
+};
+
+test('inspectCode: parsed_output의 findings 배열을 반환한다', async () => {
+  const aiFindings = [
+    { area: '보안', severity: 'concern', title: 'AI: 결함', detail: 'detail' },
+    { area: '성능', severity: 'warning', title: 'AI: N+1', detail: 'detail' },
+  ];
+  const client = makeFakeClient(() => inspectResponse(aiFindings));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.inspectCode(SAMPLE_INSPECT_INPUT);
+  assert.equal(result.length, 2);
+  assert.equal(result[0].area, '보안');
+  assert.equal(result[0].source, 'ai');
+  assert.equal(result[1].source, 'ai');
+});
+
+test('inspectCode: findings가 비어있으면 빈 배열', async () => {
+  const client = makeFakeClient(() => inspectResponse([]));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.inspectCode(SAMPLE_INSPECT_INPUT);
+  assert.deepEqual(result, []);
+});
+
+test('inspectCode: max_tokens 4096으로 호출한다(ADR 0050 결정 7)', async () => {
+  const client = makeFakeClient(() => inspectResponse([]));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.inspectCode(SAMPLE_INSPECT_INPUT);
+  assert.equal(client.captured[0].max_tokens, 4096);
+});
+
+test('inspectCode: output_config의 schema가 findings required로 강제된다', async () => {
+  const client = makeFakeClient(() => inspectResponse([]));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.inspectCode(SAMPLE_INSPECT_INPUT);
+  const schema = client.captured[0].output_config.format.schema;
+  assert.deepEqual(schema.required, ['findings']);
+  assert.equal(schema.properties.findings.type, 'array');
+  // finding의 area enum이 6개
+  const areaEnum = schema.properties.findings.items.properties.area.enum;
+  assert.equal(areaEnum.length, 6);
+  assert.ok(areaEnum.includes('법적 리스크'));
+});
+
+test('inspectCode: user 메시지에 files와 메타데이터가 들어간다', async () => {
+  const client = makeFakeClient(() => inspectResponse([]));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  await adapter.inspectCode(SAMPLE_INSPECT_INPUT);
+  const userMessage = client.captured[0].messages.find((m) => m.role === 'user');
+  assert.ok(userMessage);
+  const userText = userMessage.content;
+  assert.match(userText, /architecture\.language/);
+  assert.match(userText, /node/);
+  assert.match(userText, /=== src\/server\.js ===/);
+  assert.match(userText, /import Fastify/);
+});
+
+test('inspectCode: parsed_output의 findings가 누락되면 빈 배열로 폴백', async () => {
+  const client = makeFakeClient(() => ({ parsed_output: {}, content: [] }));
+  const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
+  const result = await adapter.inspectCode(SAMPLE_INSPECT_INPUT);
+  assert.deepEqual(result, []);
 });

@@ -90,7 +90,7 @@ node bin/beoreum.js prospect 동네 빵집 단골 주문 앱
 
 ## AI 어댑터 설정
 
-`prospect`, `smelt`, `shape`, `forge` 단계는 AI 어댑터를 부른다. 기본은 `mock`이라 네트워크 호출도 비용도 없다. 흐름만 따라가 보고 싶다면 환경 변수를 건드리지 않아도 된다.
+`prospect`, `smelt`, `shape`, `forge`, `temper`, `inspect` 단계는 AI 어댑터를 부른다. 기본은 `mock`이라 네트워크 호출도 비용도 없다. 흐름만 따라가 보고 싶다면 환경 변수를 건드리지 않아도 된다.
 
 실제 LLM을 쓰려면 환경 변수를 둔다.
 
@@ -131,7 +131,23 @@ node bin/beoreum.js prospect "온라인 책방"
 
 키도 baseURL도 없이 `BEOREUM_AI_ADAPTER=claude`를 켜면 한국어 안내 메시지로 멈춘다. 두 경로 중 하나를 알려준다. 비용 걱정이 있으면 `BEOREUM_AI_ADAPTER`를 지우거나 `mock`으로 두면 된다.
 
-배경은 [ADR 0024](docs/decisions/0024-claude-llm-adapter.md)와 [ADR 0025](docs/decisions/0025-ai-base-url-for-bridge-compatibility.md)에 정리되어 있다.
+### inspect 단계의 AI 검수
+
+7단계의 마지막 `inspect`는 set이 만든 코드를 비춰 6영역(보안/성능/운영/확장성/법적 리스크/시장 재검) 결함을 보고한다. 두 갈래 검수가 있다.
+
+- **정적 규칙**: 결정적 baseline 검사(JWT_SECRET 검사, prod placeholder 가드, /health endpoint 등). 어댑터 무관, 항상 동작
+- **AI 검수**: nuanced 도메인-특화 결함(amount 음수 검증, 인증 누락 endpoint, N+1 쿼리, 개인정보 보호 등). claude 어댑터 필요
+
+mock 어댑터로 inspect를 실행하면 AI 결과 자리에 placeholder finding이 박힌다. 실제 검수는 claude 어댑터로 받는다. 비기술 창업자라도 Claude Code를 설치한 사용자라면 위 "경로 2"의 ANTHROPIC_BASE_URL로 API 키 없이 AI 검수를 쓸 수 있다.
+
+```bash
+# Claude Code 브릿지로 inspect의 AI 검수 받기
+export BEOREUM_AI_ADAPTER=claude
+export ANTHROPIC_BASE_URL=http://localhost:3000  # Claude Code 브릿지 URL
+beoreum inspect
+```
+
+배경은 [ADR 0024](docs/decisions/0024-claude-llm-adapter.md)와 [ADR 0025](docs/decisions/0025-ai-base-url-for-bridge-compatibility.md), [ADR 0049](docs/decisions/0049-inspect-static-rules.md), [ADR 0050](docs/decisions/0050-inspect-ai-review.md)에 정리되어 있다.
 
 ## 누구를 위한 것인가
 

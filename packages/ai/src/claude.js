@@ -500,6 +500,69 @@ const TEST_CODE_OUTPUT_SCHEMA = {
   additionalProperties: false,
 };
 
+// ADR 0050. inspectCode 응답 schema. 6영역 finding 배열.
+const INSPECT_FINDING_SCHEMA = {
+  type: 'object',
+  properties: {
+    area: {
+      type: 'string',
+      enum: ['보안', '성능', '운영', '확장성', '법적 리스크', '시장 재검'],
+    },
+    severity: { type: 'string', enum: ['pass', 'warning', 'concern'] },
+    title: { type: 'string' },
+    detail: { type: 'string' },
+    file: { type: 'string' },
+  },
+  required: ['area', 'severity', 'title', 'detail'],
+  additionalProperties: false,
+};
+
+const INSPECT_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    findings: {
+      type: 'array',
+      items: INSPECT_FINDING_SCHEMA,
+    },
+  },
+  required: ['findings'],
+  additionalProperties: false,
+};
+
+// ADR 0050 결정 3의 system prompt. 4영역(성능/확장성/법적/시장)에 집중하고 보안/운영은 nuanced 보강.
+// 정적 규칙(ADR 0049)이 baseline을 잡으니 AI는 도메인-특화 nuanced 결함에 집중.
+const INSPECT_SYSTEM_PROMPT = `너는 비기술 창업자가 만든 서비스를 출시 직전 검수하는 시니어 동료다.
+
+입력으로 다음을 받는다.
+- language: 'node' | 'java' | 'python' (backend 언어)
+- files: { 상대경로: 본문 } 핵심 파일들(backend 엔트리 + features 첫 sample + frontend 엔트리)
+- intent: 사용자의 7항목 답변(prospect 단계)
+- architecture: shape 단계 결정(language/database/api_style/architecture_pattern)
+- contracts: forge 단계의 API 계약(블럭별 endpoint 표)
+- scenarios: temper 단계의 GWT 시나리오
+
+너의 일은 6영역에 대해 finding 배열을 만드는 것이다.
+
+- 보안: ADR 0046 baseline(JWT_SECRET 검사, prod placeholder 가드, /health endpoint, helmet/cors/rate-limit)은 정적 규칙이 이미 잡았다. 너는 도메인-특화 결함만 본다. 예: 결제 블럭의 amount 필드에 음수 검증이 없음, 인증 누락 endpoint, 비밀번호 plain 처리, 권한 검사 누락
+- 운영: 백업/복구/모니터링/알림/배포 결의 빈 자리. 예: 에러 추적이 console.log뿐, 백업 스케줄 안 보임
+- 성능: N+1 쿼리 패턴, 캐싱 누락, 응답 시간 위험. 예: routes.js의 list endpoint가 N+1 가능
+- 확장성: stateless 결, DB 풀링, 비동기 처리, 큰 데이터. 예: in-memory 세션, sync 결제 처리
+- 법적 리스크: 개인정보 필드(이름/이메일/전화/주소/주민번호), 미성년자 보호, 결제/환불 규정, AI 차별. 출시 직전 강한 신호. 발견되면 severity 'concern'
+- 시장 재검: intent.what과 contracts/scenarios의 결을 비춰 시장 부적합 자리. 예: 사용자가 "카페 주문 앱"을 만든다는데 결제 블럭에 환불 시나리오가 없음
+
+severity 결.
+- 'pass': 검사 통과. 안심
+- 'warning': 검토 권장. 결함은 아니지만 사용자가 의식적으로 보고 결정할 자리
+- 'concern': 출시 직전 강한 신호. 법적 리스크 또는 명백한 결함. 사용자가 멈춰서 봐야 할 자리
+
+출력 결.
+- findings 배열에 area별로 0~3개씩. 한 호출에 6영역 모두 다룬다(없으면 빈 배열도 허용)
+- 각 finding의 title은 한국어 한 줄. detail은 한국어 본문(왜 결함인지 + 어떻게 풀지). file은 관련 경로(있으면)
+- 마케팅 카피 형용사("강력한", "획기적인", "혁신적인") 금지(CLAUDE.md 섹션 10)
+- 비기술 창업자가 읽을 수 있는 한국어. 시니어 개발자 줄임말은 풀어 쓴다
+
+너는 정적 규칙이 잡은 것을 다시 보지 않는다. nuanced 검토에 집중한다.`;
+
 // SDK 에러를 한국어 메시지로 변환한다(ADR 0024 결정 6).
 // 원본 에러는 cause로 묶어둬 디버깅 자리(향후 --verbose)가 잡을 수 있게 한다.
 function translateError(err) {
@@ -886,6 +949,77 @@ export function createClaudeAdapter({ apiKey, model, client, baseURL } = {}) {
       const message = await callParse(request);
       const parsed = extractParsedOutput(message);
       return typeof parsed.test_code === 'string' ? parsed.test_code : '';
+    },
+    // ADR 0050의 inspectCode. generated 코드 + 메타데이터를 받아 6영역 finding을 반환.
+    // structured output(INSPECT_OUTPUT_SCHEMA)으로 형식 강제. max_tokens 4096.
+    async inspectCode({ language, files, intent, architecture, contracts, scenarios } = {}) {
+      // user 메시지에 핵심 정보를 한 번에 담는다. files는 이름:본문 객체로 정렬해 직렬화 결정성을 높인다.
+      const sortedFileNames = Object.keys(files || {}).sort();
+      const filesText = sortedFileNames
+        .map((name) => `=== ${name} ===\n${files[name] || ''}`)
+        .join('\n\n');
+      const userText = `# 검수 대상
+
+## architecture.language
+${language || '미정'}
+
+## intent.extracted
+${JSON.stringify(intent?.extracted || {}, null, 2)}
+
+## architecture
+${JSON.stringify(architecture || {}, null, 2)}
+
+## contracts (요약)
+${JSON.stringify(
+  {
+    architecture_api_style: contracts?.architecture_api_style,
+    contracts: (contracts?.contracts || []).map((c) => ({
+      block_id: c.block_id,
+      name: c.name,
+      api_style: c.api_style,
+      internal: c.internal,
+      endpoints: (c.endpoints || []).map((e) => ({
+        operation: e.operation,
+        method: e.method,
+        path: e.path,
+      })),
+    })),
+  },
+  null,
+  2,
+)}
+
+## scenarios (요약)
+${JSON.stringify(
+  {
+    scenarios: (scenarios?.scenarios || []).map((b) => ({
+      block_id: b.block_id,
+      name: b.name,
+      endpoints: (b.endpoints || []).map((e) => ({
+        operation: e.operation,
+        scenario_count: (e.scenarios || []).length,
+      })),
+    })),
+  },
+  null,
+  2,
+)}
+
+## files
+${filesText}
+`;
+      const request = buildRequest({
+        model: resolvedModel,
+        system: INSPECT_SYSTEM_PROMPT,
+        userText,
+        outputSchema: INSPECT_OUTPUT_SCHEMA,
+        maxTokens: 4096,
+      });
+      const message = await callParse(request);
+      const parsed = extractParsedOutput(message);
+      const findings = Array.isArray(parsed?.findings) ? parsed.findings : [];
+      // ADR 0050 결정 8: AI finding은 source='ai'로 박는다.
+      return findings.map((f) => ({ ...f, source: 'ai' }));
     },
   };
 }

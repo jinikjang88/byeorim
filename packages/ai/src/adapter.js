@@ -159,6 +159,34 @@
  *   - temper 시나리오의 test_code 자리를 채운다(ADR 0036).
  *     선택 메서드. 어댑터가 구현 안 하면 runTemper가 TODO로 폴백(graceful degradation).
  *     출력은 한 시나리오의 test_code 문자열. 빈 문자열도 허용(못 채울 자리)
+ * @property {(args: InspectInput) => Promise<InspectFinding[]>} [inspectCode]
+ *   - inspect 단계의 AI 검수(ADR 0050). generated 코드와 메타데이터를 받아 6영역 finding 배열을 반환.
+ *     선택 메서드. 어댑터가 구현 안 하면 inspect가 정적 finding만 보고(graceful degradation).
+ *     출력은 finding 배열. 각 finding의 source는 'ai'로 박힘.
+ */
+
+/**
+ * inspectCode 입력. ADR 0050 결정 2의 균형 파일 범위.
+ *
+ * @typedef {object} InspectInput
+ * @property {('node'|'java'|'python')} language
+ * @property {Record<string, string>} files - { 상대경로: 파일 본문 }. backend 엔트리 + features 첫 sample + frontend 엔트리
+ * @property {object} intent - intent.yml의 객체
+ * @property {object} architecture - architecture.yml의 객체
+ * @property {object} contracts - contracts.yml의 객체
+ * @property {object} scenarios - test-scenarios.yml의 객체
+ */
+
+/**
+ * inspect finding. ADR 0049 결정 3의 severity 셋, 결정 8의 source.
+ *
+ * @typedef {object} InspectFinding
+ * @property {('보안'|'성능'|'운영'|'확장성'|'법적 리스크'|'시장 재검')} area
+ * @property {('pass'|'warning'|'concern')} severity
+ * @property {string} title - 한국어 제목 한 줄
+ * @property {string} detail - 한국어 본문(줄바꿈 가능)
+ * @property {string} [file] - 관련 파일의 상대 경로
+ * @property {('static'|'ai')} source - finding 출처. inspect-rules.js는 'static', AI 어댑터는 'ai'
  */
 
 // 이 파일은 타입 계약만 담는다. 구현은 mock.js, claude.js 등 어댑터별 파일에 둔다

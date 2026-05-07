@@ -285,5 +285,27 @@ export function createMockAdapter() {
       if (!given && !when && !then) return '';
       return `// TODO: ${given}을 준비하고 ${when}을 호출해 ${then}을 검증한다`;
     },
+    // ADR 0050의 inspectCode. 6영역 결정적 placeholder finding을 돌려준다.
+    // 결정 4 옵션 A: mock은 가짜 finding이지만 사용자가 어떤 결로 자라날지 본다.
+    // claude 어댑터로 바꾸면 실제 검수가 된다.
+    async inspectCode({
+      language: _language,
+      files: _files,
+      intent: _intent,
+      architecture: _architecture,
+      contracts: _contracts,
+      scenarios: _scenarios,
+    } = {}) {
+      const placeholderDetail =
+        'mock 어댑터는 가짜 finding을 반환합니다. 실제 검수는 claude 어댑터(BEOREUM_AI_ADAPTER=claude)로 실행하세요. Claude Code 사용자는 ANTHROPIC_BASE_URL로 브릿지할 수 있습니다(ADR 0025).';
+      const areas = ['보안', '성능', '운영', '확장성', '법적 리스크', '시장 재검'];
+      return areas.map((area) => ({
+        area,
+        severity: 'warning',
+        title: 'AI 검수 결과가 들어올 자리(mock)',
+        detail: placeholderDetail,
+        source: 'ai',
+      }));
+    },
   };
 }

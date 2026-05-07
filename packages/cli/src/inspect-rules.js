@@ -2,12 +2,13 @@
 // 언어 무관 규칙 + architecture.language별 언어 규칙을 합쳐 finding 배열을 반환한다.
 // 각 규칙은 순수 함수: { cwd, architecture, ... } → finding[].
 //
-// finding 결: { area, severity, title, detail, file? }
+// finding 결: { area, severity, title, detail, file?, source }
 //   area     - '보안' | '성능' | '운영' | '확장성' | '법적 리스크' | '시장 재검'
 //   severity - 'pass' | 'warning' | 'concern'
 //   title    - 한국어 제목 한 줄
 //   detail   - 한국어 본문 (줄바꿈 가능)
 //   file     - 선택. 관련 파일의 상대 경로
+//   source   - 'static' | 'ai'. inspect-rules.js는 항상 'static' (ADR 0050 결정 8)
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -620,12 +621,13 @@ function checkFrontend({ cwd }) {
 // ── 인덱스 ─────────────────────────────────────────────
 
 // runAllRules는 언어 무관 + architecture.language별 규칙을 합쳐 finding 배열을 반환한다.
+// 모든 finding에 source='static'이 박힌다(ADR 0050 결정 8).
 //
 // 입력:
 //   cwd            - 프로젝트 루트
 //   architecture   - architecture.yml (또는 null)
 //
-// 반환: finding 배열
+// 반환: finding 배열 (모두 source='static')
 export function runAllRules({ cwd, architecture }) {
   const args = { cwd, architecture };
   const findings = [...runRulesLanguageAgnostic(args)];
@@ -638,5 +640,6 @@ export function runAllRules({ cwd, architecture }) {
   // frontend는 architecture.language 무관 (ADR 0021의 standard)
   findings.push(...checkFrontend(args));
 
-  return findings;
+  // ADR 0050 결정 8: 모든 정적 finding에 source='static' 박는다.
+  return findings.map((f) => ({ ...f, source: 'static' }));
 }
