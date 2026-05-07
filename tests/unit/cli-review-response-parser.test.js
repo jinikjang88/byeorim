@@ -10,6 +10,7 @@ import {
   validateTemperChange,
   validateInspectFinding,
   validateSmeltChange,
+  validateShapeChange,
 } from '../../packages/cli/src/review-response-parser.js';
 
 const VALID_RESPONSE = `
@@ -480,4 +481,54 @@ test('validateSmeltChange: 알 수 없는 kind는 invalid', () => {
 test('validateSmeltChange: 객체 아니면 invalid', () => {
   assert.equal(validateSmeltChange(null).valid, false);
   assert.equal(validateSmeltChange('string').valid, false);
+});
+
+// ── ADR 0053: validateShapeChange ──
+
+test('validateShapeChange: 4개 결정 키 모두 valid', () => {
+  for (const key of ['language', 'database', 'api_style', 'architecture_pattern']) {
+    const r = validateShapeChange({
+      kind: 'decision_modify',
+      target_key: key,
+      new_value: 'foo',
+    });
+    assert.equal(r.valid, true, `${key}는 valid여야 한다(형식 검증만, enum 강제는 호출자)`);
+  }
+});
+
+test('validateShapeChange: target_key가 4개 외면 invalid', () => {
+  const r = validateShapeChange({
+    kind: 'decision_modify',
+    target_key: 'foo_bar',
+    new_value: 'python',
+  });
+  assert.equal(r.valid, false);
+});
+
+test('validateShapeChange: kind가 decision_modify 외면 invalid', () => {
+  const r = validateShapeChange({
+    kind: 'option_add',
+    target_key: 'language',
+    new_value: 'rust',
+  });
+  assert.equal(r.valid, false);
+});
+
+test('validateShapeChange: new_value 누락 또는 빈 문자열은 invalid', () => {
+  const r1 = validateShapeChange({
+    kind: 'decision_modify',
+    target_key: 'language',
+    new_value: '',
+  });
+  assert.equal(r1.valid, false);
+  const r2 = validateShapeChange({
+    kind: 'decision_modify',
+    target_key: 'language',
+  });
+  assert.equal(r2.valid, false);
+});
+
+test('validateShapeChange: 객체 아니면 invalid', () => {
+  assert.equal(validateShapeChange(null).valid, false);
+  assert.equal(validateShapeChange(42).valid, false);
 });

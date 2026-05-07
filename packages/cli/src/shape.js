@@ -115,6 +115,19 @@ const VALID_VALUES = Object.fromEntries(
   ]),
 );
 
+// 4개 결정 키와 표준 옵션 값(ADR 0012). shape-import.js가 validateShapeChange에서 사용.
+// 미래 새 옵션 추가는 별도 ADR로.
+export const ARCHITECTURE_DECISION_KEYS = [
+  'language',
+  'database',
+  'api_style',
+  'architecture_pattern',
+];
+export function getValidArchitectureValues(key) {
+  const set = VALID_VALUES[key];
+  return set ? Array.from(set) : [];
+}
+
 function ensureFile(path, hint) {
   if (!existsSync(path)) {
     throw new Error(`${path}이(가) 없습니다. ${hint}`);

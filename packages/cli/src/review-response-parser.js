@@ -229,6 +229,33 @@ export function validateInspectFinding(finding) {
   return { valid: true };
 }
 
+// 한 변경 객체가 shape import에 쓸 수 있는 모양인지 본다(ADR 0053).
+// applyShapeReview가 호출. 표준 옵션 enum 검증은 호출자에서(shape.js의 getValidArchitectureValues 사용).
+// 반환: { valid: true } 또는 { valid: false, reason: string }
+const SHAPE_DECISION_KEYS = new Set(['language', 'database', 'api_style', 'architecture_pattern']);
+
+export function validateShapeChange(change) {
+  if (!change || typeof change !== 'object') {
+    return { valid: false, reason: '객체 아님' };
+  }
+  if (change.kind !== 'decision_modify') {
+    return {
+      valid: false,
+      reason: `알 수 없는 kind: ${change.kind} (decision_modify만 지원)`,
+    };
+  }
+  if (!SHAPE_DECISION_KEYS.has(change.target_key)) {
+    return {
+      valid: false,
+      reason: `target_key가 4개 결정 중 하나가 아닙니다(받은 값: ${change.target_key})`,
+    };
+  }
+  if (typeof change.new_value !== 'string' || change.new_value.trim() === '') {
+    return { valid: false, reason: 'new_value 누락 또는 비어있음' };
+  }
+  return { valid: true };
+}
+
 // 한 변경 객체가 smelt import에 쓸 수 있는 모양인지 본다(ADR 0052).
 // applySmeltReview가 호출. 위치 검증(catalog 대비)은 호출자에서.
 // 반환: { valid: true } 또는 { valid: false, reason: string }
