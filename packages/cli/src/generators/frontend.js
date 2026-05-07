@@ -2,9 +2,15 @@
 // architecture.yml의 frontend_framework는 아직 없음. 이번 출시는 React 표준 고정.
 // internal 블럭은 frontend features에 만들지 않는다(공개 API 없음).
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { toPascalCase, getPublicContracts, getIntentWhat } from './util.js';
+import {
+  toPascalCase,
+  getPublicContracts,
+  getIntentWhat,
+  methodSpec,
+  devPlaceholder,
+} from './util.js';
 
 // ADR 0013 결정 3의 operation에서 JS/TS 함수 이름. delete는 예약어라 remove로 매핑.
 const OPERATION_FUNCTION_NAME = {
@@ -14,16 +20,6 @@ const OPERATION_FUNCTION_NAME = {
   update: 'update',
   delete: 'remove',
   search: 'search',
-};
-
-// operation → HTTP method.
-const OPERATION_HTTP_METHOD = {
-  create: 'POST',
-  list: 'GET',
-  get: 'GET',
-  update: 'PUT',
-  delete: 'DELETE',
-  search: 'GET',
 };
 
 // fetch URL에서 path parameter를 변수로 치환할 때 쓰는 형식.
@@ -77,16 +73,69 @@ function buildPackageJson(name) {
 }
 
 function buildViteConfig() {
-  return `import { defineConfig } from 'vite';
+  return `import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // ADR 0021: Vite + React. dev server는 backend의 CORS origin 화이트리스트에 등록되어야 한다.
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-  },
+// ADR 0046 결정 4 안전망 2: prod build에서 dev placeholder가 그대로 남아있으면 빌드 실패.
+const DEV_PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_';
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  if (mode === 'production') {
+    for (const [name, value] of Object.entries(env)) {
+      if (typeof value === 'string' && value.startsWith(DEV_PLACEHOLDER_PREFIX)) {
+        throw new Error(
+          \`PROD 빌드에서 \${name} 값이 dev placeholder입니다. .env.production의 \${name}을 prod 값으로 채운 뒤 다시 빌드하세요.\`,
+        );
+      }
+    }
+  }
+  return {
+    plugins: [react()],
+    server: {
+      port: 5173,
+    },
+  };
 });
+`;
+}
+
+// .env (dev에서 즉시 동작). ADR 0046 결정 2.
+// VITE_ prefix만 클라이언트 번들에 노출(Vite 표준).
+function buildEnvDev() {
+  return `# 자동 생성된 dev 환경 변수. ADR 0046을 따른다.
+# 이 파일은 dev에서만 동작하는 값들이 들어있다. prod 빌드는 .env.production을 사용한다.
+# Vite는 VITE_ prefix가 붙은 변수만 클라이언트 번들에 노출한다.
+
+# Backend API 주소. dev는 backend dev 서버를 가리킨다.
+VITE_API_BASE=http://localhost:3000
+`;
+}
+
+// .env.production (prod 템플릿). ADR 0046 결정 2.
+function buildEnvProduction() {
+  return `# 자동 생성된 prod 환경 변수 템플릿. ADR 0046을 따른다.
+# 이 파일을 prod 빌드 전에 모든 BEOREUM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
+# 채우지 않은 채로 npm run build (production mode)를 돌리면 빌드가 거부된다.
+
+# Backend API 주소. 실제 prod 도메인으로 교체.
+VITE_API_BASE=${devPlaceholder('vite_api_base')}
+`;
+}
+
+// .gitignore. ADR 0046 결정 2의 안전 결.
+function buildGitignore() {
+  return `node_modules/
+.env
+.env.production
+*.log
+dist/
+build/
+coverage/
+.DS_Store
+.vscode/
+.idea/
 `;
 }
 
@@ -138,15 +187,26 @@ function buildIndexHtml(name) {
 function buildFrontendReadme(name, featureCount) {
   return `# ${name}
 
-벼름이 자동 생성한 React + Vite + TypeScript 프론트엔드 스켈레톤입니다. ADR 0021을 따릅니다.
+벼름이 자동 생성한 React + Vite + TypeScript 프론트엔드 스켈레톤입니다. ADR 0021과 ADR 0046을 따릅니다.
 
-## 시작하기
+## 시작하기 (dev)
 
-1. \`.env\` 파일을 만들고 backend API 주소를 채우세요(\`VITE_API_BASE=http://localhost:3000\` 등).
-2. 의존성 설치: \`npm install\`
-3. 개발 서버: \`npm run dev\` (기본 포트 5173)
-4. 빌드: \`npm run build\`
-5. 테스트: \`npm test\`
+\`.env\`가 dev 값으로 미리 채워져 있어 즉시 띄울 수 있습니다.
+
+1. 의존성 설치: \`npm install\`
+2. 개발 서버: \`npm run dev\` (기본 포트 5173)
+3. 빌드 검증: \`npm run build\`
+4. 테스트: \`npm test\`
+
+## prod 빌드
+
+\`.env.production\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BEOREUM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 빌드합니다.
+
+\`\`\`
+npm run build
+\`\`\`
+
+값을 안 채우고 빌드하면 vite.config의 가드가 빌드를 거부합니다. 한국어 안내 메시지가 나옵니다.
 
 ## 구조
 
@@ -185,7 +245,9 @@ backend의 features/와 1:1 짝(ADR 0017 결정 2). 미래 MSA 분리 시 한 fe
 
 - index.html의 CSP meta가 스크립트 출처를 self로 제한
 - fetch에 \`credentials: 'include'\`가 기본 적용. backend는 secure cookie로 인증 토큰을 관리
-- \`.env\`의 \`VITE_\` prefix 변수는 클라이언트 번들에 노출되므로 시크릿(JWT 토큰 등)을 넣지 마세요. 시크릿은 backend의 자리
+- \`.env\`와 \`.env.production\`은 \`.gitignore\`로 git에서 제외(ADR 0046)
+- \`.env\`의 \`VITE_\` prefix 변수는 클라이언트 번들에 노출되므로 시크릿(JWT 토큰 등)을 넣지 마세요. 시크릿은 backend가 책임지는 자리
+- prod 빌드에서 dev placeholder가 그대로 남아있으면 vite.config 가드가 빌드를 거부(ADR 0046 결정 4)
 - React JSX는 자동으로 escape하므로 XSS 방어가 기본. \`dangerouslySetInnerHTML\` 사용을 회피하세요
 - TypeScript strict 모드로 컴파일 타임 검증
 `;
@@ -294,8 +356,8 @@ function buildTypesTs(blockName, blockId, endpoints) {
   const declarations = endpoints
     .map((ep) => {
       const opPascal = toPascalCase(ep.operation);
-      // ADR 0013 매핑: hasBody operation은 Request 타입이 필요. 모든 operation은 Response 타입.
-      const hasBody = ['create', 'update'].includes(ep.operation);
+      // hasBody는 ep.method로 결정(POST/PUT/PATCH). singleton의 update(PATCH)도 자연스럽게 잡힘.
+      const { hasBody } = methodSpec(ep);
       const requestBlock = hasBody
         ? `// ${ep.operation} 요청 본문. contracts.yml의 ${ep.operation}.request_schema 거울.
 export interface ${opPascal}Request {
@@ -323,7 +385,7 @@ function buildApiTs(blockName, blockId, endpoints) {
   const typeImports = endpoints
     .flatMap((ep) => {
       const opPascal = toPascalCase(ep.operation);
-      const hasBody = ['create', 'update'].includes(ep.operation);
+      const { hasBody } = methodSpec(ep);
       return hasBody ? [`${opPascal}Request`, `${opPascal}Response`] : [`${opPascal}Response`];
     })
     .filter((v, i, a) => a.indexOf(v) === i);
@@ -335,37 +397,35 @@ function buildApiTs(blockName, blockId, endpoints) {
   const handlers = endpoints
     .map((ep) => {
       const opSpec = OPERATION_FUNCTION_NAME[ep.operation] || ep.operation;
-      const httpMethod = OPERATION_HTTP_METHOD[ep.operation] || 'GET';
+      const spec = methodSpec(ep);
       const opPascal = toPascalCase(ep.operation);
-      const hasBody = ['create', 'update'].includes(ep.operation);
-      const hasPath = ep.path.includes('{');
       const pathTpl = pathToTemplate(ep.path);
+      // delete는 응답 본문 없이 void를 돌려준다(status 204 관습).
+      const isDelete = spec.method === 'DELETE';
 
       // 함수 인자
       const params = [];
-      if (hasPath) {
-        // {id} 같은 path 변수 추출
+      if (spec.hasPath) {
+        // {id} 같은 path 변수 추출(여러 개 가능)
         const matches = [...ep.path.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
         for (const p of matches) params.push(`${p}: string`);
       }
-      if (hasBody) params.push(`input: ${opPascal}Request`);
+      if (spec.hasBody) params.push(`input: ${opPascal}Request`);
       const paramList = params.join(', ');
 
-      const body = hasBody ? '\n    body: JSON.stringify(input),' : '';
-      const successStatus = ep.operation === 'create' ? 201 : ep.operation === 'delete' ? 204 : 200;
-      const returnHandling =
-        ep.operation === 'delete'
-          ? `if (!response.ok) throw new Error(\`\${response.status}: \${await response.text()}\`);
+      const body = spec.hasBody ? '\n    body: JSON.stringify(input),' : '';
+      const returnHandling = isDelete
+        ? `if (!response.ok) throw new Error(\`\${response.status}: \${await response.text()}\`);
   return;`
-          : `if (!response.ok) throw new Error(\`\${response.status}: \${await response.text()}\`);
+        : `if (!response.ok) throw new Error(\`\${response.status}: \${await response.text()}\`);
   return (await response.json()) as ${opPascal}Response;`;
 
-      const returnType = ep.operation === 'delete' ? 'void' : `${opPascal}Response`;
+      const returnType = isDelete ? 'void' : `${opPascal}Response`;
 
-      return `// ${ep.operation} ${ep.method} ${ep.path} (성공 ${successStatus})
+      return `// ${ep.operation} ${ep.method} ${ep.path} (성공 ${spec.status})
 export async function ${opSpec}(${paramList}): Promise<${returnType}> {
   const response = await fetch(\`\${BASE}${pathTpl}\`, {
-    method: '${httpMethod}',
+    method: '${spec.method}',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',${body}
   });
@@ -437,7 +497,7 @@ export function generateFrontend({ inputs, generatedDir, now: _now } = {}) {
   mkdirSync(typesDir, { recursive: true });
   mkdirSync(featuresDir, { recursive: true });
 
-  // 루트 파일 8개
+  // 루트 파일 8개 + .gitignore
   writeFileSync(join(frontendDir, 'package.json'), buildPackageJson(projectName), 'utf8');
   writeFileSync(join(frontendDir, 'vite.config.ts'), buildViteConfig(), 'utf8');
   writeFileSync(join(frontendDir, 'tsconfig.json'), buildTsconfig(), 'utf8');
@@ -447,11 +507,25 @@ export function generateFrontend({ inputs, generatedDir, now: _now } = {}) {
     buildFrontendReadme(projectName, features.length),
     'utf8',
   );
+  writeFileSync(join(frontendDir, '.gitignore'), buildGitignore(), 'utf8');
   writeFileSync(join(srcDir, 'main.tsx'), buildMainTsx(), 'utf8');
   writeFileSync(join(srcDir, 'App.tsx'), buildAppTsx(), 'utf8');
   writeFileSync(join(srcDir, 'router.tsx'), buildRouterTsx(features), 'utf8');
 
-  let fileCount = 8;
+  // ADR 0046 결정 2: dev .env와 prod 템플릿 둘 다 자동 생성. existsSync로 customization 보호.
+  const envFile = join(frontendDir, '.env');
+  const envProdFile = join(frontendDir, '.env.production');
+  let envFileCount = 0;
+  if (!existsSync(envFile)) {
+    writeFileSync(envFile, buildEnvDev(), 'utf8');
+    envFileCount += 1;
+  }
+  if (!existsSync(envProdFile)) {
+    writeFileSync(envProdFile, buildEnvProduction(), 'utf8');
+    envFileCount += 1;
+  }
+
+  let fileCount = 9 + envFileCount;
 
   // feature별 3개 파일
   for (const f of features) {

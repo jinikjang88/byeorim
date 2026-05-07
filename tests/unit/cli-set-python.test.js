@@ -2,9 +2,10 @@
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import yaml from 'js-yaml';
 import {
   runInit,
   runProspect,
@@ -191,7 +192,7 @@ test('routes.py가 FastAPI 라우터와 Depends를 사용한다', async () => {
       'utf8',
     );
     assert.match(routes, /from fastapi import APIRouter, Depends/);
-    assert.match(routes, /router = APIRouter\(prefix="\/order"/);
+    assert.match(routes, /router = APIRouter\(prefix="\/orders"/);
     // 5개 endpoint(create/list/get/update/delete) HTTP 메서드 매핑
     assert.match(routes, /@router\.post\(""/);
     assert.match(routes, /@router\.get\(""/); // list
@@ -238,5 +239,124 @@ test('pyproject.toml에 보안 의존성이 빠짐없이 들어간다', async ()
     ]) {
       assert.ok(pyproject.includes(required), `${required}가 pyproject.toml에 있어야 한다`);
     }
+  });
+});
+
+// ADR 0044: singleton api_style. update가 @router.patch로 emit되어야 한다.
+async function setupSingletonForSet(cwd) {
+  runInit({ cwd });
+  await runProspect({
+    cwd,
+    answers: { what: '쇼핑몰' },
+    adapter: createMockAdapter(),
+    log: () => {},
+  });
+  await runSmelt({ cwd, blockIds: ['order'] });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => PYTHON_CHOICES,
+    confirmArchitecture: async () => 'proceed',
+  });
+  const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+  const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
+  const order = catalog.blocks.find((b) => b.id === 'order');
+  order.api_style = 'singleton';
+  order.path = '/me';
+  writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
+  await runForge({ cwd });
+  await runTemper({ cwd });
+}
+
+test('singleton 블럭의 update는 @router.patch로 emit된다(ADR 0044)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupSingletonForSet(cwd);
+    await runSet({ cwd });
+    const routes = readFileSync(
+      backendPath(cwd, 'src', PROJECT_PACKAGE, 'features', 'order', 'routes.py'),
+      'utf8',
+    );
+    // PATCH 매핑(PUT은 안 됨)
+    assert.match(routes, /@router\.patch\(/);
+    assert.ok(!/@router\.put\(/.test(routes), '@router.put은 안 emit되어야 한다');
+    // router prefix는 /me
+    assert.match(routes, /APIRouter\(prefix="\/me"/);
+    // singleton은 /{id} 자리 없음. 메서드 path는 ""
+    assert.match(routes, /@router\.patch\(""/);
+  });
+});
+
+// ADR 0046: 생성 코드의 로컬 실행 가능성 (healthcheck + env 분리 + prod 가드)
+test('main.py에 /health endpoint가 표준으로 박힌다(ADR 0046 결정 1)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const main = readFileSync(backendPath(cwd, 'src', PROJECT_PACKAGE, 'main.py'), 'utf8');
+    assert.match(main, /@app\.get\("\/health"\)/);
+    assert.match(main, /"status": "ok"/);
+  });
+});
+
+test('.env와 .env.production이 둘 다 자동 생성된다(ADR 0046 결정 2)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    assert.equal(existsSync(backendPath(cwd, '.env')), true);
+    assert.equal(existsSync(backendPath(cwd, '.env.production')), true);
+    const env = readFileSync(backendPath(cwd, '.env'), 'utf8');
+    const envProd = readFileSync(backendPath(cwd, '.env.production'), 'utf8');
+    assert.match(env, /PYTHON_ENV=development/);
+    assert.match(envProd, /PYTHON_ENV=production/);
+    assert.match(env, /JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(envProd, /JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_/);
+    // dev DB는 SQLite 파일(ADR 0046 결정 3)
+    assert.match(env, /DATABASE_URL=sqlite:/);
+    assert.match(envProd, /DATABASE_URL=BEOREUM_DEV_PLACEHOLDER_/);
+  });
+});
+
+test('config.py에 PYTHON_ENV 분기 로드와 prod 가드가 박힌다(ADR 0046 결정 4)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const config = readFileSync(backendPath(cwd, 'src', PROJECT_PACKAGE, 'config.py'), 'utf8');
+    // 분기 로드
+    assert.match(config, /PYTHON_ENV.*production/);
+    assert.match(config, /\.env\.production/);
+    // placeholder 표준 마커
+    assert.match(config, /BEOREUM_DEV_PLACEHOLDER_/);
+    // prod 가드 함수
+    assert.match(config, /_check_prod_secrets/);
+    assert.match(config, /model_validator/);
+    // 한국어 안내
+    assert.match(config, /dev placeholder입니다/);
+  });
+});
+
+test('.gitignore에 .env, .env.production이 들어간다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const gitignore = readFileSync(backendPath(cwd, '.gitignore'), 'utf8');
+    assert.match(gitignore, /^\.env$/m);
+    assert.match(gitignore, /^\.env\.production$/m);
+    assert.match(gitignore, /__pycache__/);
+  });
+});
+
+test('.env가 이미 있으면 set 재실행 시 덮어쓰지 않는다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const envFile = backendPath(cwd, '.env');
+    const userValue = '# 사용자가 채운 dev 값\nJWT_SECRET=user-real-secret\n';
+    writeFileSync(envFile, userValue, 'utf8');
+    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const state = yaml.load(readFileSync(stateFile, 'utf8'));
+    state.current_stage = 'set';
+    state.completed_stages = state.completed_stages.filter((s) => s !== 'set');
+    writeFileSync(stateFile, yaml.dump(state, { sortKeys: false }), 'utf8');
+    await runSet({ cwd });
+    const env = readFileSync(envFile, 'utf8');
+    assert.equal(env, userValue);
   });
 });

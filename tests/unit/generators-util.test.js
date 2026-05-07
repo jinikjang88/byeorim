@@ -8,6 +8,10 @@ import {
   toSnakeCase,
   getPublicContracts,
   getIntentWhat,
+  methodSpec,
+  springAnnotation,
+  devPlaceholder,
+  DEV_PLACEHOLDER_PREFIX,
 } from '../../packages/cli/src/generators/util.js';
 
 // ── toPascalCase ──────────────────────────────────────
@@ -104,4 +108,98 @@ test('getIntentWhat: extracted나 intent가 없으면 null', () => {
 test('getIntentWhat: what이 문자열이 아니면 null', () => {
   assert.equal(getIntentWhat({ extracted: { what: 123 } }), null);
   assert.equal(getIntentWhat({ extracted: { what: null } }), null);
+});
+
+// ── methodSpec ───────────────────────────────────────
+
+test('methodSpec: forge가 박은 method를 그대로 대문자로 돌려준다', () => {
+  assert.equal(methodSpec({ method: 'POST', path: '/orders' }).method, 'POST');
+  assert.equal(methodSpec({ method: 'patch', path: '/me' }).method, 'PATCH');
+  assert.equal(methodSpec({ method: 'GeT', path: '/x' }).method, 'GET');
+});
+
+test('methodSpec: hasBody는 POST/PUT/PATCH일 때만 true', () => {
+  assert.equal(methodSpec({ method: 'POST', path: '/x' }).hasBody, true);
+  assert.equal(methodSpec({ method: 'PUT', path: '/x' }).hasBody, true);
+  assert.equal(methodSpec({ method: 'PATCH', path: '/x' }).hasBody, true);
+  assert.equal(methodSpec({ method: 'GET', path: '/x' }).hasBody, false);
+  assert.equal(methodSpec({ method: 'DELETE', path: '/x' }).hasBody, false);
+});
+
+test('methodSpec: hasPath는 path에 {param}이 있을 때 true', () => {
+  assert.equal(methodSpec({ method: 'GET', path: '/orders' }).hasPath, false);
+  assert.equal(methodSpec({ method: 'GET', path: '/orders/{id}' }).hasPath, true);
+  assert.equal(methodSpec({ method: 'GET', path: '/orders/{orderId}/items' }).hasPath, true);
+  // singleton (path param 없음)
+  assert.equal(methodSpec({ method: 'PATCH', path: '/me' }).hasPath, false);
+});
+
+test('methodSpec: status는 create=201, delete=204, 그 외 200', () => {
+  assert.equal(methodSpec({ method: 'POST', path: '/x', operation: 'create' }).status, '201');
+  assert.equal(methodSpec({ method: 'DELETE', path: '/x', operation: 'delete' }).status, '204');
+  assert.equal(methodSpec({ method: 'GET', path: '/x', operation: 'list' }).status, '200');
+  assert.equal(methodSpec({ method: 'PATCH', path: '/me', operation: 'update' }).status, '200');
+});
+
+test('methodSpec: operation 없어도 method로 status 폴백', () => {
+  assert.equal(methodSpec({ method: 'POST', path: '/x' }).status, '201');
+  assert.equal(methodSpec({ method: 'DELETE', path: '/x' }).status, '204');
+  assert.equal(methodSpec({ method: 'GET', path: '/x' }).status, '200');
+});
+
+test('methodSpec: search operation은 GET이지만 list 결로 200', () => {
+  assert.equal(methodSpec({ method: 'GET', path: '/x', operation: 'search' }).status, '200');
+});
+
+// ── springAnnotation ─────────────────────────────────
+
+test('springAnnotation: 5개 method 모두 매핑', () => {
+  assert.equal(springAnnotation('POST'), 'PostMapping');
+  assert.equal(springAnnotation('GET'), 'GetMapping');
+  assert.equal(springAnnotation('PUT'), 'PutMapping');
+  assert.equal(springAnnotation('PATCH'), 'PatchMapping');
+  assert.equal(springAnnotation('DELETE'), 'DeleteMapping');
+});
+
+test('springAnnotation: 소문자/대소문자 혼용도 안전', () => {
+  assert.equal(springAnnotation('patch'), 'PatchMapping');
+  assert.equal(springAnnotation('Post'), 'PostMapping');
+});
+
+test('springAnnotation: 알 수 없는 method는 GetMapping 폴백', () => {
+  assert.equal(springAnnotation('UNKNOWN'), 'GetMapping');
+  assert.equal(springAnnotation(''), 'GetMapping');
+  assert.equal(springAnnotation(null), 'GetMapping');
+});
+
+// ── devPlaceholder (ADR 0046 결정 5) ──────────────────
+
+test('DEV_PLACEHOLDER_PREFIX는 표준 마커 BEOREUM_DEV_PLACEHOLDER_', () => {
+  assert.equal(DEV_PLACEHOLDER_PREFIX, 'BEOREUM_DEV_PLACEHOLDER_');
+});
+
+test('devPlaceholder: 키 이름을 받아 prefix + 키 + suffix로 만든다', () => {
+  const v = devPlaceholder('jwt_secret');
+  assert.ok(v.startsWith('BEOREUM_DEV_PLACEHOLDER_'));
+  assert.ok(v.includes('jwt_secret'));
+  assert.ok(v.endsWith('_change_before_production'));
+});
+
+test('devPlaceholder: 안전하지 않은 문자는 underscore로 정리된다', () => {
+  const v = devPlaceholder('Database-URL!');
+  assert.match(v, /database_url/);
+  assert.ok(v.startsWith('BEOREUM_DEV_PLACEHOLDER_'));
+});
+
+test('devPlaceholder: 빈 키 이름은 value 폴백', () => {
+  assert.match(devPlaceholder(), /value/);
+  assert.match(devPlaceholder(''), /value/);
+  assert.match(devPlaceholder(null), /value/);
+});
+
+test('devPlaceholder: 결과가 prod 가드의 prefix 검사를 통과한다', () => {
+  // 모든 generator의 가드는 startsWith(DEV_PLACEHOLDER_PREFIX)로 검사한다.
+  for (const key of ['jwt_secret', 'database_url', 'cors_origin']) {
+    assert.ok(devPlaceholder(key).startsWith(DEV_PLACEHOLDER_PREFIX));
+  }
 });

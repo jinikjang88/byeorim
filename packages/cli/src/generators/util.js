@@ -36,3 +36,60 @@ export function getIntentWhat(intent) {
   if (typeof what !== 'string' || !what.trim()) return null;
   return what.trim();
 }
+
+// endpoint의 HTTP method 결을 풀어쓴다. ep.method가 진실(forge가 박은 자리).
+// resource는 PUT, singleton은 PATCH(ADR 0044), 그 외도 forge가 박은 method 그대로.
+//
+// 반환:
+//   {
+//     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' (대문자),
+//     hasBody: boolean   // 요청 body가 있는 method인가(POST/PUT/PATCH)
+//     hasPath: boolean   // path에 {id} 같은 path param이 있는가
+//     status: '200' | '201' | '204' (성공 응답 코드 관습)
+//   }
+export function methodSpec(endpoint) {
+  const method = String((endpoint && endpoint.method) || 'GET').toUpperCase();
+  const path = String((endpoint && endpoint.path) || '');
+  const hasBody = method === 'POST' || method === 'PUT' || method === 'PATCH';
+  const hasPath = /\{[^}]+\}/.test(path);
+  // 성공 응답 코드 관습. 생성=201, 삭제=204, 그 외=200.
+  // operation 이름 우선(create/delete가 명확), 없으면 method 기반(POST=201, DELETE=204).
+  const op = endpoint && endpoint.operation;
+  let status;
+  if (op === 'create' || (method === 'POST' && op !== 'search')) {
+    status = '201';
+  } else if (op === 'delete' || method === 'DELETE') {
+    status = '204';
+  } else {
+    status = '200';
+  }
+  return { method, hasBody, hasPath, status };
+}
+
+// HTTP method를 Spring annotation 이름으로 매핑.
+// java generator가 사용. ADR 0044 결정 2(singleton update → PATCH).
+export function springAnnotation(method) {
+  const m = String(method || 'GET').toUpperCase();
+  const map = {
+    POST: 'PostMapping',
+    GET: 'GetMapping',
+    PUT: 'PutMapping',
+    PATCH: 'PatchMapping',
+    DELETE: 'DeleteMapping',
+  };
+  return map[m] || 'GetMapping';
+}
+
+// dev placeholder 표준 마커. ADR 0046 결정 5.
+// .env / application.yml / .env.production 등에 박히는 dev-only 값의 prefix.
+// 모든 generator의 prod-mode 가드가 이 prefix를 검사한다.
+export const DEV_PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_';
+
+// dev placeholder 값을 만든다. 키 이름을 받아 prefix + 키 + suffix로 한 줄 마커.
+// 예: devPlaceholder('jwt_secret') → 'BEOREUM_DEV_PLACEHOLDER_jwt_secret_change_before_production'
+export function devPlaceholder(keyName) {
+  const safe = String(keyName || 'value')
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_');
+  return `${DEV_PLACEHOLDER_PREFIX}${safe}_change_before_production`;
+}

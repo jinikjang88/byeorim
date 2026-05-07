@@ -2,9 +2,10 @@
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import yaml from 'js-yaml';
 import {
   runInit,
   runProspect,
@@ -244,5 +245,101 @@ test('frontend는 architecture.language와 무관하게 항상 생성된다', as
     assert.equal(result.language, 'java');
     assert.ok(result.frontendDir, '언어가 java여도 frontend는 만들어져야 한다');
     assert.equal(existsSync(frontendPath(cwd, 'package.json')), true);
+  });
+});
+
+// ADR 0044: singleton api_style. update fetch가 PATCH method를 사용해야 한다.
+async function setupSingletonForSet(cwd) {
+  runInit({ cwd });
+  await runProspect({
+    cwd,
+    answers: { what: '쇼핑몰' },
+    adapter: createMockAdapter(),
+    log: () => {},
+  });
+  await runSmelt({ cwd, blockIds: ['order'] });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => NODE_CHOICES,
+    confirmArchitecture: async () => 'proceed',
+  });
+  const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+  const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
+  const order = catalog.blocks.find((b) => b.id === 'order');
+  order.api_style = 'singleton';
+  order.path = '/me';
+  writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
+  await runForge({ cwd });
+  await runTemper({ cwd });
+}
+
+test('singleton 블럭의 update fetch는 PATCH method를 사용한다(ADR 0044)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupSingletonForSet(cwd);
+    await runSet({ cwd });
+    const apiTs = readFileSync(frontendPath(cwd, 'src', 'api', 'order.ts'), 'utf8');
+    // PATCH method가 fetch에 박혀야 함
+    assert.match(apiTs, /method: 'PATCH'/);
+    assert.ok(!/method: 'PUT'/.test(apiTs), 'PUT은 안 emit되어야 한다');
+    // path는 /me 그대로(singleton은 path param 없음)
+    assert.match(apiTs, /\/me/);
+  });
+});
+
+// ADR 0046: 생성 코드의 로컬 실행 가능성
+test('frontend의 .env와 .env.production이 둘 다 자동 생성된다(ADR 0046 결정 2)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    assert.equal(existsSync(frontendPath(cwd, '.env')), true);
+    assert.equal(existsSync(frontendPath(cwd, '.env.production')), true);
+    const env = readFileSync(frontendPath(cwd, '.env'), 'utf8');
+    const envProd = readFileSync(frontendPath(cwd, '.env.production'), 'utf8');
+    // dev는 backend dev 서버를 가리킨다
+    assert.match(env, /VITE_API_BASE=http:\/\/localhost:3000/);
+    // prod 템플릿은 placeholder
+    assert.match(envProd, /VITE_API_BASE=BEOREUM_DEV_PLACEHOLDER_/);
+  });
+});
+
+test('vite.config.ts가 prod build에서 placeholder를 검출해 빌드를 거부한다(ADR 0046 결정 4)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const vite = readFileSync(frontendPath(cwd, 'vite.config.ts'), 'utf8');
+    assert.match(vite, /loadEnv/);
+    assert.match(vite, /BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(vite, /mode === 'production'/);
+    // 한국어 안내
+    assert.match(vite, /dev placeholder입니다/);
+  });
+});
+
+test('frontend의 .gitignore에 .env, .env.production이 들어간다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const gitignore = readFileSync(frontendPath(cwd, '.gitignore'), 'utf8');
+    assert.match(gitignore, /^\.env$/m);
+    assert.match(gitignore, /^\.env\.production$/m);
+    assert.match(gitignore, /node_modules/);
+  });
+});
+
+test('frontend의 .env가 이미 있으면 set 재실행 시 덮어쓰지 않는다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const envFile = frontendPath(cwd, '.env');
+    const userValue = '# 사용자가 customization한 자리\nVITE_API_BASE=http://my-dev-api\n';
+    writeFileSync(envFile, userValue, 'utf8');
+    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const state = yaml.load(readFileSync(stateFile, 'utf8'));
+    state.current_stage = 'set';
+    state.completed_stages = state.completed_stages.filter((s) => s !== 'set');
+    writeFileSync(stateFile, yaml.dump(state, { sortKeys: false }), 'utf8');
+    await runSet({ cwd });
+    const env = readFileSync(envFile, 'utf8');
+    assert.equal(env, userValue);
   });
 });

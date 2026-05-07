@@ -2,9 +2,10 @@
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import yaml from 'js-yaml';
 import {
   runInit,
   runProspect,
@@ -297,5 +298,151 @@ test('Repository 인터페이스가 domain 영역에 있고 구현체가 infrast
       'utf8',
     );
     assert.match(impl, /public class JpaOrderRepository implements OrderRepository/);
+  });
+});
+
+// ADR 0044: singleton api_style. update가 @PatchMapping으로 emit되어야 한다.
+async function setupSingletonForSet(cwd) {
+  runInit({ cwd });
+  await runProspect({
+    cwd,
+    answers: { what: '쇼핑몰' },
+    adapter: createMockAdapter(),
+    log: () => {},
+  });
+  await runSmelt({ cwd, blockIds: ['order'] });
+  await interactiveShape({
+    cwd,
+    askArchitecture: async () => JAVA_CHOICES,
+    confirmArchitecture: async () => 'proceed',
+  });
+  const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+  const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
+  const order = catalog.blocks.find((b) => b.id === 'order');
+  order.api_style = 'singleton';
+  order.path = '/me';
+  writeFileSync(catalogFile, yaml.dump(catalog, { sortKeys: false }), 'utf8');
+  await runForge({ cwd });
+  await runTemper({ cwd });
+}
+
+test('singleton 블럭의 update는 @PatchMapping으로 emit된다(ADR 0044)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupSingletonForSet(cwd);
+    await runSet({ cwd });
+    const controller = readFileSync(
+      backendPath(
+        cwd,
+        'modules',
+        'order',
+        'src',
+        'main',
+        'java',
+        'com',
+        'example',
+        'beoreum',
+        'order',
+        'web',
+        'OrderController.java',
+      ),
+      'utf8',
+    );
+    // PATCH 매핑이 emit되어야 한다(PUT은 안 됨)
+    assert.match(controller, /@PatchMapping/);
+    assert.ok(!/@PutMapping/.test(controller), 'PutMapping은 안 emit되어야 한다');
+    // base path는 /me (singleton)
+    assert.match(controller, /@RequestMapping\("\/me"\)/);
+    // singleton은 /{id} 자리 없음. 메서드 path는 ""
+    assert.match(controller, /@PatchMapping\(""\)/);
+  });
+});
+
+// ADR 0046: 생성 코드의 로컬 실행 가능성 (healthcheck + env 분리 + prod 가드)
+
+function appJavaPath(cwd, ...rest) {
+  return backendPath(cwd, 'app', 'src', 'main', 'java', 'com', 'example', 'beoreum', ...rest);
+}
+
+function appResourcePath(cwd, ...rest) {
+  return backendPath(cwd, 'app', 'src', 'main', 'resources', ...rest);
+}
+
+test('HealthController.java가 표준 /health endpoint로 만들어진다(ADR 0046 결정 1)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const file = appJavaPath(cwd, 'HealthController.java');
+    assert.equal(existsSync(file), true);
+    const code = readFileSync(file, 'utf8');
+    assert.match(code, /@RestController/);
+    assert.match(code, /@GetMapping\("\/health"\)/);
+    assert.match(code, /"status", "ok"/);
+  });
+});
+
+test('application.yml과 application-production.yml이 둘 다 자동 생성된다(ADR 0046 결정 2)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const dev = appResourcePath(cwd, 'application.yml');
+    const prod = appResourcePath(cwd, 'application-production.yml');
+    assert.equal(existsSync(dev), true, 'application.yml이 자동 생성되어야 한다');
+    assert.equal(existsSync(prod), true, 'application-production.yml이 자동 생성되어야 한다');
+    const devText = readFileSync(dev, 'utf8');
+    const prodText = readFileSync(prod, 'utf8');
+    // dev는 H2 in-memory(ADR 0046 결정 3)
+    assert.match(devText, /jdbc:h2:mem/);
+    // 둘 다 jwt.secret이 dev placeholder
+    assert.match(devText, /secret: BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(prodText, /secret: BEOREUM_DEV_PLACEHOLDER_/);
+    // prod 템플릿은 database.url도 placeholder
+    assert.match(prodText, /url: BEOREUM_DEV_PLACEHOLDER_/);
+  });
+});
+
+test('EnvSecretsValidator.java가 production profile에서만 동작한다(ADR 0046 결정 4 안전망 2)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const file = appJavaPath(cwd, 'config', 'EnvSecretsValidator.java');
+    assert.equal(existsSync(file), true);
+    const code = readFileSync(file, 'utf8');
+    assert.match(code, /@Component/);
+    assert.match(code, /@Profile\("production"\)/);
+    assert.match(code, /BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(code, /@PostConstruct/);
+    // 한국어 안내(사용자가 보는 결)
+    assert.match(code, /dev placeholder입니다/);
+  });
+});
+
+test('.gitignore에 application-production.yml이 들어간다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const gitignore = readFileSync(backendPath(cwd, '.gitignore'), 'utf8');
+    assert.match(gitignore, /application-production\.yml/);
+    assert.match(gitignore, /\.gradle/);
+  });
+});
+
+test('application.yml이 이미 있으면 set 재실행 시 덮어쓰지 않는다(사용자 customization 보호)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForSet(cwd, ['order']);
+    await runSet({ cwd });
+    const ymlFile = appResourcePath(cwd, 'application.yml');
+    // 사용자가 application.yml을 customization했다고 가정
+    const userValue = '# 사용자가 customization한 자리\nserver:\n  port: 9090\n';
+    writeFileSync(ymlFile, userValue, 'utf8');
+    // current_stage를 set으로 되돌려 다시 실행
+    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const state = yaml.load(readFileSync(stateFile, 'utf8'));
+    state.current_stage = 'set';
+    state.completed_stages = state.completed_stages.filter((s) => s !== 'set');
+    writeFileSync(stateFile, yaml.dump(state, { sortKeys: false }), 'utf8');
+    await runSet({ cwd });
+    // 사용자가 customization한 값이 살아있다
+    const yml = readFileSync(ymlFile, 'utf8');
+    assert.equal(yml, userValue);
   });
 });

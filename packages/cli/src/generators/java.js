@@ -1,25 +1,38 @@
 // Java 백엔드 코드 생성기. ADR 0019를 따른다.
 // architecture.yml의 language='java'일 때 set 단계가 호출.
 // internal 블럭은 modules에 만들지 않는다(공개 API 없음).
+// ep.method가 진실(forge가 박은 자리). resource는 PUT, singleton은 PATCH(ADR 0044).
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { toCamelCase, toPascalCase, getPublicContracts, getIntentWhat } from './util.js';
+import {
+  toCamelCase,
+  toPascalCase,
+  getPublicContracts,
+  getIntentWhat,
+  methodSpec,
+  springAnnotation,
+  devPlaceholder,
+} from './util.js';
 
 const GROUP = 'com.example';
 const PROJECT_PACKAGE_FALLBACK = 'beoreum';
 const SPRING_BOOT_VERSION = '3.4.0';
 const JAVA_VERSION = '17';
 
-// operation → Spring HTTP 어노테이션 매핑. ADR 0013 결정 3 매핑 표와 짝.
-const OPERATION_HTTP = {
-  create: { annotation: 'PostMapping', hasBody: true, hasPath: false, status: '201' },
-  list: { annotation: 'GetMapping', hasBody: false, hasPath: false, status: '200' },
-  get: { annotation: 'GetMapping', hasBody: false, hasPath: true, status: '200' },
-  update: { annotation: 'PutMapping', hasBody: true, hasPath: true, status: '200' },
-  delete: { annotation: 'DeleteMapping', hasBody: false, hasPath: true, status: '204' },
-  search: { annotation: 'GetMapping', hasBody: false, hasPath: false, status: '200' },
-};
+// endpoints의 base path를 결정한다. forge가 항상 첫 endpoint를 컬렉션/싱글톤 base로 박는다.
+// resource: endpoints[0]이 POST /orders. singleton: endpoints[0]이 GET /me.
+function basePathOf(endpoints) {
+  if (!Array.isArray(endpoints) || endpoints.length === 0) return '';
+  return String(endpoints[0].path || '');
+}
+
+// ep.path에서 path param 이름을 뽑는다. 없으면 'id' 폴백.
+// 예: /orders/{id} → 'id', /orders/by-customer/{customerId} → 'customerId'.
+function pathParamName(path) {
+  const m = String(path || '').match(/\{(\w+)\}/);
+  return m ? m[1] : 'id';
+}
 
 // pg-integration → pgintegration. Java 패키지 이름은 lowercase, 구분자 없음(전통).
 // Java 패키지 식별자 규칙은 다른 언어와 달라 util.js에 두지 않고 여기에 둔다.
@@ -144,26 +157,45 @@ org.gradle.caching=true
 function buildBackendReadme(projectName, featureCount) {
   return `# ${projectName} (Java)
 
-벼름이 자동 생성한 Spring Boot 백엔드 스켈레톤입니다. ADR 0019를 따릅니다.
+벼름이 자동 생성한 Spring Boot 백엔드 스켈레톤입니다. ADR 0019와 ADR 0046을 따릅니다.
 
-## 시작하기
+## 시작하기 (dev)
 
-1. \`.env\` 또는 \`application.yml\`에 시크릿(JWT_SECRET 등)을 채우세요. application.yml은 \`.gitignore\`에 추가하는 자리.
-2. 빌드: \`./gradlew build\`
-3. 실행: \`./gradlew :app:bootRun\`
+\`application.yml\`이 dev 값으로 미리 채워져 있어 즉시 띄울 수 있습니다.
+
+1. 빌드: \`./gradlew build\`
+2. 개발 실행: \`./gradlew :app:bootRun\`
+3. 살아있는지 확인: \`curl http://localhost:8080/health\` → \`{"status":"ok"}\`
 4. 테스트: \`./gradlew test\`
+
+## prod로 옮기기
+
+\`application-production.yml\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BEOREUM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 production profile로 띄웁니다.
+
+\`\`\`
+./gradlew :app:bootRun --args='--spring.profiles.active=production'
+\`\`\`
+
+값을 안 채우고 띄우면 시작이 거부됩니다. 한국어 안내 메시지가 나옵니다.
 
 ## 구조
 
 \`\`\`
 backend/
+├── .gitignore
 ├── settings.gradle.kts
-├── build.gradle.kts        # 공통 설정 (Java ${JAVA_VERSION}, Spring Boot ${SPRING_BOOT_VERSION})
+├── build.gradle.kts
 ├── app/                    # 엔트리, 부트스트랩
-│   └── ... (Application.java)
+│   └── src/main/
+│       ├── java/.../Application.java
+│       ├── java/.../HealthController.java        # /health 표준
+│       ├── java/.../config/EnvSecretsValidator.java   # prod 가드
+│       └── resources/
+│           ├── application.yml                   # dev 값
+│           └── application-production.yml        # prod 템플릿
 └── modules/                # ${featureCount}개 feature
     └── {feature-name}/
-        └── ... (헥사고날 4영역: domain/application/infrastructure/web)
+        └── ... (헥사고날 4영역)
 \`\`\`
 
 각 feature는 한 Gradle 모듈입니다. 미래 MSA 분리 시 한 모듈이 한 마이크로서비스로 빠집니다.
@@ -180,12 +212,143 @@ backend/
 
 ## 보안
 
-이 스켈레톤은 ADR 0017 결정 1(보안 최우선)을 따릅니다.
+이 스켈레톤은 ADR 0017 결정 1(보안 최우선)과 ADR 0046 결정 4(prod 가드)를 따릅니다.
 
-- Spring Security가 모든 엔드포인트를 기본 차단합니다(allow-list 방식). 공개 자리만 명시적으로 허용
+- Spring Security가 모든 엔드포인트를 기본 차단(allow-list 방식). 공개 자리만 명시적으로 허용
 - Bean Validation(\`@Valid\`)으로 입력 경계 검증
-- JWT는 \`@fastify/jwt\` 대응되는 Spring Security 설정으로(이번 스켈레톤은 자리만, 실제 설정은 사용자가 채움)
-- \`application.yml\`에 시크릿 하드코딩 금지. 환경 변수 또는 Spring Profile로 분리
+- \`application.yml\`과 \`application-production.yml\`은 \`.gitignore\`로 git에서 제외
+- production profile에서 시크릿이 dev placeholder면 시작 거부(EnvSecretsValidator)
+`;
+}
+
+// dev application.yml. ADR 0046 결정 2와 3.
+// jwt.secret은 dev placeholder prefix로 박아 prod 가드가 잡을 수 있게.
+// 데이터베이스는 H2 in-memory(외부 의존성 없음, ADR 0046 결정 3).
+function buildApplicationYml() {
+  return `# 자동 생성된 dev 환경 설정. ADR 0046을 따른다.
+# 이 파일은 dev에서만 동작하는 값들이 들어있다. prod에서 이 값을 그대로 쓰지 않는다.
+# prod 환경 변수는 application-production.yml에 별도로 채운다.
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: beoreum-app
+  profiles:
+    default: development
+
+# 시크릿. dev placeholder는 prod 가드가 검출해서 막는다(ADR 0046 결정 4).
+jwt:
+  secret: ${devPlaceholder('jwt_secret')}
+
+# 데이터베이스. dev는 H2 in-memory로 외부 의존성 없이 기동(ADR 0046 결정 3).
+# JPA 의존성이 추가되면 자동으로 활성화된다.
+database:
+  url: jdbc:h2:mem:devdb
+  username: sa
+  password: ''
+`;
+}
+
+// prod application-production.yml. ADR 0046 결정 2.
+// 모든 시크릿이 dev placeholder로 박혀있어 사용자가 직접 채우지 않으면 prod 가드가 막는다.
+function buildApplicationProductionYml() {
+  return `# 자동 생성된 prod 환경 설정 템플릿. ADR 0046을 따른다.
+# 이 파일을 prod에 배포하기 전에 모든 BEOREUM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
+# 채우지 않은 채로 spring.profiles.active=production으로 기동하면 시작이 거부된다.
+
+server:
+  port: 8080
+
+# 시크릿. 반드시 안전한 random 값으로 교체.
+jwt:
+  secret: ${devPlaceholder('jwt_secret')}
+
+# 데이터베이스. architecture.yml에서 고른 DB의 connection string으로 교체.
+database:
+  url: ${devPlaceholder('database_url')}
+  username: ${devPlaceholder('database_username')}
+  password: ${devPlaceholder('database_password')}
+`;
+}
+
+// HealthController. ADR 0046 결정 1의 표준 /health endpoint.
+function buildHealthControllerJava(projectPackage) {
+  return `package ${GROUP}.${projectPackage};
+
+import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+// 표준 healthcheck endpoint(ADR 0046 결정 1). 인증 없이 한 URL로 살아있음을 본다.
+@RestController
+public class HealthController {
+  @GetMapping("/health")
+  public Map<String, String> health() {
+    return Map.of("status", "ok");
+  }
+}
+`;
+}
+
+// EnvSecretsValidator. ADR 0046 결정 4 안전망 2.
+// production profile에서 시크릿 값이 dev placeholder prefix로 시작하면 시작을 거부.
+function buildEnvSecretsValidatorJava(projectPackage) {
+  return `package ${GROUP}.${projectPackage}.config;
+
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+// production profile에서 시크릿이 dev placeholder인지 검사한다(ADR 0046 결정 4 안전망 2).
+// dev placeholder prefix는 모든 generator에서 같은 표준 마커(ADR 0046 결정 5).
+@Component
+@Profile("production")
+public class EnvSecretsValidator {
+  private static final String DEV_PLACEHOLDER_PREFIX = "BEOREUM_DEV_PLACEHOLDER_";
+
+  @Value("\${jwt.secret:}")
+  private String jwtSecret;
+
+  @Value("\${database.url:}")
+  private String databaseUrl;
+
+  @PostConstruct
+  void validate() {
+    requireProdValue("jwt.secret", jwtSecret);
+    requireProdValue("database.url", databaseUrl);
+  }
+
+  private void requireProdValue(String name, String value) {
+    if (value == null || value.isBlank()) {
+      throw new IllegalStateException(
+          "PROD 모드에서 " + name + " 값이 비어있습니다. application-production.yml을 채운 뒤 다시 시작하세요.");
+    }
+    if (value.startsWith(DEV_PLACEHOLDER_PREFIX)) {
+      throw new IllegalStateException(
+          "PROD 모드에서 " + name + " 값이 dev placeholder입니다. application-production.yml의 " + name + "을 prod 값으로 채운 뒤 다시 시작하세요.");
+    }
+  }
+}
+`;
+}
+
+// .gitignore. ADR 0046 결정 2의 안전 결과 Spring 관례를 함께 따른다.
+// application.yml은 dev placeholder만 박혀있어 commit 안전. application-production.yml은 사용자가 prod 값을 채우는 자리라 git에서 제외.
+function buildGitignore() {
+  return `.gradle/
+build/
+out/
+*.class
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# prod 시크릿 파일(ADR 0046). application.yml은 dev placeholder라 commit 가능.
+**/application-production.yml
 `;
 }
 
@@ -336,23 +499,31 @@ function buildControllerJava(
   endpoints,
 ) {
   const camel = toCamelCase(blockId);
+  // base path는 endpoints[0]의 path. 각 endpoint의 상대 path를 base 기준으로 자른다.
+  const pathPrefix = basePathOf(endpoints);
   const handlers = endpoints
     .map((ep) => {
-      const opSpec = OPERATION_HTTP[ep.operation] || OPERATION_HTTP.get;
+      const spec = methodSpec(ep);
       const opPascal = toPascalCase(ep.operation);
-      const requestType = opSpec.hasBody ? `${opPascal}Request` : null;
+      const requestType = spec.hasBody ? `${opPascal}Request` : null;
       const responseType = `${opPascal}Response`;
       const params = [];
-      if (opSpec.hasPath) params.push('@PathVariable UUID id');
-      if (opSpec.hasBody) params.push(`@Valid @RequestBody ${requestType} request`);
+      if (spec.hasPath) {
+        const paramName = pathParamName(ep.path);
+        params.push(`@PathVariable UUID ${paramName}`);
+      }
+      if (spec.hasBody) params.push(`@Valid @RequestBody ${requestType} request`);
       const paramList = params.join(', ');
 
-      const annotation = opSpec.annotation;
-      const path = opSpec.hasPath ? '"/{id}"' : '""';
+      const annotation = springAnnotation(spec.method);
+      // 상대 path = ep.path - pathPrefix. 같으면 빈 문자열, 아니면 잘라낸 자리.
+      const relativeRaw =
+        ep.path && ep.path.startsWith(pathPrefix) ? ep.path.slice(pathPrefix.length) : ep.path;
+      const path = relativeRaw ? `"${relativeRaw}"` : '""';
 
       return `  // ${ep.operation} ${ep.method} ${ep.path}
   @${annotation}(${path})
-  @ResponseStatus(HttpStatus.valueOf(${opSpec.status}))
+  @ResponseStatus(HttpStatus.valueOf(${spec.status}))
   public ${responseType} ${ep.operation}(${paramList}) {
     // TODO: ${camel}Service.${ep.operation}(...) 호출
     throw new UnsupportedOperationException("Not Implemented Yet: ${ep.operation}");
@@ -363,9 +534,9 @@ function buildControllerJava(
   // Nested DTO records. schema가 채워지면 record 필드로 자동 변환(ADR 0023).
   const dtos = endpoints
     .map((ep) => {
-      const opSpec = OPERATION_HTTP[ep.operation] || OPERATION_HTTP.get;
+      const spec = methodSpec(ep);
       const opPascal = toPascalCase(ep.operation);
-      const requestRecord = opSpec.hasBody
+      const requestRecord = spec.hasBody
         ? `  // ${ep.operation} 요청 필드. Bean Validation 어노테이션(@NotBlank 등)은 사용자가 추가.
   public record ${opPascal}Request(${schemaToJavaRecordFields(ep.request_schema)}) {}`
         : '';
@@ -374,9 +545,6 @@ function buildControllerJava(
       return [requestRecord, responseRecord].filter(Boolean).join('\n\n');
     })
     .join('\n\n');
-
-  // 컨트롤러가 사용하는 path prefix는 block_id 기반(forge가 만든 path와 짝)
-  const pathPrefix = `/${blockId}`;
 
   return `package ${GROUP}.${projectPackage}.${featurePackage}.web;
 
@@ -450,19 +618,50 @@ export function generateJavaBackend({ inputs, generatedDir, now: _now } = {}) {
     buildBackendReadme(projectName, features.length),
     'utf8',
   );
+  writeFileSync(join(backendDir, '.gitignore'), buildGitignore(), 'utf8');
 
   // app 모듈
   const appDir = join(backendDir, 'app');
   const appJavaDir = join(appDir, 'src', 'main', 'java', GROUP.replace(/\./g, '/'), projectPackage);
-  mkdirSync(appJavaDir, { recursive: true });
+  const appConfigDir = join(appJavaDir, 'config');
+  const appResourcesDir = join(appDir, 'src', 'main', 'resources');
+  mkdirSync(appConfigDir, { recursive: true });
+  mkdirSync(appResourcesDir, { recursive: true });
   writeFileSync(
     join(appDir, 'build.gradle.kts'),
     buildAppBuildGradle(features, projectPackage),
     'utf8',
   );
   writeFileSync(join(appJavaDir, 'Application.java'), buildApplicationJava(projectPackage), 'utf8');
+  // ADR 0046: /health 표준 endpoint
+  writeFileSync(
+    join(appJavaDir, 'HealthController.java'),
+    buildHealthControllerJava(projectPackage),
+    'utf8',
+  );
+  // ADR 0046 결정 4 안전망 2: production profile에서 placeholder 검출 throw
+  writeFileSync(
+    join(appConfigDir, 'EnvSecretsValidator.java'),
+    buildEnvSecretsValidatorJava(projectPackage),
+    'utf8',
+  );
 
-  let fileCount = 4 /* root */ + 2; /* app */
+  // ADR 0046 결정 2: dev application.yml과 prod 템플릿 둘 다 자동 생성.
+  // 이미 있으면 사용자가 채운 prod 값을 보호하기 위해 덮어쓰지 않는다.
+  const applicationYml = join(appResourcesDir, 'application.yml');
+  const applicationProdYml = join(appResourcesDir, 'application-production.yml');
+  let envFileCount = 0;
+  if (!existsSync(applicationYml)) {
+    writeFileSync(applicationYml, buildApplicationYml(), 'utf8');
+    envFileCount += 1;
+  }
+  if (!existsSync(applicationProdYml)) {
+    writeFileSync(applicationProdYml, buildApplicationProductionYml(), 'utf8');
+    envFileCount += 1;
+  }
+
+  // root(4) + .gitignore(1) + app(build.gradle + Application + HealthController + EnvSecretsValidator) + env files
+  let fileCount = 4 + 1 + 4 + envFileCount;
 
   // 각 feature 모듈
   for (const f of features) {
