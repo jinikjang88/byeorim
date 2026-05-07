@@ -118,9 +118,10 @@ program
 program
   .command('verify')
   .description('생성된 backend/frontend의 컴파일과 테스트를 실행한다')
-  .action(async () => {
+  .option('--smoke', 'backend를 잠깐 띄워 /health 응답까지 확인(ADR 0048)')
+  .action(async (options) => {
     try {
-      const result = await runVerify({ cwd: process.cwd() });
+      const result = await runVerify({ cwd: process.cwd(), smoke: !!options.smoke });
       console.log(`검증 리포트: ${result.reportFile}`);
       console.log(`전체: ${result.passedCount} 성공, ${result.failedCount} 실패`);
       for (const target of result.targets) {

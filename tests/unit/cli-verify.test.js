@@ -214,3 +214,221 @@ test('init도 안 된 자리는 한국어 메시지로 거부한다', async () =
 test('cwd 누락은 한국어로 거부한다', async () => {
   await assert.rejects(runVerify({}), /cwd.*필요합니다/);
 });
+
+// ── ADR 0048: --smoke 플래그 ─────────────────────────────
+
+// mock spawnProcess: 호출 시 onStdout 한 줄 emit, 외부 kill로 결정적 종료.
+function createMockSpawn() {
+  const spawned = [];
+  const spawn = (spec) => {
+    let resolveExit;
+    const exited = new Promise((res) => {
+      resolveExit = res;
+    });
+    const handle = {
+      pid: 1000 + spawned.length,
+      killed: false,
+      kill(sig = 'SIGTERM') {
+        if (handle.killed) return;
+        handle.killed = true;
+        resolveExit({ code: null, signal: sig });
+      },
+      exited,
+    };
+    spec.onStdout(`${spec.cmd} 시작 시뮬레이션`);
+    spawned.push({ spec, handle });
+    return handle;
+  };
+  spawn.spawned = spawned;
+  return spawn;
+}
+
+function createMockFetch(nReadyAt) {
+  let count = 0;
+  const fn = async () => {
+    count += 1;
+    return count >= nReadyAt;
+  };
+  fn.callCount = () => count;
+  return fn;
+}
+
+test('smoke=false(기본)면 spawnProcess는 호출되지 않는다(기존 동작 유지)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForVerify(cwd);
+    const { runCommand } = makeSuccessRunCommand();
+    const spawnProcess = createMockSpawn();
+    const fetchHealth = async () => true;
+    const result = await runVerify({ cwd, runCommand, spawnProcess, fetchHealth });
+    assert.equal(spawnProcess.spawned.length, 0);
+    // smoke 섹션이 없음
+    assert.ok(!result.targets.find((t) => t.key && t.key.startsWith('smoke:')));
+  });
+});
+
+test('smoke=true면 backend smoke 섹션이 추가되고 ready 시 passed=true', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForVerify(cwd);
+    const { runCommand } = makeSuccessRunCommand();
+    const spawnProcess = createMockSpawn();
+    const fetchHealth = createMockFetch(1); // 즉시 ready
+    const result = await runVerify({
+      cwd,
+      runCommand,
+      smoke: true,
+      spawnProcess,
+      fetchHealth,
+      smokeTimeoutMs: 1000,
+      smokeIntervalMs: 10,
+    });
+    // 한 번 spawn(backend만)
+    assert.equal(spawnProcess.spawned.length, 1);
+    assert.equal(spawnProcess.spawned[0].spec.cmd, 'npm');
+    // smoke 섹션이 있고 passed
+    const smoke = result.targets.find((t) => t.key && t.key.startsWith('smoke:'));
+    assert.ok(smoke, 'smoke 섹션이 있어야 한다');
+    assert.equal(smoke.passed, true);
+    assert.match(smoke.label, /Backend Smoke \(node\)/);
+    assert.match(smoke.lastCommand, /\(ready\)/);
+    assert.match(smoke.output, /\/health 응답 확인/);
+    // child process가 정리됨
+    assert.ok(spawnProcess.spawned[0].handle.killed);
+  });
+});
+
+test('smoke=true이고 /health가 응답 안 하면 timeout 후 passed=false', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForVerify(cwd);
+    const { runCommand } = makeSuccessRunCommand();
+    const spawnProcess = createMockSpawn();
+    const fetchHealth = async () => false; // 절대 ready 안 됨
+    const result = await runVerify({
+      cwd,
+      runCommand,
+      smoke: true,
+      spawnProcess,
+      fetchHealth,
+      smokeTimeoutMs: 50,
+      smokeIntervalMs: 10,
+    });
+    const smoke = result.targets.find((t) => t.key && t.key.startsWith('smoke:'));
+    assert.ok(smoke);
+    assert.equal(smoke.passed, false);
+    assert.equal(smoke.exitCode, 1);
+    assert.match(smoke.lastCommand, /시간 초과/);
+    assert.match(smoke.output, /응답 시간 초과/);
+    // 전체 실패
+    assert.equal(result.allPassed, false);
+  });
+});
+
+test('smoke 섹션이 verify-report.md에 install/test 섹션과 같은 결로 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForVerify(cwd);
+    const { runCommand } = makeSuccessRunCommand();
+    const spawnProcess = createMockSpawn();
+    const fetchHealth = createMockFetch(1);
+    const result = await runVerify({
+      cwd,
+      runCommand,
+      smoke: true,
+      spawnProcess,
+      fetchHealth,
+      smokeTimeoutMs: 1000,
+      smokeIntervalMs: 10,
+    });
+    const report = readFileSync(result.reportFile, 'utf8');
+    // 표준 섹션 헤더(다른 target과 같은 결)
+    assert.match(report, /## Backend Smoke \(node\)/);
+    assert.match(report, /- 상태: 성공/);
+    assert.match(report, /- 마지막 명령: `npm run dev/);
+    // 전체 결과 줄에 smoke가 합산됨
+    assert.match(report, /전체 결과: \d+ 성공/);
+  });
+});
+
+test('BEOREUM_VERIFY_SMOKE_TIMEOUT_MS 환경 변수가 default를 override', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForVerify(cwd);
+    const { runCommand } = makeSuccessRunCommand();
+    const spawnProcess = createMockSpawn();
+    const fetchHealth = async () => false; // timeout 시나리오
+
+    const prev = process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS;
+    process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS = '50';
+    try {
+      const start = Date.now();
+      const result = await runVerify({
+        cwd,
+        runCommand,
+        smoke: true,
+        spawnProcess,
+        fetchHealth,
+        smokeIntervalMs: 10,
+      });
+      const elapsed = Date.now() - start;
+      // 환경 변수의 50ms가 적용됐다면 빠르게 돌아왔어야 함(default 60000ms이라면 timeout)
+      assert.ok(elapsed < 5000, `환경 변수의 50ms가 안 적용됨(걸린 시간: ${elapsed}ms)`);
+      const smoke = result.targets.find((t) => t.key && t.key.startsWith('smoke:'));
+      assert.ok(smoke);
+      assert.equal(smoke.passed, false);
+    } finally {
+      if (prev === undefined) delete process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS;
+      else process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS = prev;
+    }
+  });
+});
+
+test('smoke + frontend는 둘 다 결과에 들어간다(frontend는 smoke 안 함)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForVerify(cwd);
+    const { runCommand } = makeSuccessRunCommand();
+    const spawnProcess = createMockSpawn();
+    const fetchHealth = createMockFetch(1);
+    const result = await runVerify({
+      cwd,
+      runCommand,
+      smoke: true,
+      spawnProcess,
+      fetchHealth,
+      smokeTimeoutMs: 1000,
+      smokeIntervalMs: 10,
+    });
+    // backend(install/test) + frontend(install/build/test) + smoke = 3개 target
+    assert.equal(result.targets.length, 3);
+    const labels = result.targets.map((t) => t.label);
+    assert.ok(labels.includes('Backend (node)'));
+    assert.ok(labels.includes('Frontend (React)'));
+    assert.ok(labels.find((l) => l.startsWith('Backend Smoke')));
+    // spawn은 한 번만(backend만 smoke)
+    assert.equal(spawnProcess.spawned.length, 1);
+  });
+});
+
+test('smoke=true이고 backend가 없으면 smoke 섹션이 추가되지 않는다', async () => {
+  await withTempCwd(async (cwd) => {
+    // architecture를 frontend-only 결로 가정. 다만 set은 backend도 만들어야 하므로
+    // 직접 generated/backend를 지운 결로 시뮬레이션
+    await setupReadyForVerify(cwd);
+    rmSync(join(cwd, '.beoreum', 'project', 'generated', 'backend'), {
+      recursive: true,
+      force: true,
+    });
+    const { runCommand } = makeSuccessRunCommand();
+    const spawnProcess = createMockSpawn();
+    const fetchHealth = createMockFetch(1);
+    const result = await runVerify({
+      cwd,
+      runCommand,
+      smoke: true,
+      spawnProcess,
+      fetchHealth,
+      smokeTimeoutMs: 1000,
+      smokeIntervalMs: 10,
+    });
+    // smoke 섹션이 없음(backend 없음)
+    assert.ok(!result.targets.find((t) => t.key && t.key.startsWith('smoke:')));
+    // spawn 호출도 없음
+    assert.equal(spawnProcess.spawned.length, 0);
+  });
+});
