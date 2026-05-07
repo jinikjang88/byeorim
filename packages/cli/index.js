@@ -21,6 +21,7 @@ export { buildScenariosReviewPromptMarkdown } from './src/temper-prompt.js';
 export { applyTemperReview } from './src/temper-import.js';
 export { runSet } from './src/set.js';
 export { runInspect } from './src/inspect.js';
+export { runAllRules } from './src/inspect-rules.js';
 export { interactiveAnswer } from './src/answer.js';
 export { runStatus } from './src/status.js';
 export { runVerify } from './src/verify.js';

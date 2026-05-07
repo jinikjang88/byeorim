@@ -1,10 +1,11 @@
-// beoreum inspect. 7단계의 마지막. 6영역 다관점 체크리스트로 inspect-report.md를 만든다.
-// ADR 0007의 자리, ADR 0016의 6영역과 형식, ADR 0003 결정 3의 강한 신호 정신을 따른다.
-// 사용자 입력 없는 변환 단계라 picker 없음. 정적 체크리스트(프로젝트 맞춤은 미래 ADR).
+// beoreum inspect. 7단계의 마지막. 6영역 다관점 체크리스트와 코드 검수로 inspect-report.md를 만든다.
+// ADR 0007, ADR 0016(6영역과 정적 체크리스트), ADR 0003 결정 3(강한 신호), ADR 0049(정적 규칙 코드 검수)를 따른다.
+// 사용자 입력 없는 변환 단계라 picker 없음.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
+import { runAllRules } from './inspect-rules.js';
 
 const STAGE = 'inspect';
 const DONE_MARKER = 'done';
@@ -95,7 +96,28 @@ function ensureStage(state, expected) {
   }
 }
 
-function buildAreaSection(area, index) {
+// severity별 prefix 마커. ADR 0049 결정 3.
+const SEVERITY_PREFIX = {
+  pass: '✓',
+  warning: '⚠',
+  concern: '✗',
+};
+
+// 한 영역에 묶인 finding을 markdown 한 묶음으로 박는다.
+function buildFindingsSection(findings) {
+  if (findings.length === 0) {
+    return '_(이 영역은 ADR 0050의 AI 검수에서 보강됩니다)_\n';
+  }
+  return findings
+    .map((f) => {
+      const prefix = SEVERITY_PREFIX[f.severity] || '·';
+      const fileSuffix = f.file ? ` _(${f.file})_` : '';
+      return `${prefix} **${f.title}**${fileSuffix}\n  ${f.detail}`;
+    })
+    .join('\n\n');
+}
+
+function buildAreaSection(area, index, findingsByArea) {
   const lines = [`## ${index}. ${area.title}`, ''];
   if (area.warning) {
     lines.push(`> ${area.warning}`, '');
@@ -103,25 +125,56 @@ function buildAreaSection(area, index) {
   if (area.intro) {
     lines.push(area.intro, '');
   }
+  // 자기 점검 체크리스트
   for (const q of area.questions) {
     lines.push(`- [ ] ${q}`);
   }
   lines.push('');
+  // 코드 검수 (ADR 0049)
+  lines.push('### 코드 검수 (정적 규칙)');
+  lines.push('');
+  lines.push(buildFindingsSection(findingsByArea[area.title] || []));
+  lines.push('');
   return lines.join('\n');
 }
 
-function buildReport(now) {
+// finding 배열을 area별로 묶는다. ADR 0049 결정 2.
+function groupFindingsByArea(findings) {
+  const map = {};
+  for (const f of findings) {
+    if (!map[f.area]) map[f.area] = [];
+    map[f.area].push(f);
+  }
+  return map;
+}
+
+// concern severity 결함 수를 센다. ADR 0049 결정 5(머리에 강한 신호 안내).
+function countConcerns(findings) {
+  return findings.filter((f) => f.severity === 'concern').length;
+}
+
+function buildReport(now, findings) {
   const createdAt = (now || new Date()).toISOString();
+  const concernCount = countConcerns(findings);
+  const concernNotice =
+    concernCount > 0
+      ? `\n> ⚠ concern severity의 결함이 ${concernCount}개 발견되었습니다. 출시 직전 자리이므로 각 영역의 코드 검수 섹션을 보고 결정해주세요.\n`
+      : '';
   const header = `# Inspect Report
 
 벼름의 마지막 단계 비춤. 도구를 빛에 비춰 결함을 봅니다. 6영역으로 점검합니다.
-
+${concernNotice}
 생성 시각: ${createdAt}
 `;
-  const sections = INSPECT_AREAS.map((area, i) => buildAreaSection(area, i + 1)).join('\n');
+  const findingsByArea = groupFindingsByArea(findings);
+  const sections = INSPECT_AREAS.map((area, i) =>
+    buildAreaSection(area, i + 1, findingsByArea),
+  ).join('\n');
   const closing = `## 마무리
 
-이 체크리스트는 자동으로 채워지지 않습니다. 답하지 못한 자리는 다이어리(\`.beoreum/project/diary.md\`)에 같이 남겨두세요. 만들면서, 출시 전에, 첫 사용자를 만났을 때, 그 질문이 다시 찾아옵니다.
+이 체크리스트는 자동으로 채워지지 않습니다. 답하지 못한 질문은 다이어리(\`.beoreum/project/diary.md\`)에 같이 남겨두세요. 만들면서, 출시 전에, 첫 사용자를 만났을 때, 그 질문이 다시 찾아옵니다.
+
+코드 검수 섹션은 set이 만든 코드를 정적 규칙으로 비춘 결과입니다. concern severity는 출시 전에 풀어주세요. warning은 검토 후 결정.
 
 7단계 흐름이 끝났습니다. 합성 README(\`.beoreum/project/generated/README.md\`)를 보면서 다음 일을 정해주세요.
 `;
@@ -139,14 +192,24 @@ function advanceState(state, stage) {
   };
 }
 
-// runInspect는 7단계의 마지막 단계의 본체. 6영역 정적 체크리스트로 inspect-report.md를 만들고
-// state.yml의 current_stage를 'done'으로 갱신한다.
+function loadArchitectureSafe(beoreumDir) {
+  const archFile = join(beoreumDir, 'project', 'architecture.yml');
+  if (!existsSync(archFile)) return null;
+  try {
+    return yaml.load(readFileSync(archFile, 'utf8')) || null;
+  } catch {
+    return null;
+  }
+}
+
+// runInspect는 7단계의 마지막 단계의 본체. 자기 점검 체크리스트(ADR 0016)와 정적 규칙 코드 검수(ADR 0049)로
+// inspect-report.md를 만들고 state.yml의 current_stage를 'done'으로 갱신한다.
 //
 // 입력:
 //   cwd  - 프로젝트 루트 절대 경로
 //   now  - 테스트용 결정적 시각(선택)
 //
-// 반환: { reportFile, areaCount, questionCount, isDone }
+// 반환: { reportFile, areaCount, questionCount, findingCount, concernCount, isDone }
 export async function runInspect({ cwd, now } = {}) {
   if (!cwd) throw new Error('runInspect({ cwd })가 필요합니다');
 
@@ -157,7 +220,11 @@ export async function runInspect({ cwd, now } = {}) {
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
-  writeFileSync(reportFile, buildReport(now), 'utf8');
+  // ADR 0049: 정적 규칙으로 코드 검수
+  const architecture = loadArchitectureSafe(beoreumDir);
+  const findings = runAllRules({ cwd, architecture });
+
+  writeFileSync(reportFile, buildReport(now, findings), 'utf8');
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
 
   const questionCount = INSPECT_AREAS.reduce((sum, a) => sum + a.questions.length, 0);
@@ -166,6 +233,8 @@ export async function runInspect({ cwd, now } = {}) {
     reportFile,
     areaCount: INSPECT_AREAS.length,
     questionCount,
+    findingCount: findings.length,
+    concernCount: countConcerns(findings),
     isDone: true,
   };
 }

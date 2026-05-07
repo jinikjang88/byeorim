@@ -454,16 +454,24 @@ program
 program
   .command('inspect')
   .alias('ins')
-  .description('비춤. 6영역 다관점 체크리스트 (보안/성능/운영/확장성/법적/시장 재검)')
+  .description('비춤. 6영역 자기 점검 + 정적 규칙 코드 검수(ADR 0049)')
   .action(async () => {
     try {
       const result = await runInspect({ cwd: process.cwd() });
-      console.log(`체크리스트를 만들었습니다: ${result.reportFile}`);
-      console.log(`영역 ${result.areaCount}개, 질문 ${result.questionCount}개`);
+      console.log(`체크리스트와 코드 검수 결과를 만들었습니다: ${result.reportFile}`);
+      console.log(
+        `영역 ${result.areaCount}개, 질문 ${result.questionCount}개, 코드 검수 ${result.findingCount}건`,
+      );
+      if (result.concernCount > 0) {
+        console.log('');
+        console.log(
+          `⚠ concern severity의 결함이 ${result.concernCount}개 있습니다. 출시 직전 자리이니 살펴주세요.`,
+        );
+      }
       console.log('');
       console.log('7단계 흐름이 끝났습니다.');
       console.log(
-        '체크리스트를 채워가며 출시를 준비하세요. 답하지 못한 자리는 다이어리에 남겨두세요.',
+        '체크리스트를 채워가며 출시를 준비하세요. 답하지 못한 질문은 다이어리에 남겨두세요.',
       );
     } catch (err) {
       console.error(err.message);

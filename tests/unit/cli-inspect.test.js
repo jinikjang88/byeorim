@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
@@ -174,4 +174,88 @@ test('현재 단계가 inspect가 아니면 한국어 메시지로 거부한다'
 
 test('cwd 누락은 한국어로 거부한다', async () => {
   await assert.rejects(runInspect({}), /cwd.*필요합니다/);
+});
+
+// ── ADR 0049: 정적 규칙 코드 검수 ──────────────────────
+
+test('정상 흐름이 끝나면 inspect-report.md에 코드 검수 섹션이 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    const result = await runInspect({ cwd });
+    assert.ok(result.findingCount > 0, 'finding이 한 개 이상 있어야 한다');
+    assert.equal(typeof result.concernCount, 'number');
+    const report = readFileSync(result.reportFile, 'utf8');
+    // 6영역마다 "코드 검수" 섹션
+    const matches = report.match(/### 코드 검수 \(정적 규칙\)/g) || [];
+    assert.equal(matches.length, 6, '6영역 모두 코드 검수 섹션이 있어야 한다');
+  });
+});
+
+test('ADR 0046 baseline이 박힌 코드는 보안 영역에 pass finding이 여러 개', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    await runInspect({ cwd });
+    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const report = readFileSync(reportFile, 'utf8');
+    // pass 마커가 보안 영역에 여러 개
+    assert.match(report, /✓.*JWT_SECRET startup 검사가 박혀 있습니다/);
+    assert.match(report, /✓.*\/health endpoint가 인증 없이 공개됩니다/);
+    assert.match(report, /✓.*prod placeholder 가드가 박혀 있습니다/);
+    assert.match(report, /✓.*보안 plugin이 모두 등록되었습니다/);
+  });
+});
+
+test('frontend의 CSP meta와 vite prod 가드가 pass로 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    await runInspect({ cwd });
+    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const report = readFileSync(reportFile, 'utf8');
+    assert.match(report, /✓.*index\.html에 CSP meta가 박혀 있습니다/);
+    assert.match(report, /✓.*prod build에서 placeholder 가드가 동작합니다/);
+  });
+});
+
+test('성능/확장성/법적/시장 재검 영역은 AI 검수 안내 결로 비어있다(ADR 0050 자리)', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    await runInspect({ cwd });
+    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const report = readFileSync(reportFile, 'utf8');
+    // 네 영역 머리 다음에 ADR 0050 안내가 한 줄
+    const matches = report.match(/_\(이 영역은 ADR 0050의 AI 검수에서 보강됩니다\)_/g) || [];
+    // 시장 재검은 architecture를 봐도 finding이 없을 수 있음. 최소 3개(성능/확장성/법적/시장 재검 중)
+    assert.ok(matches.length >= 3, `AI 안내가 3개 이상 있어야 한다(실제: ${matches.length})`);
+  });
+});
+
+test('concern severity가 있으면 머리에 강한 신호 blockquote가 박힌다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    // generated/backend의 server.js를 의도적으로 망가뜨려 concern 발생 시뮬레이션
+    const serverFile = join(cwd, '.beoreum', 'project', 'generated', 'backend', 'src', 'server.js');
+    const broken = `// 망가진 server.js (테스트용)\nimport Fastify from 'fastify';\nconst app = Fastify();\napp.listen({ port: 3000 });\n`;
+    writeFileSync(serverFile, broken, 'utf8');
+
+    const result = await runInspect({ cwd });
+    assert.ok(result.concernCount > 0, 'concern이 한 개 이상 있어야 한다');
+    const report = readFileSync(result.reportFile, 'utf8');
+    // 머리에 강한 신호 안내
+    assert.match(report, /> ⚠ concern severity의 결함이/);
+  });
+});
+
+test('finding이 영역별로 grouping되어 표시된다', async () => {
+  await withTempCwd(async (cwd) => {
+    await setupReadyForInspect(cwd);
+    await runInspect({ cwd });
+    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const report = readFileSync(reportFile, 'utf8');
+    // 보안 섹션과 운영 섹션 안에 코드 검수가 있어야 한다
+    const securityIdx = report.indexOf('## 1. 보안');
+    const performanceIdx = report.indexOf('## 2. 성능');
+    const securityFindings = report.slice(securityIdx, performanceIdx);
+    assert.match(securityFindings, /### 코드 검수/);
+    assert.match(securityFindings, /✓/);
+  });
 });
