@@ -229,6 +229,26 @@ export function validateInspectFinding(finding) {
   return { valid: true };
 }
 
+// 한 변경 객체가 smelt import에 쓸 수 있는 모양인지 본다(ADR 0052).
+// applySmeltReview가 호출. 위치 검증(catalog 대비)은 호출자에서.
+// 반환: { valid: true } 또는 { valid: false, reason: string }
+export function validateSmeltChange(change) {
+  if (!change || typeof change !== 'object') {
+    return { valid: false, reason: '객체 아님' };
+  }
+  const kind = change.kind;
+  if (typeof kind !== 'string') {
+    return { valid: false, reason: 'kind 누락' };
+  }
+  if (typeof change.block_id !== 'string' || change.block_id.trim() === '') {
+    return { valid: false, reason: 'block_id 누락' };
+  }
+  if (kind !== 'block_add' && kind !== 'block_remove') {
+    return { valid: false, reason: `알 수 없는 kind: ${kind} (block_add 또는 block_remove)` };
+  }
+  return { valid: true };
+}
+
 // 한 변경 객체가 forge import에 쓸 수 있는 모양인지 본다.
 // applyForgeReview가 호출(파싱과 분리, 데이터 무관성 정신).
 // 반환: { valid: true } 또는 { valid: false, reason: string }

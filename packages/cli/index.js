@@ -6,6 +6,7 @@ export { importCatalog } from './src/prospect-import.js';
 export { buildCatalogPromptMarkdown } from './src/prospect-prompt.js';
 export { buildBlockReviewPromptMarkdown } from './src/smelt-prompt.js';
 export { runSmelt, interactiveSmelt } from './src/smelt.js';
+export { applySmeltReview } from './src/smelt-import.js';
 export { interactiveShape } from './src/shape.js';
 export { buildArchitectureReviewPromptMarkdown } from './src/shape-prompt.js';
 export { runForge, interactiveForge } from './src/forge.js';
@@ -17,6 +18,7 @@ export {
   validateForgeChange,
   validateTemperChange,
   validateInspectFinding,
+  validateSmeltChange,
 } from './src/review-response-parser.js';
 export { runTemper, interactiveTemper } from './src/temper.js';
 export { buildScenariosReviewPromptMarkdown } from './src/temper-prompt.js';

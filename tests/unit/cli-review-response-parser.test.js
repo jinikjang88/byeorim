@@ -9,6 +9,7 @@ import {
   validateForgeChange,
   validateTemperChange,
   validateInspectFinding,
+  validateSmeltChange,
 } from '../../packages/cli/src/review-response-parser.js';
 
 const VALID_RESPONSE = `
@@ -446,4 +447,37 @@ test('validateInspectFinding: 6영역 모두 통과한다', () => {
     });
     assert.equal(r.valid, true, `${area}는 valid여야 한다`);
   }
+});
+
+// ── ADR 0052: validateSmeltChange ──
+
+test('validateSmeltChange: block_add는 valid', () => {
+  const r = validateSmeltChange({ kind: 'block_add', block_id: 'order' });
+  assert.equal(r.valid, true);
+});
+
+test('validateSmeltChange: block_remove는 valid', () => {
+  const r = validateSmeltChange({ kind: 'block_remove', block_id: 'order' });
+  assert.equal(r.valid, true);
+});
+
+test('validateSmeltChange: block_id 누락은 invalid', () => {
+  const r = validateSmeltChange({ kind: 'block_add' });
+  assert.equal(r.valid, false);
+});
+
+test('validateSmeltChange: block_id가 빈 문자열이면 invalid', () => {
+  const r = validateSmeltChange({ kind: 'block_add', block_id: '' });
+  assert.equal(r.valid, false);
+});
+
+test('validateSmeltChange: 알 수 없는 kind는 invalid', () => {
+  const r = validateSmeltChange({ kind: 'block_modify', block_id: 'order' });
+  assert.equal(r.valid, false);
+  assert.match(r.reason, /알 수 없는 kind/);
+});
+
+test('validateSmeltChange: 객체 아니면 invalid', () => {
+  assert.equal(validateSmeltChange(null).valid, false);
+  assert.equal(validateSmeltChange('string').valid, false);
 });

@@ -13,6 +13,7 @@ import {
   interactiveShape,
   interactiveForge,
   applyForgeReview,
+  applySmeltReview,
   interactiveTemper,
   applyTemperReview,
   runSet,
@@ -247,7 +248,7 @@ prospectCmd
     }
   });
 
-program
+const smeltCmd = program
   .command('smelt')
   .alias('sml')
   .description('제련. 블럭 선택(AI 추천 + 의존성 해결 + 검토)')
@@ -281,8 +282,28 @@ program
         console.log(
           '더 자세한 블럭 검토를 원하시면 .beoreum/project/prompts/block-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0030).',
         );
+        console.log(
+          '받은 응답은 `beoreum smelt import-review <응답파일>`로 다시 가져올 수 있어요(ADR 0052).',
+        );
       }
       console.log(`다음 단계: beoreum ${result.nextStage}`);
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  });
+
+// smelt 보조 명령(ADR 0052). 외부 AI에서 받은 검토 응답을 selected-blocks.yml에 picker로 반영.
+// 예: beoreum smelt import-review ./response.md
+smeltCmd
+  .command('import-review')
+  .description(
+    '외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 검토 응답을 selected-blocks.yml에 반영(ADR 0052)',
+  )
+  .argument('<file>', '가져올 응답 마크다운 파일 경로')
+  .action(async (file) => {
+    try {
+      await applySmeltReview({ cwd: process.cwd(), responsePath: file });
     } catch (err) {
       console.error(err.message);
       process.exit(1);
