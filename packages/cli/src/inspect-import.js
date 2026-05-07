@@ -8,9 +8,16 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { select } from '@inquirer/prompts';
 import { parseFindingsResponse, validateInspectFinding } from './review-response-parser.js';
 import { rebuildInspectReport } from './inspect.js';
+import {
+  readResponseFile,
+  runValidationLoop,
+  runChangePicker,
+  logGracefulDegrade,
+  logSummary,
+  batchPickerSelect,
+} from './import-helpers.js';
 
 const SEVERITY_LABEL = {
   pass: '✓ pass',
@@ -26,20 +33,9 @@ function describeFinding(finding) {
 
 // 기본 confirmFinding. 사용자에게 한 finding을 보여주고 select로 결정 묻는다.
 async function defaultConfirmFinding({ finding, index, total, log = console.log } = {}) {
-  log('');
-  log(`[${index + 1}/${total}] ${describeFinding(finding)}`);
-  log(`  ${finding.detail}`);
-  log('');
-  return select({
-    message: '어떻게 할까요?',
-    choices: [
-      { name: '적용하기 (external에 추가)', value: 'apply' },
-      { name: '건너뛰기', value: 'skip' },
-      { name: '이번부터 모두 적용', value: 'apply_all_remaining' },
-      { name: '이번부터 모두 건너뛰기', value: 'skip_all_remaining' },
-      { name: '여기서 멈추기', value: 'stop' },
-    ],
-    default: 'apply',
+  return batchPickerSelect({
+    description: `[${index + 1}/${total}] ${describeFinding(finding)}\n  ${finding.detail}`,
+    log,
   });
 }
 
@@ -86,31 +82,20 @@ export async function applyInspectReview({
     );
   }
 
-  // 응답 파일 읽기. ENOENT는 한국어 메시지로 풀어준다.
-  let responseText;
-  try {
-    responseText = readFileSync(responsePath, 'utf8');
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      throw new Error(`응답 파일을 찾지 못했어요: ${responsePath}`);
-    }
-    throw err;
-  }
+  // 응답 파일 읽기 (ADR 0054 helpers).
+  const responseText = readResponseFile(responsePath);
 
   // 파싱(graceful, ADR 0051 결정 8).
   const parseResult = parseFindingsResponse(responseText);
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    log('');
-    log('응답에서 "## 검수 결과" 섹션을 못 알아봤어요.');
-    if (parseResult.parseError) {
-      log(`  사유: ${parseResult.parseError}`);
-    }
-    log('외부 AI가 자유 형식으로만 답했거나 형식이 어긋났을 수 있어요.');
-    log(
-      '응답을 직접 보시고 inspect-report.md를 손으로 다듬으시거나, 외부 AI에 형식대로 다시 답해달라고 부탁해주세요.',
-    );
+    logGracefulDegrade({
+      log,
+      parseResult,
+      ymlName: 'inspect-report.md',
+      sectionName: '## 검수 결과',
+    });
     return {
       findingsFile,
       reportFile,
@@ -126,21 +111,13 @@ export async function applyInspectReview({
     };
   }
 
-  // 형식 검증.
-  const proposed = parseResult.findings;
-  const validFindings = [];
-  const invalidNotes = [];
-  for (let i = 0; i < proposed.length; i += 1) {
-    const finding = proposed[i];
-    const check = validateInspectFinding(finding);
-    if (!check.valid) {
-      invalidNotes.push(`#${i + 1} 형식 어긋남: ${check.reason}`);
-      continue;
-    }
-    validFindings.push(finding);
-  }
+  // 형식 검증 (ADR 0054 helpers, locate 없음 — finding은 단순 추가).
+  const { validItems, invalidNotes } = runValidationLoop({
+    proposed: parseResult.findings,
+    validate: validateInspectFinding,
+  });
 
-  const proposedCount = proposed.length;
+  const proposedCount = parseResult.findings.length;
   const invalidCount = invalidNotes.length;
 
   log('');
@@ -151,7 +128,7 @@ export async function applyInspectReview({
       log(`  - ${note}`);
     }
   }
-  if (validFindings.length === 0) {
+  if (validItems.length === 0) {
     log('적용할 검수 결과가 없어요. inspect-findings.yml의 external 섹션은 그대로 둡니다.');
     return {
       findingsFile,
@@ -167,43 +144,23 @@ export async function applyInspectReview({
       warnings,
     };
   }
-  log(`적용 가능한 검수 결과 ${validFindings.length}개를 한 자리씩 같이 봐요.`);
+  log(`적용 가능한 검수 결과 ${validItems.length}개를 한 자리씩 같이 봐요.`);
 
-  // 인터랙티브 picker. ADR 0045 batch 모드 결.
+  // batch picker (ADR 0045 + ADR 0054 helpers).
+  // confirmFinding 외부 인자는 { finding, index, total, log } 결로 호출돼야 하므로
+  // helper의 confirmChange 결({ change, located, index, total, log })에서 wrapping.
   const accepted = [];
-  let skippedCount = 0;
-  let stopped = false;
-  let mode = 'prompt';
-  for (let i = 0; i < validFindings.length; i += 1) {
-    const finding = validFindings[i];
-    let decision;
-    if (mode === 'apply_all') decision = 'apply';
-    else if (mode === 'skip_all') decision = 'skip';
-    else
-      decision = await confirmFinding({
-        finding,
-        index: i,
-        total: validFindings.length,
-        log,
-      });
-
-    if (decision === 'apply_all_remaining') {
-      mode = 'apply_all';
-      decision = 'apply';
-    } else if (decision === 'skip_all_remaining') {
-      mode = 'skip_all';
-      decision = 'skip';
-    }
-
-    if (decision === 'apply') {
-      accepted.push(finding);
-    } else if (decision === 'skip') {
-      skippedCount += 1;
-    } else if (decision === 'stop') {
-      stopped = true;
-      break;
-    }
-  }
+  const wrappedConfirmChange = ({ change, index, total, log: localLog }) =>
+    confirmFinding({ finding: change, index, total, log: localLog });
+  const pickerResult = await runChangePicker({
+    items: validItems,
+    applyOne: ({ change }) => accepted.push(change),
+    confirmChange: wrappedConfirmChange,
+    log,
+  });
+  const { appliedCount: _appliedFromPicker, skippedCount, stopped } = pickerResult;
+  // appliedCount는 accepted.length로 다시 계산(picker는 applyOne 호출 횟수만 셈)
+  void _appliedFromPicker;
 
   // ADR 0051 결정 6: external 섹션 교체. 매 import-review가 fresh take.
   // 단 사용자가 한 개도 적용 안 했고 stopped 했어도 yml은 안 건드림(부분 상태 박지 않음).
@@ -219,12 +176,7 @@ export async function applyInspectReview({
     rebuildInspectReport({ cwd, now });
   }
 
-  log('');
-  log(
-    `정리. 적용 ${appliedCount}개, 건너뜀 ${skippedCount}개${
-      stopped ? `, 멈춤(남은 ${validFindings.length - appliedCount - skippedCount}개)` : ''
-    }.`,
-  );
+  logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
     log(`inspect-findings.yml의 external 섹션이 갱신되었습니다.`);
     log(`inspect-report.md가 재렌더됐어요: ${reportFile}`);

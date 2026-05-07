@@ -8,8 +8,15 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { select } from '@inquirer/prompts';
 import { parseReviewResponse, validateTemperChange } from './review-response-parser.js';
+import {
+  readResponseFile,
+  runValidationLoop,
+  runChangePicker,
+  logGracefulDegrade,
+  logSummary,
+  batchPickerSelect,
+} from './import-helpers.js';
 
 const TODO = 'TODO';
 
@@ -160,6 +167,7 @@ function describeNewValue(change) {
 }
 
 // 기본 confirmChange. 사용자에게 한 변경을 보여주고 select로 결정 묻는다.
+// scenario_add는 multi-line 새 값이 있어 batchPickerSelect 호출 전 사전 출력(forge와 같은 결).
 async function defaultConfirmChange({ change, index, total, log = console.log } = {}) {
   log('');
   log(`[${index + 1}/${total}] ${describeChange(change)}`);
@@ -169,21 +177,7 @@ async function defaultConfirmChange({ change, index, total, log = console.log } 
       log(line);
     }
   }
-  if (change.reason) {
-    log(`  이유: ${change.reason}`);
-  }
-  log('');
-  return select({
-    message: '어떻게 할까요?',
-    choices: [
-      { name: '적용하기', value: 'apply' },
-      { name: '건너뛰기', value: 'skip' },
-      { name: '이번부터 모두 적용', value: 'apply_all_remaining' },
-      { name: '이번부터 모두 건너뛰기', value: 'skip_all_remaining' },
-      { name: '여기서 멈추기 (나머지 변경 안 보고 끝내기)', value: 'stop' },
-    ],
-    default: 'apply',
-  });
+  return batchPickerSelect({ description: null, reason: change.reason, log });
 }
 
 // applyTemperReview는 temper import-review의 본체.
@@ -221,31 +215,15 @@ export async function applyTemperReview({
 
   ensureFile(scenariosFile, '먼저 beoreum temper를 실행해주세요');
 
-  // 응답 파일 읽기
-  let responseText;
-  try {
-    responseText = readFileSync(responsePath, 'utf8');
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      throw new Error(`응답 파일을 찾지 못했어요: ${responsePath}`);
-    }
-    throw err;
-  }
+  // 응답 파일 읽기 (ADR 0054 helpers).
+  const responseText = readResponseFile(responsePath);
 
   // 파싱(graceful, ADR 0040 결정 6)
   const parseResult = parseReviewResponse(responseText);
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    log('');
-    log('응답에서 "## 제안된 변경 사항" 섹션을 못 알아봤어요.');
-    if (parseResult.parseError) {
-      log(`  사유: ${parseResult.parseError}`);
-    }
-    log('외부 AI가 자유 형식으로만 답했거나 형식이 어긋났을 수 있어요.');
-    log(
-      '응답을 직접 보시고 test-scenarios.yml을 손으로 다듬으시거나, 외부 AI에 형식대로 다시 답해달라고 부탁해주세요.',
-    );
+    logGracefulDegrade({ log, parseResult, ymlName: 'test-scenarios.yml' });
     return {
       scenariosFile,
       responseFile: responsePath,
@@ -264,26 +242,15 @@ export async function applyTemperReview({
   const scenariosDoc = yaml.load(readFileSync(scenariosFile, 'utf8')) || {};
   const scenarios = Array.isArray(scenariosDoc.scenarios) ? scenariosDoc.scenarios : [];
 
-  // 형식 검증 + scenarios 대비 위치 검증
-  const proposed = parseResult.changes;
-  const validChanges = [];
-  const invalidNotes = [];
-  for (let i = 0; i < proposed.length; i += 1) {
-    const change = proposed[i];
-    const formatCheck = validateTemperChange(change);
-    if (!formatCheck.valid) {
-      invalidNotes.push(`#${i + 1} 형식 어긋남: ${formatCheck.reason}`);
-      continue;
-    }
-    const located = locateChange(change, scenarios);
-    if (!located.ok) {
-      invalidNotes.push(`#${i + 1} ${describeChange(change)} - ${located.reason}`);
-      continue;
-    }
-    validChanges.push({ change, located });
-  }
+  // 형식 + 위치 검증 (ADR 0054 helpers).
+  const { validItems, invalidNotes } = runValidationLoop({
+    proposed: parseResult.changes,
+    validate: validateTemperChange,
+    locate: (change) => locateChange(change, scenarios),
+    describe: (change) => describeChange(change),
+  });
 
-  const proposedCount = proposed.length;
+  const proposedCount = parseResult.changes.length;
   const invalidCount = invalidNotes.length;
 
   log('');
@@ -294,7 +261,7 @@ export async function applyTemperReview({
       log(`  - ${note}`);
     }
   }
-  if (validChanges.length === 0) {
+  if (validItems.length === 0) {
     log('적용할 변경이 없어요. test-scenarios.yml은 그대로 둡니다.');
     return {
       scenariosFile,
@@ -309,44 +276,15 @@ export async function applyTemperReview({
       warnings,
     };
   }
-  log(`적용 가능한 변경 ${validChanges.length}개를 한 자리씩 같이 봐요.`);
+  log(`적용 가능한 변경 ${validItems.length}개를 한 자리씩 같이 봐요.`);
 
-  // 인터랙티브 picker. ADR 0045: mode가 'apply_all'/'skip_all'이면 더 안 묻고 일괄 처리.
-  let appliedCount = 0;
-  let skippedCount = 0;
-  let stopped = false;
-  let mode = 'prompt';
-  for (let i = 0; i < validChanges.length; i += 1) {
-    const { change, located } = validChanges[i];
-    let decision;
-    if (mode === 'apply_all') decision = 'apply';
-    else if (mode === 'skip_all') decision = 'skip';
-    else
-      decision = await confirmChange({
-        change,
-        index: i,
-        total: validChanges.length,
-        log,
-      });
-
-    if (decision === 'apply_all_remaining') {
-      mode = 'apply_all';
-      decision = 'apply';
-    } else if (decision === 'skip_all_remaining') {
-      mode = 'skip_all';
-      decision = 'skip';
-    }
-
-    if (decision === 'apply') {
-      applyChange(change, located);
-      appliedCount += 1;
-    } else if (decision === 'skip') {
-      skippedCount += 1;
-    } else if (decision === 'stop') {
-      stopped = true;
-      break;
-    }
-  }
+  // batch picker (ADR 0045 + ADR 0054 helpers).
+  const { appliedCount, skippedCount, stopped } = await runChangePicker({
+    items: validItems,
+    applyOne: ({ change, located }) => applyChange(change, located),
+    confirmChange,
+    log,
+  });
 
   // 변경이 한 번이라도 적용됐으면 test-scenarios.yml 갱신
   if (appliedCount > 0) {
@@ -354,12 +292,7 @@ export async function applyTemperReview({
     writeFileSync(scenariosFile, yaml.dump(scenariosDoc, { sortKeys: false }), 'utf8');
   }
 
-  log('');
-  log(
-    `정리. 적용 ${appliedCount}개, 건너뜀 ${skippedCount}개${
-      stopped ? `, 멈춤(남은 ${validChanges.length - appliedCount - skippedCount}개)` : ''
-    }.`,
-  );
+  logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
     log(`test-scenarios.yml을 갱신했어요: ${scenariosFile}`);
   } else {

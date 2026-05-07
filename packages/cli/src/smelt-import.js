@@ -7,9 +7,16 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { select } from '@inquirer/prompts';
 import { resolveAll } from '@beoreum/core';
 import { parseReviewResponse, validateSmeltChange } from './review-response-parser.js';
+import {
+  readResponseFile,
+  runValidationLoop,
+  runChangePicker,
+  logGracefulDegrade,
+  logSummary,
+  batchPickerSelect,
+} from './import-helpers.js';
 
 function ensureFile(path, hint) {
   if (!existsSync(path)) {
@@ -82,28 +89,15 @@ function describeChange(change, block) {
   return `${change.block_id}의 알 수 없는 변경(${change.kind})`;
 }
 
-// 기본 confirmChange. forge-import의 결과 같음.
-async function defaultConfirmChange({ change, block, index, total, log = console.log } = {}) {
+// 기본 confirmChange. forge-import의 결과 같음. helper의 picker는 { change, located } 결로 호출.
+async function defaultConfirmChange({ change, located, index, total, log = console.log } = {}) {
+  const block = located && located.block;
   log('');
   log(`[${index + 1}/${total}] ${describeChange(change, block)}`);
   if (block && block.user_desc) {
     log(`  설명: ${block.user_desc}`);
   }
-  if (change.reason) {
-    log(`  이유: ${change.reason}`);
-  }
-  log('');
-  return select({
-    message: '어떻게 할까요?',
-    choices: [
-      { name: '적용하기', value: 'apply' },
-      { name: '건너뛰기', value: 'skip' },
-      { name: '이번부터 모두 적용', value: 'apply_all_remaining' },
-      { name: '이번부터 모두 건너뛰기', value: 'skip_all_remaining' },
-      { name: '여기서 멈추기', value: 'stop' },
-    ],
-    default: 'apply',
-  });
+  return batchPickerSelect({ description: null, reason: change.reason, log });
 }
 
 // 옛 decisions.yml의 사용자 답변을 trigger 단위로 보존하면서 새 decisions 목록과 머지한다.
@@ -162,30 +156,14 @@ export async function applySmeltReview({
   ensureFile(selectedBlocksFile, '먼저 beoreum smelt를 실행해주세요');
   ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
 
-  // 응답 파일 읽기.
-  let responseText;
-  try {
-    responseText = readFileSync(responsePath, 'utf8');
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      throw new Error(`응답 파일을 찾지 못했어요: ${responsePath}`);
-    }
-    throw err;
-  }
+  // 응답 파일 읽기 (ADR 0054 helpers).
+  const responseText = readResponseFile(responsePath);
 
   const parseResult = parseReviewResponse(responseText);
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    log('');
-    log('응답에서 "## 제안된 변경 사항" 섹션을 못 알아봤어요.');
-    if (parseResult.parseError) {
-      log(`  사유: ${parseResult.parseError}`);
-    }
-    log('외부 AI가 자유 형식으로만 답했거나 형식이 어긋났을 수 있어요.');
-    log(
-      '응답을 직접 보시고 selected-blocks.yml을 손으로 다듬으시거나, 외부 AI에 형식대로 다시 답해달라고 부탁해주세요.',
-    );
+    logGracefulDegrade({ log, parseResult, ymlName: 'selected-blocks.yml' });
     return {
       selectedBlocksFile,
       decisionsFile,
@@ -206,28 +184,15 @@ export async function applySmeltReview({
   const selected = Array.isArray(selectedBlocksDoc.selected) ? [...selectedBlocksDoc.selected] : [];
   const catalog = loadYaml(catalogFile);
 
-  // 형식 + 위치 검증.
-  const proposed = parseResult.changes;
-  const validChanges = [];
-  const invalidNotes = [];
-  for (let i = 0; i < proposed.length; i += 1) {
-    const change = proposed[i];
-    const formatCheck = validateSmeltChange(change);
-    if (!formatCheck.valid) {
-      invalidNotes.push(`#${i + 1} 형식 어긋남: ${formatCheck.reason}`);
-      continue;
-    }
-    // selected는 picker 진행 중에 변할 수 있어 매번 현재 상태로 검증.
-    // 다만 첫 위치 검증은 원본 selected로(외부 AI가 처음 본 자리). picker 진행은 dryRun이라 위치 충돌 미세 차이는 허용.
-    const located = locateChange(change, selected, catalog);
-    if (!located.ok) {
-      invalidNotes.push(`#${i + 1} ${describeChange(change, null)} - ${located.reason}`);
-      continue;
-    }
-    validChanges.push({ change, block: located.block });
-  }
+  // 형식 + 위치 검증 (ADR 0054 helpers).
+  const { validItems, invalidNotes } = runValidationLoop({
+    proposed: parseResult.changes,
+    validate: validateSmeltChange,
+    locate: (change) => locateChange(change, selected, catalog),
+    describe: (change) => describeChange(change, null),
+  });
 
-  const proposedCount = proposed.length;
+  const proposedCount = parseResult.changes.length;
   const invalidCount = invalidNotes.length;
 
   log('');
@@ -238,7 +203,7 @@ export async function applySmeltReview({
       log(`  - ${note}`);
     }
   }
-  if (validChanges.length === 0) {
+  if (validItems.length === 0) {
     log('적용할 변경이 없어요. selected-blocks.yml과 decisions.yml은 그대로 둡니다.');
     return {
       selectedBlocksFile,
@@ -254,45 +219,15 @@ export async function applySmeltReview({
       warnings,
     };
   }
-  log(`적용 가능한 변경 ${validChanges.length}개를 한 자리씩 같이 봐요.`);
+  log(`적용 가능한 변경 ${validItems.length}개를 한 자리씩 같이 봐요.`);
 
-  // batch picker (ADR 0045).
-  let appliedCount = 0;
-  let skippedCount = 0;
-  let stopped = false;
-  let mode = 'prompt';
-  for (let i = 0; i < validChanges.length; i += 1) {
-    const { change, block } = validChanges[i];
-    let decision;
-    if (mode === 'apply_all') decision = 'apply';
-    else if (mode === 'skip_all') decision = 'skip';
-    else
-      decision = await confirmChange({
-        change,
-        block,
-        index: i,
-        total: validChanges.length,
-        log,
-      });
-
-    if (decision === 'apply_all_remaining') {
-      mode = 'apply_all';
-      decision = 'apply';
-    } else if (decision === 'skip_all_remaining') {
-      mode = 'skip_all';
-      decision = 'skip';
-    }
-
-    if (decision === 'apply') {
-      applyChange(change, selected);
-      appliedCount += 1;
-    } else if (decision === 'skip') {
-      skippedCount += 1;
-    } else if (decision === 'stop') {
-      stopped = true;
-      break;
-    }
-  }
+  // batch picker (ADR 0045 + ADR 0054 helpers).
+  const { appliedCount, skippedCount, stopped } = await runChangePicker({
+    items: validItems,
+    applyOne: ({ change }) => applyChange(change, selected),
+    confirmChange,
+    log,
+  });
 
   // 변경이 한 번이라도 적용됐으면 의존성 재해결 + yml 갱신.
   if (appliedCount > 0) {
@@ -315,12 +250,7 @@ export async function applySmeltReview({
     }
   }
 
-  log('');
-  log(
-    `정리. 적용 ${appliedCount}개, 건너뜀 ${skippedCount}개${
-      stopped ? `, 멈춤(남은 ${validChanges.length - appliedCount - skippedCount}개)` : ''
-    }.`,
-  );
+  logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
     log(`selected-blocks.yml과 decisions.yml이 갱신되었습니다(의존성 재해결 포함).`);
   }

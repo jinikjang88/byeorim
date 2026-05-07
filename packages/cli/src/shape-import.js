@@ -7,9 +7,16 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { select } from '@inquirer/prompts';
 import { parseReviewResponse, validateShapeChange } from './review-response-parser.js';
 import { getValidArchitectureValues } from './shape.js';
+import {
+  readResponseFile,
+  runValidationLoop,
+  runChangePicker,
+  logGracefulDegrade,
+  logSummary,
+  batchPickerSelect,
+} from './import-helpers.js';
 
 function ensureFile(path, hint) {
   if (!existsSync(path)) {
@@ -52,24 +59,13 @@ function describeChange(change, oldValue) {
   return `${change.target_key}: ${before}${change.new_value}`;
 }
 
-// 기본 confirmChange. forge-import의 결과 같음.
-async function defaultConfirmChange({ change, oldValue, index, total, log = console.log } = {}) {
-  log('');
-  log(`[${index + 1}/${total}] ${describeChange(change, oldValue)}`);
-  if (change.reason) {
-    log(`  이유: ${change.reason}`);
-  }
-  log('');
-  return select({
-    message: '어떻게 할까요?',
-    choices: [
-      { name: '적용하기', value: 'apply' },
-      { name: '건너뛰기', value: 'skip' },
-      { name: '이번부터 모두 적용', value: 'apply_all_remaining' },
-      { name: '이번부터 모두 건너뛰기', value: 'skip_all_remaining' },
-      { name: '여기서 멈추기', value: 'stop' },
-    ],
-    default: 'apply',
+// 기본 confirmChange. forge-import의 결과 같음. helper picker는 { change, located } 결로 호출.
+async function defaultConfirmChange({ change, located, index, total, log = console.log } = {}) {
+  const oldValue = located && located.oldValue;
+  return batchPickerSelect({
+    description: `[${index + 1}/${total}] ${describeChange(change, oldValue)}`,
+    reason: change.reason,
+    log,
   });
 }
 
@@ -106,30 +102,14 @@ export async function applyShapeReview({
 
   ensureFile(architectureFile, '먼저 beoreum shape를 실행해주세요');
 
-  // 응답 파일 읽기.
-  let responseText;
-  try {
-    responseText = readFileSync(responsePath, 'utf8');
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      throw new Error(`응답 파일을 찾지 못했어요: ${responsePath}`);
-    }
-    throw err;
-  }
+  // 응답 파일 읽기 (ADR 0054 helpers).
+  const responseText = readResponseFile(responsePath);
 
   const parseResult = parseReviewResponse(responseText);
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    log('');
-    log('응답에서 "## 제안된 변경 사항" 섹션을 못 알아봤어요.');
-    if (parseResult.parseError) {
-      log(`  사유: ${parseResult.parseError}`);
-    }
-    log('외부 AI가 자유 형식으로만 답했거나 형식이 어긋났을 수 있어요.');
-    log(
-      '응답을 직접 보시고 architecture.yml을 손으로 다듬으시거나, 외부 AI에 형식대로 다시 답해달라고 부탁해주세요.',
-    );
+    logGracefulDegrade({ log, parseResult, ymlName: 'architecture.yml' });
     return {
       architectureFile,
       responseFile: responsePath,
@@ -147,26 +127,15 @@ export async function applyShapeReview({
   // architecture.yml 로드(in-memory copy).
   const architecture = loadYaml(architectureFile);
 
-  // 형식 + 위치 검증.
-  const proposed = parseResult.changes;
-  const validChanges = [];
-  const invalidNotes = [];
-  for (let i = 0; i < proposed.length; i += 1) {
-    const change = proposed[i];
-    const formatCheck = validateShapeChange(change);
-    if (!formatCheck.valid) {
-      invalidNotes.push(`#${i + 1} 형식 어긋남: ${formatCheck.reason}`);
-      continue;
-    }
-    const located = locateChange(change, architecture);
-    if (!located.ok) {
-      invalidNotes.push(`#${i + 1} ${change.target_key} → ${change.new_value} - ${located.reason}`);
-      continue;
-    }
-    validChanges.push({ change, oldValue: located.oldValue });
-  }
+  // 형식 + 위치 검증 (ADR 0054 helpers).
+  const { validItems, invalidNotes } = runValidationLoop({
+    proposed: parseResult.changes,
+    validate: validateShapeChange,
+    locate: (change) => locateChange(change, architecture),
+    describe: (change) => `${change.target_key} → ${change.new_value}`,
+  });
 
-  const proposedCount = proposed.length;
+  const proposedCount = parseResult.changes.length;
   const invalidCount = invalidNotes.length;
 
   log('');
@@ -177,7 +146,7 @@ export async function applyShapeReview({
       log(`  - ${note}`);
     }
   }
-  if (validChanges.length === 0) {
+  if (validItems.length === 0) {
     log('적용할 변경이 없어요. architecture.yml은 그대로 둡니다.');
     return {
       architectureFile,
@@ -192,57 +161,22 @@ export async function applyShapeReview({
       warnings,
     };
   }
-  log(`적용 가능한 변경 ${validChanges.length}개를 한 자리씩 같이 봐요.`);
+  log(`적용 가능한 변경 ${validItems.length}개를 한 자리씩 같이 봐요.`);
 
-  // batch picker (ADR 0045).
-  let appliedCount = 0;
-  let skippedCount = 0;
-  let stopped = false;
-  let mode = 'prompt';
-  for (let i = 0; i < validChanges.length; i += 1) {
-    const { change, oldValue } = validChanges[i];
-    let decision;
-    if (mode === 'apply_all') decision = 'apply';
-    else if (mode === 'skip_all') decision = 'skip';
-    else
-      decision = await confirmChange({
-        change,
-        oldValue,
-        index: i,
-        total: validChanges.length,
-        log,
-      });
-
-    if (decision === 'apply_all_remaining') {
-      mode = 'apply_all';
-      decision = 'apply';
-    } else if (decision === 'skip_all_remaining') {
-      mode = 'skip_all';
-      decision = 'skip';
-    }
-
-    if (decision === 'apply') {
-      applyChange(change, architecture);
-      appliedCount += 1;
-    } else if (decision === 'skip') {
-      skippedCount += 1;
-    } else if (decision === 'stop') {
-      stopped = true;
-      break;
-    }
-  }
+  // batch picker (ADR 0045 + ADR 0054 helpers).
+  const { appliedCount, skippedCount, stopped } = await runChangePicker({
+    items: validItems,
+    applyOne: ({ change }) => applyChange(change, architecture),
+    confirmChange,
+    log,
+  });
 
   // 변경이 한 번이라도 적용됐으면 architecture.yml 갱신.
   if (appliedCount > 0) {
     writeFileSync(architectureFile, yaml.dump(architecture, { sortKeys: false }), 'utf8');
   }
 
-  log('');
-  log(
-    `정리. 적용 ${appliedCount}개, 건너뜀 ${skippedCount}개${
-      stopped ? `, 멈춤(남은 ${validChanges.length - appliedCount - skippedCount}개)` : ''
-    }.`,
-  );
+  logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
     log(`architecture.yml이 갱신되었습니다: ${architectureFile}`);
   }
