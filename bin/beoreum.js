@@ -12,12 +12,15 @@ import {
   interactiveSmelt,
   interactiveShape,
   interactiveForge,
-  runTemper,
+  applyForgeReview,
+  interactiveTemper,
+  applyTemperReview,
   runSet,
   runInspect,
   interactiveAnswer,
   runStatus,
   runVerify,
+  runRun,
 } from '@beoreum/cli';
 import { selectAdapter } from '@beoreum/ai';
 
@@ -132,6 +135,44 @@ program
     } catch (err) {
       console.error(err.message);
       process.exit(1);
+    }
+  });
+
+program
+  .command('run')
+  .description('생성된 backend + frontend를 한 명령으로 동시 기동한다(ADR 0047)')
+  .option('--backend-only', 'backend만 기동')
+  .option('--frontend-only', 'frontend만 기동')
+  .action(async (options) => {
+    if (options.backendOnly && options.frontendOnly) {
+      console.error('--backend-only와 --frontend-only를 동시에 쓸 수 없습니다.');
+      process.exit(1);
+    }
+    const target = options.backendOnly ? 'backend' : options.frontendOnly ? 'frontend' : 'both';
+
+    const ac = new AbortController();
+    const onSignal = () => {
+      if (!ac.signal.aborted) ac.abort();
+    };
+    process.on('SIGINT', onSignal);
+    process.on('SIGTERM', onSignal);
+
+    try {
+      const result = await runRun({
+        cwd: process.cwd(),
+        target,
+        signal: ac.signal,
+      });
+      const exitName = result.firstExit && result.firstExit.name;
+      const exitCode =
+        exitName === 'signal' ? 130 : (result.firstExit && result.firstExit.code) || 0;
+      process.exit(exitCode);
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    } finally {
+      process.off('SIGINT', onSignal);
+      process.off('SIGTERM', onSignal);
     }
   });
 
@@ -283,7 +324,7 @@ program
     }
   });
 
-program
+const forgeCmd = program
   .command('forge')
   .alias('frg')
   .description('단조. 계약 우선 정의(contracts.yml 생성, AI가 schema 채움, 검토)')
@@ -311,14 +352,32 @@ program
     }
   });
 
-program
+// forge 보조 명령(ADR 0039). 외부 AI에서 받은 검토 응답 마크다운을 가져와 contracts.yml에 인터랙티브로 반영한다.
+// 예: beoreum forge import-review ./response.md
+forgeCmd
+  .command('import-review')
+  .description(
+    '외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 검토 응답을 contracts.yml에 반영(ADR 0039)',
+  )
+  .argument('<file>', '가져올 응답 마크다운 파일 경로')
+  .action(async (file) => {
+    try {
+      await applyForgeReview({ cwd: process.cwd(), responsePath: file });
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  });
+
+const temperCmd = program
   .command('temper')
   .alias('tmr')
   .description('다듬. Given-When-Then 테스트 의도 + AI test_code 채움 (test-scenarios.yml 생성)')
   .action(async () => {
     try {
       const adapter = selectAdapter();
-      const result = await runTemper({ cwd: process.cwd(), adapter });
+      const result = await interactiveTemper({ cwd: process.cwd(), adapter });
+      console.log('');
       console.log(`테스트 의도를 만들었습니다: ${result.scenariosFile}`);
       console.log(`블럭 ${result.blockCount}개, 시나리오 ${result.scenarioCount}개`);
       if (result.testCodeFilled) {
@@ -328,7 +387,29 @@ program
           'test_code가 TODO로 들어있습니다. 코드를 채운 뒤 다음 단계로 가거나, 어댑터 설정을 확인해주세요.',
         );
       }
+      if (result.scenariosReviewPromptFile) {
+        console.log(
+          '더 자세한 시나리오 검토를 원하시면 .beoreum/project/prompts/test-scenarios-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0038).',
+        );
+      }
       console.log(`다음 단계: beoreum ${result.nextStage}`);
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  });
+
+// temper 보조 명령(ADR 0040). 외부 AI에서 받은 시나리오 검토 응답을 test-scenarios.yml에 인터랙티브로 반영한다.
+// 예: beoreum temper import-review ./response.md
+temperCmd
+  .command('import-review')
+  .description(
+    '외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 시나리오 검토 응답을 test-scenarios.yml에 반영(ADR 0040)',
+  )
+  .argument('<file>', '가져올 응답 마크다운 파일 경로')
+  .action(async (file) => {
+    try {
+      await applyTemperReview({ cwd: process.cwd(), responsePath: file });
     } catch (err) {
       console.error(err.message);
       process.exit(1);

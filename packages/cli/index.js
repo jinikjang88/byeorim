@@ -10,9 +10,18 @@ export { interactiveShape } from './src/shape.js';
 export { buildArchitectureReviewPromptMarkdown } from './src/shape-prompt.js';
 export { runForge, interactiveForge } from './src/forge.js';
 export { buildContractsReviewPromptMarkdown } from './src/forge-prompt.js';
-export { runTemper } from './src/temper.js';
+export { applyForgeReview } from './src/forge-import.js';
+export {
+  parseReviewResponse,
+  validateForgeChange,
+  validateTemperChange,
+} from './src/review-response-parser.js';
+export { runTemper, interactiveTemper } from './src/temper.js';
+export { buildScenariosReviewPromptMarkdown } from './src/temper-prompt.js';
+export { applyTemperReview } from './src/temper-import.js';
 export { runSet } from './src/set.js';
 export { runInspect } from './src/inspect.js';
 export { interactiveAnswer } from './src/answer.js';
 export { runStatus } from './src/status.js';
 export { runVerify } from './src/verify.js';
+export { runRun, buildRunTargets } from './src/run.js';
