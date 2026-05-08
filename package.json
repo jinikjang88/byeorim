@@ -15,8 +15,8 @@
     "byeorim": "bin/byeorim.js"
   },
   "scripts": {
-    "test": "node --test \"tests/unit/**/*.test.js\" \"tests/integration/**/*.test.js\"",
-    "test:e2e": "node --test \"tests/e2e/**/*.test.js\"",
+    "test": "node scripts/run-tests.js tests/unit tests/integration",
+    "test:e2e": "node scripts/run-tests.js tests/e2e",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
