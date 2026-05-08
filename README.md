@@ -1,5 +1,7 @@
 # 벼림 (Byeorim)
 
+> English: [README.en.md](README.en.md). 두 문서가 어긋나면 이 한국어판을 정본으로 본다.
+
 벼림은 AI로 자기 서비스를 만들고 싶은 사람을 돕는 도구다. 막연한 아이디어를 곧장 코드로 바꾸기 전에, 그 서비스가 어떤 모양으로 이루어질지 함께 본다. AI는 동료처럼 꼼꼼히 묻는다. 답을 강요하지 않는다. 답하지 못한 질문은 다이어리에 남겨두고 함께 다음 단계로 간다.
 
 자세한 배경은 [docs/MANIFESTO.md](docs/MANIFESTO.md)에서 본다.
@@ -194,6 +196,11 @@ node bin/byeorim.js prospect "온라인 책방"
 
 각 단계의 결정 배경은 [docs/decisions/](docs/decisions/)에 ADR(Architecture Decision Records)로 정리되어 있다. ADR을 읽어야 벼림을 쓸 수 있는 것은 아니다. 위 명령어만으로 충분하다.
 
-## 라이선스
+## 기여와 라이선스
 
-MIT 라이선스.
+벼림은 MIT 라이선스를 따르는 무료 오픈소스다. 한국어가 정본이고 영문판이 함께 있다.
+
+- [LICENSE](LICENSE): MIT 라이선스 전문
+- [CONTRIBUTING.md](CONTRIBUTING.md) ([English](CONTRIBUTING.en.md)): 기여 동선과 PR 흐름
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) ([English](CODE_OF_CONDUCT.en.md)): 행동 강령
+- [SECURITY.md](SECURITY.md) ([English](SECURITY.en.md)): 보안 이슈 신고 채널

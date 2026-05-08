@@ -1,5 +1,7 @@
 # 행동 강령 (Code of Conduct)
 
+> English: [CODE_OF_CONDUCT.en.md](CODE_OF_CONDUCT.en.md). 두 문서가 어긋나면 이 한국어판을 정본으로 본다.
+
 벼림은 비기술 창업자, 신사업 개발자, 시니어 개발자가 함께 모이는 자리다. 배경이 다른 사람들이 한 코드베이스에서 일하려면 서로를 대하는 결을 약속해 둘 필요가 있다. 이 문서는 그 약속이다.
 
 이 강령은 [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)을 토대로 벼림의 결에 맞게 다듬었다.
