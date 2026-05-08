@@ -1,5 +1,7 @@
 # Byeorim (벼림)
 
+[![CI](https://github.com/jinikjang88/byeorim/actions/workflows/ci.yml/badge.svg)](https://github.com/jinikjang88/byeorim/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org/)
+
 > Korean original: [README.md](README.md). If this translation falls out of sync, the Korean version is canonical.
 
 Byeorim is a tool that helps people who want to build their own service with AI. Before turning a vague idea into code, it helps you see the shape of that service together. The AI asks like a careful colleague. It does not force answers. Questions you cannot answer go into a diary, and you move on together to the next step.

@@ -1,5 +1,7 @@
 # 벼림 (Byeorim)
 
+[![CI](https://github.com/jinikjang88/byeorim/actions/workflows/ci.yml/badge.svg)](https://github.com/jinikjang88/byeorim/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org/)
+
 > English: [README.en.md](README.en.md). 두 문서가 어긋나면 이 한국어판을 정본으로 본다.
 
 벼림은 AI로 자기 서비스를 만들고 싶은 사람을 돕는 도구다. 막연한 아이디어를 곧장 코드로 바꾸기 전에, 그 서비스가 어떤 모양으로 이루어질지 함께 본다. AI는 동료처럼 꼼꼼히 묻는다. 답을 강요하지 않는다. 답하지 못한 질문은 다이어리에 남겨두고 함께 다음 단계로 간다.
