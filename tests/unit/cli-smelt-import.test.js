@@ -11,7 +11,7 @@ import { runInit, runProspect, runSmelt, applySmeltReview } from '../../packages
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-smelt-import-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-smelt-import-'));
 }
 
 async function withTempCwd(fn) {
@@ -147,7 +147,7 @@ changes:
 test('모두 건너뛰면 yml 안 건드림', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
-    const before = readFileSync(join(cwd, '.beoreum', 'project', 'selected-blocks.yml'), 'utf8');
+    const before = readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8');
     const responsePath = writeResponse(cwd, VALID_RESPONSE);
     const result = await applySmeltReview({
       cwd,
@@ -157,7 +157,7 @@ test('모두 건너뛰면 yml 안 건드림', async () => {
     });
     assert.equal(result.appliedCount, 0);
     assert.equal(result.skippedCount, 2);
-    const after = readFileSync(join(cwd, '.beoreum', 'project', 'selected-blocks.yml'), 'utf8');
+    const after = readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8');
     assert.equal(before, after);
   });
 });
@@ -302,7 +302,7 @@ test('decisions.yml 사용자 답변이 보존된다(ADR 0052 결정 4)', async 
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd, ['order', 'payment']);
     // 사용자 답변을 decisions.yml에 박는다
-    const decisionsFile = join(cwd, '.beoreum', 'project', 'decisions.yml');
+    const decisionsFile = join(cwd, '.byeorim', 'project', 'decisions.yml');
     const doc = yaml.load(readFileSync(decisionsFile, 'utf8')) || {};
     if (Array.isArray(doc.decisions) && doc.decisions.length > 0) {
       doc.decisions[0].answer = '사용자가 박은 답';

@@ -35,7 +35,7 @@ Node.js 생태계는 선택지가 많다. 웹 프레임워크만 해도 Express,
 ### 결정 2. 빌드 도구와 의존성 관리
 
 #### 옵션 A. npm + workspaces
-- 장점: Node.js 표준 도구. 모노레포(BE/FE 분리)에 workspaces가 자연스럽게 동작. 벼름 자체도 npm workspaces 사용
+- 장점: Node.js 표준 도구. 모노레포(BE/FE 분리)에 workspaces가 자연스럽게 동작. 벼림 자체도 npm workspaces 사용
 - 단점: pnpm이나 yarn보다 살짝 느림
 
 #### 옵션 B. pnpm
@@ -49,7 +49,7 @@ Node.js 생태계는 선택지가 많다. 웹 프레임워크만 해도 Express,
 ### 결정 3. 테스트 프레임워크
 
 #### 옵션 A. node:test (Node.js 빌트인)
-- 장점: 의존성 0. Node 18+ 빌트인. 벼름 자체도 사용. 학습 일관성
+- 장점: 의존성 0. Node 18+ 빌트인. 벼림 자체도 사용. 학습 일관성
 - 단점: 매처가 vitest/jest보다 적음. watch mode와 snapshot 같은 자리는 직접 짜야 함
 
 #### 옵션 B. vitest
@@ -144,11 +144,11 @@ Express는 익숙하지만 보안이 plugin 조합에 의존한다. 빠뜨리는
 
 ### 결정 2: npm + workspaces (옵션 A)
 
-빌드 도구는 **npm workspaces**. Node.js 표준 도구를 그대로 사용하고, BE/FE 분리(결정 7)도 workspaces로 자연스럽게 처리. 벼름 자체도 같은 도구를 쓰므로 학습 일관성.
+빌드 도구는 **npm workspaces**. Node.js 표준 도구를 그대로 사용하고, BE/FE 분리(결정 7)도 workspaces로 자연스럽게 처리. 벼림 자체도 같은 도구를 쓰므로 학습 일관성.
 
 ### 결정 3: node:test (옵션 A)
 
-테스트 프레임워크는 **node:test**. 의존성 0이고 Node 18+ 빌트인. 벼름 자체와 같은 도구. 매처가 부족한 자리는 `node:assert`로 보강한다.
+테스트 프레임워크는 **node:test**. 의존성 0이고 Node 18+ 빌트인. 벼림 자체와 같은 도구. 매처가 부족한 자리는 `node:assert`로 보강한다.
 
 미래에 watch mode나 snapshot이 절실해지면 vitest로 옮기는 ADR을 별도로.
 
@@ -276,15 +276,15 @@ export async function orderRoutes(fastify) {
 
 ADR 0017 결정 4의 단방향 의존성을 다음 도구로 강제한다.
 
-- `eslint-plugin-import`의 `no-restricted-paths` 규칙(벼름 자체와 같은 도구)
+- `eslint-plugin-import`의 `no-restricted-paths` 규칙(벼림 자체와 같은 도구)
 - 금지 엣지: domain.js → service.js, domain.js → repository.js, domain.js → routes.js
 - 금지 엣지: service.js → routes.js, repository.js → routes.js
 - 금지 엣지: feature/A → feature/B (feature 간 직접 import 금지. shared/를 통해서만)
 
 ### 코드 컨벤션
 
-- Prettier (벼름 자체와 같은 설정: printWidth 100, single quote, 2-space)
-- ESLint (Airbnb 또는 Standard 베이스 + 벼름 자체 규칙)
+- Prettier (벼림 자체와 같은 설정: printWidth 100, single quote, 2-space)
+- ESLint (Airbnb 또는 Standard 베이스 + 벼림 자체 규칙)
 - 함수는 50줄 이하 권장(강제 안 함, 린트 경고로)
 
 ## 결과

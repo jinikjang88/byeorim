@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0007이 Smelt 단계 산출물의 자리를 박았다. `.beoreum/project/selected-blocks.yml`과 `.beoreum/project/decisions.yml`이 그 자리다. 그 파일 안이 어떻게 생겼는지는 정하지 않았다. 이 ADR이 그 자리를 채운다.
+ADR 0007이 Smelt 단계 산출물의 자리를 박았다. `.byeorim/project/selected-blocks.yml`과 `.byeorim/project/decisions.yml`이 그 자리다. 그 파일 안이 어떻게 생겼는지는 정하지 않았다. 이 ADR이 그 자리를 채운다.
 
 CLAUDE.md 섹션 2의 절대 금지선 1번이 selected-blocks.yml을 다음 단계 진입 조건으로 박았다. 즉 selected-blocks.yml의 형식이 Shape 단계의 입력 형식이기도 하다.
 
@@ -150,7 +150,7 @@ selected-blocks.yml의 prerequisites는 카탈로그의 prerequisite 객체를 �
 - 인터랙티브 prompt(inquirer 등) 도입은 별도 ADR이다. 본 ADR이 정한 산출물 형식과는 독립이다
 
 ## 링크
-- 이전 결정: ADR 0007 (.beoreum/ 자리), ADR 0008 (intent.yml 형식)
+- 이전 결정: ADR 0007 (.byeorim/ 자리), ADR 0008 (intent.yml 형식)
 - 짝 결정: ADR 0003 (동행 톤)
 - 후속 작업 후보: 인터랙티브 prompt 도입 ADR, Shape의 architecture.yml 형식 ADR(pending_decisions 자리 포함)
 - 관련 정책: CLAUDE.md 섹션 2(절대 금지선 1번), 섹션 5(역사 요구사항)

@@ -93,7 +93,7 @@ mock.js의 inspectCode가 6영역마다 결정적 placeholder finding을 한 개
 - 장점: 후행 호환. 기존 사용자에게 영향 없음. CLI는 selectAdapter()로 자동 결합
 - 단점: 함수 시그니처에 인자 추가
 
-#### 옵션 B. AI 검수 별도 명령(`beoreum inspect-ai`)
+#### 옵션 B. AI 검수 별도 명령(`byeorim inspect-ai`)
 
 - 장점: 명령 분리
 - 단점: 학습 비용. 한 inspect-report.md에 통합되는 결이 깨짐
@@ -199,7 +199,7 @@ mock.js의 inspectCode가 다음을 반환.
 runInspect({ cwd, now, adapter })
 ```
 
-adapter가 있고 `adapter.inspectCode`가 있으면 호출. 없으면 정적만(후행 호환). bin/beoreum.js의 inspect 핸들러가 selectAdapter()를 호출해 자동 결합.
+adapter가 있고 `adapter.inspectCode`가 있으면 호출. 없으면 정적만(후행 호환). bin/byeorim.js의 inspect 핸들러가 selectAdapter()를 호출해 자동 결합.
 
 ### 결정 6: graceful degrade (옵션 A)
 

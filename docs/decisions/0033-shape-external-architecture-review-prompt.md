@@ -24,7 +24,7 @@ shape의 4개 결정(language, database, api_style, architecture_pattern)은 ADR
 - 장점: 사용자가 부산물 존재를 잊지 않음. smelt의 `block-review-prompt.md`와 같은 결. CLI 출력에 안내 한 줄로 흐름 자연스러움
 - 단점: 사용자가 안 쓰면 디스크 자리만 차지. 다만 마크다운 한 파일이라 무게 작음
 
-#### 옵션 B. 별도 명령 `beoreum shape review-prompt`
+#### 옵션 B. 별도 명령 `byeorim shape review-prompt`
 - 장점: 사용자가 원할 때만 생성
 - 단점: 사용자가 새 명령을 알아야 함. 비기술 창업자에게 학습 비용. ADR 0028과 ADR 0030이 이미 자동 생성으로 갔는데 shape만 다른 결이면 일관성 깨짐
 
@@ -78,7 +78,7 @@ shape의 4개 결정(language, database, api_style, architecture_pattern)은 ADR
 
 ### 결정 1: 자동 생성 (옵션 A)
 
-shape의 ask → confirm → proceed 자리에서 architecture.yml을 작성한 직후 항상 부산물을 생성한다. 위치는 `.beoreum/project/prompts/architecture-review-prompt.md`. smelt의 `block-review-prompt.md`와 같은 디렉토리, 같은 결.
+shape의 ask → confirm → proceed 자리에서 architecture.yml을 작성한 직후 항상 부산물을 생성한다. 위치는 `.byeorim/project/prompts/architecture-review-prompt.md`. smelt의 `block-review-prompt.md`와 같은 디렉토리, 같은 결.
 
 ### 결정 2: 카탈로그 전체 + 4개 결정과 12개 표준 옵션 표 + 추천 두 시점 (옵션 A)
 
@@ -130,10 +130,10 @@ picker는 ADR 0032 결정 2 그대로 user만 노출. 부산물은 외부 AI에 
 - 12개 표준 옵션 표가 ADR 0012와 ARCHITECTURE_CHOICES 코드, claude system 프롬프트, 그리고 부산물 셋에 같은 자리가 박힘. 한 자리(ARCHITECTURE_CHOICES) 변경 시 세 자리 모두 봐야 함. 셋이 한 데이터에서 합성되는 결로 가야 일관성 유지
 
 ### 미래 묶임
-- `architecture-review-prompt.md` 위치(.beoreum/project/prompts/)와 마크다운 형식은 표준
+- `architecture-review-prompt.md` 위치(.byeorim/project/prompts/)와 마크다운 형식은 표준
 - 부산물에 담는 정보 범위(7항목 + 카탈로그 + 선택 + 4개 결정 + 추천)는 표준. 변경하려면 새 ADR
 - 부산물에서 외부 AI에 묻는 검토 항목 셋은 표준. 항목 추가/제거는 새 ADR
-- 부산물 응답을 다시 import하는 자리(예: `beoreum shape import-architecture-review`)는 미래 ADR에서 결정. 이번 출시는 사용자가 응답을 읽고 수동으로 다음 결정에 반영
+- 부산물 응답을 다시 import하는 자리(예: `byeorim shape import-architecture-review`)는 미래 ADR에서 결정. 이번 출시는 사용자가 응답을 읽고 수동으로 다음 결정에 반영
 
 ## 링크
 - 짝 결정: ADR 0030 (smelt 외부 검토 프롬프트, 같은 결을 shape에 옮김), ADR 0032 (shape 추천과 검토 흐름의 dev 시점 노출 약속을 풀어냄)

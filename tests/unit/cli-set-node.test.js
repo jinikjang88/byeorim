@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-set-node-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-set-node-'));
 }
 
 async function withTempCwd(fn) {
@@ -56,7 +56,7 @@ async function setupReadyForSet(cwd, blockIds, choices = NODE_CHOICES) {
 }
 
 function backendPath(cwd, ...rest) {
-  return join(cwd, '.beoreum', 'project', 'generated', 'backend', ...rest);
+  return join(cwd, '.byeorim', 'project', 'generated', 'backend', ...rest);
 }
 
 test('language=node일 때 backend/ 디렉토리와 표준 파일 셋이 만들어진다', async () => {
@@ -206,7 +206,7 @@ async function setupSingletonForSet(cwd) {
     confirmArchitecture: async () => 'proceed',
   });
   // catalog의 order를 singleton + /me로 변환
-  const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+  const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
   const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
   const order = catalog.blocks.find((b) => b.id === 'order');
   order.api_style = 'singleton';
@@ -260,12 +260,12 @@ test('.env와 .env.production이 둘 다 자동 생성된다(ADR 0046 결정 2)'
     // prod 템플릿은 NODE_ENV=production
     assert.match(envProd, /NODE_ENV=production/);
     // 둘 다 JWT_SECRET이 dev placeholder prefix로 박혀있음
-    assert.match(env, /JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_/);
-    assert.match(envProd, /JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(env, /JWT_SECRET=BYEORIM_DEV_PLACEHOLDER_/);
+    assert.match(envProd, /JWT_SECRET=BYEORIM_DEV_PLACEHOLDER_/);
     // dev DB는 in-memory SQLite
     assert.match(env, /DATABASE_URL=sqlite::memory:/);
     // prod 템플릿은 DATABASE_URL이 placeholder
-    assert.match(envProd, /DATABASE_URL=BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(envProd, /DATABASE_URL=BYEORIM_DEV_PLACEHOLDER_/);
   });
 });
 
@@ -286,7 +286,7 @@ test('server.js에 prod 모드 placeholder 가드가 박힌다(ADR 0046 결정 4
     await runSet({ cwd });
     const server = readFileSync(backendPath(cwd, 'src', 'server.js'), 'utf8');
     // placeholder prefix 표준 마커
-    assert.match(server, /BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(server, /BYEORIM_DEV_PLACEHOLDER_/);
     // prod 모드 검사 함수
     assert.match(server, /ensureProdSecrets/);
     // NODE_ENV=production 분기
@@ -331,7 +331,7 @@ test('.env가 이미 있으면 set 재실행 시 덮어쓰지 않는다(사용�
     writeFileSync(envFile, userValue, 'utf8');
     // set 다시 실행
     // current_stage가 inspect로 갔을 테니 state를 set으로 되돌린다
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'set';
     state.completed_stages = state.completed_stages.filter((s) => s !== 'set');

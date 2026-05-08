@@ -1,6 +1,6 @@
 node_modules
 package-lock.json
-.beoreum
+.byeorim
 coverage
 
 # 카탈로그 YAML은 수동 정렬과 주석을 보존한다

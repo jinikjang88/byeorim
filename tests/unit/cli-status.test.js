@@ -20,7 +20,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-status-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-status-'));
 }
 
 async function withTempCwd(fn) {
@@ -44,7 +44,7 @@ test('init 안 된 빈 디렉토리는 initialized=false를 돌려준다', () =>
   try {
     const status = runStatus({ cwd });
     assert.equal(status.initialized, false);
-    assert.equal(status.beoreumDir, join(cwd, '.beoreum'));
+    assert.equal(status.byeorimDir, join(cwd, '.byeorim'));
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
@@ -185,16 +185,16 @@ test('산출물 존재 여부가 단계 진행에 따라 정확히 채워진다'
 test('runStatus는 부작용이 없다(파일을 만들지도 state를 바꾸지도 않는다)', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
-    const stateBefore = readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8');
+    const stateBefore = readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8');
     // status 두 번 호출
     runStatus({ cwd });
     runStatus({ cwd });
     // state.yml이 그대로
-    const stateAfter = readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8');
+    const stateAfter = readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8');
     assert.equal(stateAfter, stateBefore);
     // status 호출이 새 파일을 만들지 않았다
-    assert.equal(existsSync(join(cwd, '.beoreum', 'project', 'intent.yml')), false);
-    assert.equal(existsSync(join(cwd, '.beoreum', 'project', 'contracts.yml')), false);
+    assert.equal(existsSync(join(cwd, '.byeorim', 'project', 'intent.yml')), false);
+    assert.equal(existsSync(join(cwd, '.byeorim', 'project', 'contracts.yml')), false);
   });
 });
 
@@ -207,7 +207,7 @@ test('손상된 state.yml도 안전하게 처리한다', async () => {
     runInit({ cwd });
     // state.yml을 망가진 YAML로 덮어쓴다
     const { writeFileSync } = await import('node:fs');
-    writeFileSync(join(cwd, '.beoreum', 'state.yml'), 'broken: "unclosed', 'utf8');
+    writeFileSync(join(cwd, '.byeorim', 'state.yml'), 'broken: "unclosed', 'utf8');
     // status는 throw하지 않고 안전한 기본값으로 돌려준다
     const status = runStatus({ cwd });
     assert.equal(status.initialized, true);

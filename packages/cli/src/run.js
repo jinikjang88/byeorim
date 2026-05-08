@@ -1,4 +1,4 @@
-// beoreum run. set이 만든 backend + frontend를 한 명령으로 동시 기동한다.
+// byeorim run. set이 만든 backend + frontend를 한 명령으로 동시 기동한다.
 // ADR 0047을 따른다. 단계 독립 명령(answer/status/verify와 같은 결).
 // spawnProcess와 fetchHealth는 의존성 주입(ADR 0047 결정 7) — 테스트에서 mock으로.
 
@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { defaultSpawnProcess, defaultFetchHealth, pollUntilReady } from './process-helpers.js';
 
-const PYTHON_PACKAGE_FALLBACK = 'beoreum';
+const PYTHON_PACKAGE_FALLBACK = 'byeorim';
 
 // 언어별 backend 명령 표(ADR 0047 결정 7).
 // 새 backend 언어가 ADR로 들어오면 이 표만 갱신한다.
@@ -70,14 +70,14 @@ function pythonPackageOf(intent) {
 //   intent         - intent.yml 객체 (또는 null)
 //   architecture   - architecture.yml 객체 (또는 null)
 //   target         - 'both' | 'backend' | 'frontend'
-//   beoreumDirOverride - 테스트용 .beoreum 절대 경로 override(선택)
+//   byeorimDirOverride - 테스트용 .byeorim 절대 경로 override(선택)
 //
 // 반환: Array<{ name, cmd, args, cwd, readyUrl?, url }>
 export function buildRunTargets({ cwd, intent, architecture, target = 'both' }) {
   if (!cwd) throw new Error('buildRunTargets({ cwd })가 필요합니다');
-  const beoreumDir = join(cwd, '.beoreum');
-  const backendDir = join(beoreumDir, 'project', 'generated', 'backend');
-  const frontendDir = join(beoreumDir, 'project', 'generated', 'frontend');
+  const byeorimDir = join(cwd, '.byeorim');
+  const backendDir = join(byeorimDir, 'project', 'generated', 'backend');
+  const frontendDir = join(byeorimDir, 'project', 'generated', 'frontend');
 
   const targets = [];
 
@@ -162,19 +162,19 @@ export async function runRun({
     );
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
   if (!existsSync(stateFile)) {
-    throw new Error('.beoreum/state.yml이 없습니다. 먼저 beoreum init을 실행해주세요');
+    throw new Error('.byeorim/state.yml이 없습니다. 먼저 byeorim init을 실행해주세요');
   }
 
-  const intent = loadYamlSafe(join(beoreumDir, 'project', 'intent.yml'));
-  const architecture = loadYamlSafe(join(beoreumDir, 'project', 'architecture.yml'));
+  const intent = loadYamlSafe(join(byeorimDir, 'project', 'intent.yml'));
+  const architecture = loadYamlSafe(join(byeorimDir, 'project', 'architecture.yml'));
 
   const targets = buildRunTargets({ cwd, intent, architecture, target });
 
   if (targets.length === 0) {
-    throw new Error('실행할 backend/frontend가 없습니다. 먼저 beoreum set을 실행해주세요');
+    throw new Error('실행할 backend/frontend가 없습니다. 먼저 byeorim set을 실행해주세요');
   }
 
   // 모든 프로세스 spawn. 한 콘솔에 prefix 결합 출력(ADR 0047 결정 2).

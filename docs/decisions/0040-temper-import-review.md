@@ -7,9 +7,9 @@
 
 ## 맥락
 
-ADR 0038이 temper에 외부 검토 프롬프트 부산물(`.beoreum/project/prompts/test-scenarios-review-prompt.md`)을 박았다. 사용자는 이 마크다운을 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 시나리오 종류 누락, test_code 도메인 적합성, 시작 무게를 자세히 검토받는다. 그러나 받은 응답을 다시 test-scenarios.yml에 반영하는 자리가 비어있다.
+ADR 0038이 temper에 외부 검토 프롬프트 부산물(`.byeorim/project/prompts/test-scenarios-review-prompt.md`)을 박았다. 사용자는 이 마크다운을 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 시나리오 종류 누락, test_code 도메인 적합성, 시작 무게를 자세히 검토받는다. 그러나 받은 응답을 다시 test-scenarios.yml에 반영하는 자리가 비어있다.
 
-ADR 0039가 같은 자리를 forge에서 풀었다. 외부 AI에게 자유 형식 검토 끝에 구조화된 "## 제안된 변경 사항" 섹션을 한 번 더 추가하라고 안내(검토 프롬프트에 형식 가이드 박음). 사용자는 받은 응답을 `beoreum forge import-review <file>`로 가져온다. 코드는 구조화 섹션을 파싱하고 각 제안마다 사용자에게 picker로 묻는다.
+ADR 0039가 같은 자리를 forge에서 풀었다. 외부 AI에게 자유 형식 검토 끝에 구조화된 "## 제안된 변경 사항" 섹션을 한 번 더 추가하라고 안내(검토 프롬프트에 형식 가이드 박음). 사용자는 받은 응답을 `byeorim forge import-review <file>`로 가져온다. 코드는 구조화 섹션을 파싱하고 각 제안마다 사용자에게 picker로 묻는다.
 
 이 ADR로 같은 결을 temper에 옮긴다. 변경 가능 자리는 forge와 다름. forge가 endpoint와 schema를 다듬는 자리였다면, temper는 시나리오와 test_code를 다듬는 자리.
 
@@ -98,13 +98,13 @@ changes:
 
 invalid 자리는 picker 시작 전에 한 번에 안내(forge와 같은 결).
 
-### 결정 4: 서브커맨드 `beoreum temper import-review <file>` (ADR 0039 결정 4와 같은 결)
+### 결정 4: 서브커맨드 `byeorim temper import-review <file>` (ADR 0039 결정 4와 같은 결)
 
 forge import-review 결과 평행.
 
 ### 결정 5: 파일 경로 (ADR 0039 결정 5와 같은 결)
 
-`beoreum temper import-review ./response.md`.
+`byeorim temper import-review ./response.md`.
 
 ### 결정 6: graceful degrade (ADR 0039 결정 6과 같은 결)
 

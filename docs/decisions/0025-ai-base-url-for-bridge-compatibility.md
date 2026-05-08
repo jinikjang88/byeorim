@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0024가 Claude 어댑터를 박았다. 사용자는 ANTHROPIC_API_KEY를 발급해 환경 변수로 두고 BEOREUM_AI_ADAPTER=claude로 켜면 실제 LLM 응답을 받는다.
+ADR 0024가 Claude 어댑터를 박았다. 사용자는 ANTHROPIC_API_KEY를 발급해 환경 변수로 두고 BYEORIM_AI_ADAPTER=claude로 켜면 실제 LLM 응답을 받는다.
 
 이 흐름이 일순위 사용자(섹션 0의 비기술 창업자)에게 두 가지 마찰을 남긴다.
 
@@ -26,13 +26,13 @@ CLAUDE.md 절대 금지선 6번이 한 번 더 작동한다. Claude Code SDK나 
 
 #### 옵션 A. ANTHROPIC_BASE_URL 단일 (SDK 표준 따름)
 - 장점: SDK가 이미 표준으로 인식하는 이름. 사용자가 다른 Anthropic SDK 기반 도구로 옮겨도 같은 변수가 통함. 인지 부담이 작음. 외부 브릿지 도구의 README들이 대부분 이 이름으로 안내
-- 단점: 벼름 고유 변수가 아니라 다른 Anthropic 도구와 환경 변수 이름이 충돌할 수 있음(좋은 충돌이지만)
+- 단점: 벼림 고유 변수가 아니라 다른 Anthropic 도구와 환경 변수 이름이 충돌할 수 있음(좋은 충돌이지만)
 
-#### 옵션 B. BEOREUM_AI_BASE_URL 단일
-- 장점: 벼름 표준. 다른 벤더 어댑터가 들어와도 같은 결의 이름
-- 단점: 새 환경 변수 표면 추가. 사용자가 두 이름(SDK 표준 + 벼름 표준)을 알아야 함
+#### 옵션 B. BYEORIM_AI_BASE_URL 단일
+- 장점: 벼림 표준. 다른 벤더 어댑터가 들어와도 같은 결의 이름
+- 단점: 새 환경 변수 표면 추가. 사용자가 두 이름(SDK 표준 + 벼림 표준)을 알아야 함
 
-#### 옵션 C. 둘 다 받음, BEOREUM_AI_BASE_URL이 우선
+#### 옵션 C. 둘 다 받음, BYEORIM_AI_BASE_URL이 우선
 - 장점: 양쪽 사용자 모두 수용
 - 단점: 우선순위 규칙이 또 늘어남. 디버깅 시 어느 변수가 먹혔는지 헷갈림
 
@@ -56,7 +56,7 @@ CLAUDE.md 절대 금지선 6번이 한 번 더 작동한다. Claude Code SDK나 
 - 장점: 사용자가 브릿지를 안 띄워도 됨. 환경 변수 한 줄로 끝
 - 단점: ADR 0024 결정 5(structured output)가 흔들림. Claude Code의 출력은 JSON Schema 강제를 보장하지 않아 우리가 프롬프트로 강제하고 try/catch로 파싱하는 자리(ADR 0024가 옵션 B로 거절했던 자리)가 다시 살아남. 의존성과 유지보수 면적이 큼. Claude Code 변화에 우리가 묶임
 
-#### 옵션 C. 자체 브릿지 서버를 벼름이 번들
+#### 옵션 C. 자체 브릿지 서버를 벼림이 번들
 - 장점: 사용자 경험이 가장 매끄러움
 - 단점: 면적이 가장 큼. 새 패키지, 새 명령어, 외부 도구 모방 책임. 절대 금지선 6번(벤더 무관)도 위태로워짐
 
@@ -70,7 +70,7 @@ baseURL 환경 변수는 ANTHROPIC_BASE_URL만 인정한다. SDK 표준 이름�
 
 ### 결정 2: 키 검증 완화 (옵션 A)
 
-ANTHROPIC_API_KEY가 비어 있어도 ANTHROPIC_BASE_URL이 설정되어 있으면 통과한다. SDK 인스턴스화 시점에 placeholder 키(`'beoreum-bridge-placeholder'`)를 자동으로 채워 SDK가 인스턴스 자리에서 던지는 검증 에러를 피한다. 실제 인증은 브릿지가 처리한다.
+ANTHROPIC_API_KEY가 비어 있어도 ANTHROPIC_BASE_URL이 설정되어 있으면 통과한다. SDK 인스턴스화 시점에 placeholder 키(`'byeorim-bridge-placeholder'`)를 자동으로 채워 SDK가 인스턴스 자리에서 던지는 검증 에러를 피한다. 실제 인증은 브릿지가 처리한다.
 
 | ANTHROPIC_BASE_URL | ANTHROPIC_API_KEY | 결과 |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ createClaudeAdapter({ apiKey, model, client, baseURL })
 ## 결과
 
 ### 긍정적
-- API 키 없는 사용자가 브릿지를 통해 벼름을 쓸 수 있다. 일순위 사용자의 진입 장벽이 낮아진다
+- API 키 없는 사용자가 브릿지를 통해 벼림을 쓸 수 있다. 일순위 사용자의 진입 장벽이 낮아진다
 - 변경 면적이 작다. 어댑터 팩토리에 인자 한 개, select 분기 하나, 환경 변수 한 개. ADR 0024가 박은 약속은 그대로
 - 절대 금지선 6번이 더 단단해진다. Claude Code SDK도 자체 브릿지도 박지 않아 외부 도구 변화에서 자유로움
 - 사용자가 어떤 브릿지를 고르든 우리는 모름. 사용자 자율 영역이 늘어남
@@ -113,7 +113,7 @@ createClaudeAdapter({ apiKey, model, client, baseURL })
 
 ### 미래 묶임
 - ANTHROPIC_BASE_URL은 표준 이름이다. 변경하려면 ADR
-- placeholder 키 값(`beoreum-bridge-placeholder`)도 표준이다. 변경 시 ADR amendment
+- placeholder 키 값(`byeorim-bridge-placeholder`)도 표준이다. 변경 시 ADR amendment
 - 별도 claude-code 어댑터는 미래 자리. 사용자 신호가 나타나면 ADR로
 - 다른 벤더 어댑터(GPT, Gemini)가 들어오면 같은 패턴(벤더별 BASE_URL 환경 변수)으로 받는다
 

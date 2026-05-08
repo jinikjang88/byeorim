@@ -10,7 +10,7 @@ import yaml from 'js-yaml';
 import { runRun, buildRunTargets } from '../../packages/cli/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-run-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-run-'));
 }
 
 async function withTempCwd(fn) {
@@ -22,18 +22,18 @@ async function withTempCwd(fn) {
   }
 }
 
-// 한 cwd에 .beoreum/ 트리를 최소한으로 만든다(state.yml + intent.yml + architecture.yml + generated/{backend,frontend}/).
+// 한 cwd에 .byeorim/ 트리를 최소한으로 만든다(state.yml + intent.yml + architecture.yml + generated/{backend,frontend}/).
 // generator를 통째로 안 돌려 테스트 속도를 빠르게 유지(ADR 0046이 박은 generator는 별도 단위 테스트가 검증).
-function setupBeoreum(
+function setupByeorim(
   cwd,
   { language = 'node', backend = true, frontend = true, what = '쇼핑몰' } = {},
 ) {
-  const beoreumDir = join(cwd, '.beoreum');
-  const projectDir = join(beoreumDir, 'project');
+  const byeorimDir = join(cwd, '.byeorim');
+  const projectDir = join(byeorimDir, 'project');
   const generatedDir = join(projectDir, 'generated');
   mkdirSync(generatedDir, { recursive: true });
   writeFileSync(
-    join(beoreumDir, 'state.yml'),
+    join(byeorimDir, 'state.yml'),
     yaml.dump({ schema_version: 1, current_stage: 'inspect' }),
     'utf8',
   );
@@ -45,7 +45,7 @@ function setupBeoreum(
   );
   if (backend) mkdirSync(join(generatedDir, 'backend'), { recursive: true });
   if (frontend) mkdirSync(join(generatedDir, 'frontend'), { recursive: true });
-  return { beoreumDir, generatedDir };
+  return { byeorimDir, generatedDir };
 }
 
 // 결정적 mock spawnProcess. 호출 즉시 onStdout으로 한 줄 emit, kill()이 호출되거나
@@ -98,7 +98,7 @@ function createMockFetch(nReadyAt = 1) {
 
 test('buildRunTargets: target=both이고 둘 다 있으면 backend + frontend 두 자리 반환', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const targets = buildRunTargets({
       cwd,
       intent: { extracted: { what: '쇼핑몰' } },
@@ -121,7 +121,7 @@ test('buildRunTargets: target=both이고 둘 다 있으면 backend + frontend �
 
 test('buildRunTargets: language=java면 ./gradlew :app:bootRun, port 8080', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'java' });
+    setupByeorim(cwd, { language: 'java' });
     const targets = buildRunTargets({
       cwd,
       intent: {},
@@ -138,7 +138,7 @@ test('buildRunTargets: language=java면 ./gradlew :app:bootRun, port 8080', asyn
 
 test('buildRunTargets: language=python이면 poetry run uvicorn {pkg}.main:app, port 8000', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'python', what: '도서관' });
+    setupByeorim(cwd, { language: 'python', what: '도서관' });
     const targets = buildRunTargets({
       cwd,
       intent: { extracted: { what: '도서관' } },
@@ -149,7 +149,7 @@ test('buildRunTargets: language=python이면 poetry run uvicorn {pkg}.main:app, 
     assert.ok(backend);
     assert.equal(backend.cmd, 'poetry');
     assert.ok(backend.args.includes('uvicorn'));
-    // 한국어 what은 fallback으로 'beoreum' 패키지가 됨(ASCII만 허용)
+    // 한국어 what은 fallback으로 'byeorim' 패키지가 됨(ASCII만 허용)
     assert.ok(backend.args.find((a) => a.endsWith('.main:app')));
     assert.equal(backend.readyUrl, 'http://localhost:8000/health');
   });
@@ -157,7 +157,7 @@ test('buildRunTargets: language=python이면 poetry run uvicorn {pkg}.main:app, 
 
 test('buildRunTargets: target=backend면 frontend는 빠진다', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const targets = buildRunTargets({
       cwd,
       intent: {},
@@ -171,7 +171,7 @@ test('buildRunTargets: target=backend면 frontend는 빠진다', async () => {
 
 test('buildRunTargets: target=frontend면 backend는 빠진다', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const targets = buildRunTargets({
       cwd,
       intent: {},
@@ -185,7 +185,7 @@ test('buildRunTargets: target=frontend면 backend는 빠진다', async () => {
 
 test('buildRunTargets: backend 디렉토리가 없으면 backend 자리 빠진다', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node', backend: false });
+    setupByeorim(cwd, { language: 'node', backend: false });
     const targets = buildRunTargets({
       cwd,
       intent: {},
@@ -199,7 +199,7 @@ test('buildRunTargets: backend 디렉토리가 없으면 backend 자리 빠진�
 
 test('buildRunTargets: 알 수 없는 language는 backend 빠진다', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'kotlin' });
+    setupByeorim(cwd, { language: 'kotlin' });
     const targets = buildRunTargets({
       cwd,
       intent: {},
@@ -216,7 +216,7 @@ test('buildRunTargets: 알 수 없는 language는 backend 빠진다', async () =
 
 test('runRun: target=both면 backend와 frontend 둘 다 spawn 호출', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const spawnProcess = createMockSpawn();
     const fetchHealth = createMockFetch(1);
     const logs = [];
@@ -252,7 +252,7 @@ test('runRun: target=both면 backend와 frontend 둘 다 spawn 호출', async ()
 
 test('runRun: backend의 /health가 응답하면 ready 안내 출력', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const spawnProcess = createMockSpawn();
     const fetchHealth = createMockFetch(2); // 두 번째 호출에 ready
     const logs = [];
@@ -281,7 +281,7 @@ test('runRun: backend의 /health가 응답하면 ready 안내 출력', async () 
 
 test('runRun: readiness timeout이면 한국어 안내 후 진행 계속', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const spawnProcess = createMockSpawn();
     // 절대 ready 안 됨
     const fetchHealth = async () => false;
@@ -309,7 +309,7 @@ test('runRun: readiness timeout이면 한국어 안내 후 진행 계속', async
 
 test('runRun: 한쪽 프로세스가 종료되면 다른 쪽도 정리(fail-fast)', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const spawnProcess = createMockSpawn();
     const fetchHealth = createMockFetch(1);
     const logs = [];
@@ -343,7 +343,7 @@ test('runRun: 한쪽 프로세스가 종료되면 다른 쪽도 정리(fail-fast
 
 test('runRun: target=backend면 frontend는 spawn하지 않는다', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const spawnProcess = createMockSpawn();
     const fetchHealth = createMockFetch(1);
     const ac = new AbortController();
@@ -371,7 +371,7 @@ test('runRun: target=backend면 frontend는 spawn하지 않는다', async () => 
 
 test('runRun: target=frontend면 backend는 spawn하지 않는다', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const spawnProcess = createMockSpawn();
     const fetchHealth = createMockFetch(1);
     const ac = new AbortController();
@@ -399,7 +399,7 @@ test('runRun: target=frontend면 backend는 spawn하지 않는다', async () => 
 
 test('runRun: state.yml이 없으면 명확한 한국어 에러', async () => {
   await withTempCwd(async (cwd) => {
-    // .beoreum 자체가 없는 결
+    // .byeorim 자체가 없는 결
     await assert.rejects(
       runRun({
         cwd,
@@ -407,7 +407,7 @@ test('runRun: state.yml이 없으면 명확한 한국어 에러', async () => {
         fetchHealth: async () => true,
         log: () => {},
       }),
-      /beoreum init/,
+      /byeorim init/,
     );
   });
 });
@@ -415,7 +415,7 @@ test('runRun: state.yml이 없으면 명확한 한국어 에러', async () => {
 test('runRun: 실행할 backend/frontend가 없으면 한국어 에러', async () => {
   await withTempCwd(async (cwd) => {
     // generated가 비어있음
-    setupBeoreum(cwd, { language: 'node', backend: false, frontend: false });
+    setupByeorim(cwd, { language: 'node', backend: false, frontend: false });
     await assert.rejects(
       runRun({
         cwd,
@@ -423,14 +423,14 @@ test('runRun: 실행할 backend/frontend가 없으면 한국어 에러', async (
         fetchHealth: async () => true,
         log: () => {},
       }),
-      /beoreum set/,
+      /byeorim set/,
     );
   });
 });
 
 test('runRun: target이 잘못된 값이면 한국어 에러', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     await assert.rejects(
       runRun({
         cwd,
@@ -446,7 +446,7 @@ test('runRun: target이 잘못된 값이면 한국어 에러', async () => {
 
 test('runRun: 출력이 [backend]/[frontend] prefix로 박힌다', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     const spawnProcess = createMockSpawn();
     const fetchHealth = createMockFetch(1);
     const logs = [];

@@ -30,7 +30,7 @@ prospect가 세 출시로 다 벼려졌다. 7항목 동행 질문, AI 카탈로�
 - 장점: prospect가 한 번에 끝내면 smelt가 LLM 호출 없이 진행
 - 단점: 추천이 prospect 시점에 박혀있어 사용자가 카탈로그를 import-catalog로 교체해도 옛 추천이 남음. 시점 불일치
 
-#### 옵션 C. 별도 명령 beoreum smelt recommend
+#### 옵션 C. 별도 명령 byeorim smelt recommend
 - 장점: 책임 분리 명확
 - 단점: 사용자가 새 명령을 알아야 함. 비기술 창업자에게 학습 비용. 자연스러운 흐름 깨짐
 

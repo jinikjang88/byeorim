@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0007이 `.beoreum/project/test-scenarios.yml`을 Temper 단계 산출물 자리로 박았다. ADR 0006이 Temper의 정의를 다시 한 번 다듬었다. "다듬은 무엇이 통과해야 하는지를 짓는 자리. 실제로 통과하는지를 보는 자리는 다음 단계(Set)다."
+ADR 0007이 `.byeorim/project/test-scenarios.yml`을 Temper 단계 산출물 자리로 박았다. ADR 0006이 Temper의 정의를 다시 한 번 다듬었다. "다듬은 무엇이 통과해야 하는지를 짓는 자리. 실제로 통과하는지를 보는 자리는 다음 단계(Set)다."
 
 즉 Temper는 테스트 의도를 짓는 단계이고, Set이 그 의도 위에 코드와 검증을 올린다. CLAUDE.md 섹션 4가 이미 Given-When-Then을 주력 패턴으로 박았으니, Temper의 산출물도 그 결을 따른다.
 
@@ -50,7 +50,7 @@ ADR 0007이 `.beoreum/project/test-scenarios.yml`을 Temper 단계 산출물 자
 
 #### 옵션 C. OpenAPI 또는 Cucumber 표준 형식
 - 장점: 외부 도구가 읽음
-- 단점: 우리는 *벼름의* 시나리오 자리지 표준 자리가 아니다. Set이 변환할 때 맞춘다
+- 단점: 우리는 *벼림의* 시나리오 자리지 표준 자리가 아니다. Set이 변환할 때 맞춘다
 
 ### 결정 3. Given-When-Then 텍스트의 깊이
 

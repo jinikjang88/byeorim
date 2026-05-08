@@ -1,4 +1,4 @@
-// beoreum smelt. 사용자가 고른 블럭에서 의존성을 해결해 두 산출물을 만든다.
+// byeorim smelt. 사용자가 고른 블럭에서 의존성을 해결해 두 산출물을 만든다.
 // ADR 0007의 자리, ADR 0010의 두 파일 형식, ADR 0003의 동행 톤(답하지 못한 질문 허용),
 // ADR 0029(블럭 추천 + 선택 검토), ADR 0030(두 시점 reason + 외부 검토 프롬프트),
 // ADR 0031(picker 세계/번들 그룹화 + 의존성 상세 검토)를 따른다.
@@ -7,8 +7,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { checkbox, select, Separator } from '@inquirer/prompts';
-import { resolveAll } from '@beoreum/core';
-import { loadCatalog } from '@beoreum/catalog';
+import { resolveAll } from '@byeorim/core';
+import { loadCatalog } from '@byeorim/catalog';
 import { buildBlockReviewPromptMarkdown } from './smelt-prompt.js';
 import {
   buildBlockHierarchy,
@@ -29,7 +29,7 @@ function ensureFile(path, hint) {
 }
 
 function loadState(stateFile) {
-  ensureFile(stateFile, '먼저 beoreum init을 실행해주세요');
+  ensureFile(stateFile, '먼저 byeorim init을 실행해주세요');
   return yaml.load(readFileSync(stateFile, 'utf8'));
 }
 
@@ -58,7 +58,7 @@ function ensureBlockIdsExist(blockIds, catalog) {
   if (unknown.length > 0) {
     throw new Error(
       `카탈로그에 없는 블럭 ID가 있습니다: ${unknown.join(', ')}\n` +
-        `사용 가능한 블럭 ID는 .beoreum/project/catalog/catalog.yml의 blocks 항목에서 볼 수 있습니다`,
+        `사용 가능한 블럭 ID는 .byeorim/project/catalog/catalog.yml의 blocks 항목에서 볼 수 있습니다`,
     );
   }
 }
@@ -133,20 +133,20 @@ export async function runSmelt({ cwd, blockIds, recommendation = EMPTY_RECOMMEND
     throw new Error('runSmelt({ blockIds })가 필요합니다. 한 개 이상의 블럭 ID를 골라주세요');
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
-  const selectedBlocksFile = join(beoreumDir, 'project', 'selected-blocks.yml');
-  const decisionsFile = join(beoreumDir, 'project', 'decisions.yml');
-  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
+  const selectedBlocksFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
+  const promptsDir = join(byeorimDir, 'project', 'prompts');
   const blockReviewPromptFile = join(promptsDir, 'block-review-prompt.md');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
-  ensureFile(intentFile, '먼저 beoreum prospect를 실행해주세요');
-  ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
+  ensureFile(intentFile, '먼저 byeorim prospect를 실행해주세요');
+  ensureFile(catalogFile, '먼저 byeorim prospect를 실행해주세요');
 
   const catalog = loadCatalog(catalogFile);
   ensureBlockIdsExist(blockIds, catalog);
@@ -322,17 +322,17 @@ export async function interactiveSmelt({
 } = {}) {
   if (!cwd) throw new Error('interactiveSmelt({ cwd })가 필요합니다');
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
   // picker를 띄우기 전에 단계와 파일 자리를 먼저 검증한다. 사용자가 블럭을 고른 뒤에야
   // 거부당하는 일이 없도록.
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
-  ensureFile(intentFile, '먼저 beoreum prospect를 실행해주세요');
-  ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
+  ensureFile(intentFile, '먼저 byeorim prospect를 실행해주세요');
+  ensureFile(catalogFile, '먼저 byeorim prospect를 실행해주세요');
 
   const catalog = loadCatalog(catalogFile);
   const { user_answers: answers } = readIntent(intentFile);

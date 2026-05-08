@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// 벼름 CLI 엔트리포인트. 7단계 명령어(prospect, smelt, shape, forge, temper, set, inspect)와
-// status, init을 등록한다. 각 명령어 본체는 @beoreum/cli 패키지의 src/<명령어>.js에 산다.
+// 벼림 CLI 엔트리포인트. 7단계 명령어(prospect, smelt, shape, forge, temper, set, inspect)와
+// status, init을 등록한다. 각 명령어 본체는 @byeorim/cli 패키지의 src/<명령어>.js에 산다.
 
 import { Command } from 'commander';
 import {
@@ -24,13 +24,13 @@ import {
   runVerify,
   runRun,
   applyInspectReview,
-} from '@beoreum/cli';
-import { selectAdapter } from '@beoreum/ai';
+} from '@byeorim/cli';
+import { selectAdapter } from '@byeorim/ai';
 
 const program = new Command();
 
 program
-  .name('beoreum')
+  .name('byeorim')
   .description('AI로 자신의 서비스를 만들고 싶은 사람을 위한 협업 프로토콜')
   .version('0.1.0');
 
@@ -38,16 +38,16 @@ program.addHelpText(
   'after',
   `
 환경 변수
-  BEOREUM_AI_ADAPTER   사용할 AI 어댑터. mock(기본) 또는 claude
+  BYEORIM_AI_ADAPTER   사용할 AI 어댑터. mock(기본) 또는 claude
   ANTHROPIC_API_KEY    Anthropic API에 직접 호출할 때 필요한 키
   ANTHROPIC_BASE_URL   Claude Code 등 브릿지 서버를 거칠 때의 URL. 키 대신 사용 가능
-  BEOREUM_AI_MODEL     사용할 모델 (기본 claude-opus-4-7)
+  BYEORIM_AI_MODEL     사용할 모델 (기본 claude-opus-4-7)
 
 예시
-  $ beoreum prospect "온라인 책방"                                          # mock으로 흐름만 확인
-  $ BEOREUM_AI_ADAPTER=claude ANTHROPIC_API_KEY=sk-... beoreum prospect "..."   # 직접 호출
-  $ BEOREUM_AI_ADAPTER=claude ANTHROPIC_BASE_URL=http://localhost:3000 \\
-      beoreum prospect "..."                                                # 브릿지 경유
+  $ byeorim prospect "온라인 책방"                                          # mock으로 흐름만 확인
+  $ BYEORIM_AI_ADAPTER=claude ANTHROPIC_API_KEY=sk-... byeorim prospect "..."   # 직접 호출
+  $ BYEORIM_AI_ADAPTER=claude ANTHROPIC_BASE_URL=http://localhost:3000 \\
+      byeorim prospect "..."                                                # 브릿지 경유
 
 자세한 안내는 README.md의 "AI 어댑터 설정" 절을 보세요.
 `,
@@ -55,12 +55,12 @@ program.addHelpText(
 
 program
   .command('init')
-  .description('현재 디렉토리에 .beoreum/ 작업 공간을 만든다')
+  .description('현재 디렉토리에 .byeorim/ 작업 공간을 만든다')
   .action(() => {
     try {
-      const { beoreumDir } = runInit({ cwd: process.cwd() });
-      console.log(`벼름 작업 공간을 만들었습니다: ${beoreumDir}`);
-      console.log('다음 단계: beoreum prospect');
+      const { byeorimDir } = runInit({ cwd: process.cwd() });
+      console.log(`벼림 작업 공간을 만들었습니다: ${byeorimDir}`);
+      console.log('다음 단계: byeorim prospect');
     } catch (err) {
       console.error(err.message);
       process.exit(1);
@@ -74,12 +74,12 @@ program
     try {
       const status = runStatus({ cwd: process.cwd() });
       if (!status.initialized) {
-        console.log('벼름 작업 공간이 없습니다.');
-        console.log('beoreum init을 먼저 실행해주세요.');
+        console.log('벼림 작업 공간이 없습니다.');
+        console.log('byeorim init을 먼저 실행해주세요.');
         return;
       }
 
-      console.log(`벼름 작업 공간: ${status.beoreumDir}`);
+      console.log(`벼림 작업 공간: ${status.byeorimDir}`);
       console.log(`시작 시각: ${status.created_at}`);
       console.log('');
       console.log('진행 상황:');
@@ -104,13 +104,13 @@ program
       if (status.is_done) {
         console.log('7단계 흐름이 끝났습니다.');
         if (status.artifacts.generated_readme) {
-          console.log(`  합성 README: ${status.beoreumDir}/project/generated/README.md`);
+          console.log(`  합성 README: ${status.byeorimDir}/project/generated/README.md`);
         }
         if (status.artifacts.inspect_report) {
-          console.log(`  체크리스트: ${status.beoreumDir}/project/inspect-report.md`);
+          console.log(`  체크리스트: ${status.byeorimDir}/project/inspect-report.md`);
         }
       } else if (status.next_stage) {
-        console.log(`다음 단계: beoreum ${status.next_stage}`);
+        console.log(`다음 단계: byeorim ${status.next_stage}`);
       }
     } catch (err) {
       console.error(err.message);
@@ -187,7 +187,7 @@ program
     try {
       const result = await interactiveAnswer({ cwd: process.cwd() });
       if (result.totalCount === 0) {
-        console.log('아직 결정이 없습니다. 먼저 beoreum smelt를 실행해주세요.');
+        console.log('아직 결정이 없습니다. 먼저 byeorim smelt를 실행해주세요.');
         return;
       }
       if (result.unansweredBefore === 0) {
@@ -199,7 +199,7 @@ program
         console.log('모든 결정에 답을 채웠습니다.');
       } else {
         console.log(
-          `아직 답하지 않은 결정이 ${result.unansweredBefore - result.answeredCount}개 남아있습니다. 다음에 다시 beoreum answer로 채울 수 있습니다.`,
+          `아직 답하지 않은 결정이 ${result.unansweredBefore - result.answeredCount}개 남아있습니다. 다음에 다시 byeorim answer로 채울 수 있습니다.`,
         );
       }
     } catch (err) {
@@ -225,7 +225,7 @@ const prospectCmd = program
           : await interactiveProspect({ cwd, adapter });
       console.log(`템플릿을 가져왔습니다: ${result.suggestedTemplate}`);
       console.log(`의도가 기록되었습니다: ${result.intentFile}`);
-      console.log(`다음 단계: beoreum ${result.nextStage}`);
+      console.log(`다음 단계: byeorim ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);
@@ -233,7 +233,7 @@ const prospectCmd = program
   });
 
 // prospect 보조 명령(ADR 0028). 외부 AI에서 받은 카탈로그 yml을 가져와 catalog.yml로 교체한다.
-// 예: beoreum prospect import-catalog ./received-catalog.yml
+// 예: byeorim prospect import-catalog ./received-catalog.yml
 prospectCmd
   .command('import-catalog')
   .alias('import')
@@ -281,13 +281,13 @@ const smeltCmd = program
       }
       if (result.blockReviewPromptFile) {
         console.log(
-          '더 자세한 블럭 검토를 원하시면 .beoreum/project/prompts/block-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0030).',
+          '더 자세한 블럭 검토를 원하시면 .byeorim/project/prompts/block-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0030).',
         );
         console.log(
-          '받은 응답은 `beoreum smelt import-review <응답파일>`로 다시 가져올 수 있어요(ADR 0052).',
+          '받은 응답은 `byeorim smelt import-review <응답파일>`로 다시 가져올 수 있어요(ADR 0052).',
         );
       }
-      console.log(`다음 단계: beoreum ${result.nextStage}`);
+      console.log(`다음 단계: byeorim ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);
@@ -295,7 +295,7 @@ const smeltCmd = program
   });
 
 // smelt 보조 명령(ADR 0052). 외부 AI에서 받은 검토 응답을 selected-blocks.yml에 picker로 반영.
-// 예: beoreum smelt import-review ./response.md
+// 예: byeorim smelt import-review ./response.md
 smeltCmd
   .command('import-review')
   .description(
@@ -338,13 +338,13 @@ const shapeCmd = program
       console.log(`기록 자리: ${result.architectureFile}`);
       if (result.architectureReviewPromptFile) {
         console.log(
-          '더 자세한 아키텍처 검토를 원하시면 .beoreum/project/prompts/architecture-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0033).',
+          '더 자세한 아키텍처 검토를 원하시면 .byeorim/project/prompts/architecture-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0033).',
         );
         console.log(
-          '받은 응답은 `beoreum shape import-review <응답파일>`로 다시 가져올 수 있어요(ADR 0053).',
+          '받은 응답은 `byeorim shape import-review <응답파일>`로 다시 가져올 수 있어요(ADR 0053).',
         );
       }
-      console.log(`다음 단계: beoreum ${result.nextStage}`);
+      console.log(`다음 단계: byeorim ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);
@@ -385,10 +385,10 @@ const forgeCmd = program
       }
       if (result.contractsReviewPromptFile) {
         console.log(
-          '더 자세한 계약 검토를 원하시면 .beoreum/project/prompts/contracts-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0035).',
+          '더 자세한 계약 검토를 원하시면 .byeorim/project/prompts/contracts-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0035).',
         );
       }
-      console.log(`다음 단계: beoreum ${result.nextStage}`);
+      console.log(`다음 단계: byeorim ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);
@@ -396,7 +396,7 @@ const forgeCmd = program
   });
 
 // forge 보조 명령(ADR 0039). 외부 AI에서 받은 검토 응답 마크다운을 가져와 contracts.yml에 인터랙티브로 반영한다.
-// 예: beoreum forge import-review ./response.md
+// 예: byeorim forge import-review ./response.md
 forgeCmd
   .command('import-review')
   .description(
@@ -432,10 +432,10 @@ const temperCmd = program
       }
       if (result.scenariosReviewPromptFile) {
         console.log(
-          '더 자세한 시나리오 검토를 원하시면 .beoreum/project/prompts/test-scenarios-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0038).',
+          '더 자세한 시나리오 검토를 원하시면 .byeorim/project/prompts/test-scenarios-review-prompt.md를 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 보세요(ADR 0038).',
         );
       }
-      console.log(`다음 단계: beoreum ${result.nextStage}`);
+      console.log(`다음 단계: byeorim ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);
@@ -443,7 +443,7 @@ const temperCmd = program
   });
 
 // temper 보조 명령(ADR 0040). 외부 AI에서 받은 시나리오 검토 응답을 test-scenarios.yml에 인터랙티브로 반영한다.
-// 예: beoreum temper import-review ./response.md
+// 예: byeorim temper import-review ./response.md
 temperCmd
   .command('import-review')
   .description(
@@ -486,7 +486,7 @@ program
         console.log(`파일 ${result.frontendFileCount}개 생성. frontend/README.md를 먼저 읽으세요.`);
       }
       console.log('');
-      console.log(`다음 단계: beoreum ${result.nextStage}`);
+      console.log(`다음 단계: byeorim ${result.nextStage}`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);
@@ -517,7 +517,7 @@ const inspectCmd = program
       } else if (!result.aiCalled || adapter.name === 'mock') {
         console.log('');
         console.log(
-          'AI 검수는 mock placeholder입니다. 실제 검수는 BEOREUM_AI_ADAPTER=claude로 실행하세요.',
+          'AI 검수는 mock placeholder입니다. 실제 검수는 BYEORIM_AI_ADAPTER=claude로 실행하세요.',
         );
         console.log(
           'Claude Code 사용자: ANTHROPIC_BASE_URL=<Claude Code 브릿지 URL>로 API 키 없이 쓸 수 있습니다(ADR 0025).',
@@ -531,7 +531,7 @@ const inspectCmd = program
       }
       console.log('');
       console.log(
-        `외부 AI 검수: ${result.promptFile}을 claude.ai/ChatGPT/Gemini에 붙여넣고 받은 응답을 \`beoreum inspect import-review <응답파일>\`로 다시 가져옵니다(ADR 0051).`,
+        `외부 AI 검수: ${result.promptFile}을 claude.ai/ChatGPT/Gemini에 붙여넣고 받은 응답을 \`byeorim inspect import-review <응답파일>\`로 다시 가져옵니다(ADR 0051).`,
       );
       console.log('');
       console.log('7단계 흐름이 끝났습니다.');
@@ -545,7 +545,7 @@ const inspectCmd = program
   });
 
 // inspect 보조 명령(ADR 0051). 외부 AI에서 받은 검수 응답을 inspect-findings.yml의 external 섹션에 반영.
-// 예: beoreum inspect import-review ./response.md
+// 예: byeorim inspect import-review ./response.md
 inspectCmd
   .command('import-review')
   .description(

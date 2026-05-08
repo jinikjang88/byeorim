@@ -9,8 +9,8 @@
 ADR 0006이 Set 단계를 도입했다. "도구를 일으켜 세우는 일. 단조에서 정의한 계약과 다듬에서 적은 의도를 합쳐 실제 코드를 짓고, 그 코드가 자기 발로 서는지 컴파일과 테스트로 확인한다."
 
 ADR 0007이 산출물 자리를 박았다.
-- `.beoreum/project/generated/`: 생성된 코드
-- `.beoreum/project/verify-report.md`: 검증 결과 리포트
+- `.byeorim/project/generated/`: 생성된 코드
+- `.byeorim/project/verify-report.md`: 검증 결과 리포트
 
 지금까지 7단계 중 6단계까지 결정과 산출물이 모였다.
 - intent.yml: 사용자 의도(prospect)
@@ -79,7 +79,7 @@ ADR 0007이 산출물 자리를 박았다.
 
 ### 결정 1: README 합성만 (옵션 A)
 
-이번 출시의 set은 `.beoreum/project/generated/README.md` 한 파일과 `.beoreum/project/verify-report.md` 한 파일을 만든다. 실제 코드 생성(언어/프레임워크/빌드 도구)은 모두 미래 ADR로 미룬다.
+이번 출시의 set은 `.byeorim/project/generated/README.md` 한 파일과 `.byeorim/project/verify-report.md` 한 파일을 만든다. 실제 코드 생성(언어/프레임워크/빌드 도구)은 모두 미래 ADR로 미룬다.
 
 이 결정의 핵심은 "한 자리에 집중하고 미래로 확장"이다. ADR 0013과 ADR 0014가 같은 결로 결정했고, set도 같은 결을 따른다. 풀 코드 생성을 한 ADR에 박으면 미래 마이그레이션 부담이 모든 자리에 동시에 걸린다는 위험을 회피.
 
@@ -103,7 +103,7 @@ README의 표준 섹션은 다음과 같다. 각 섹션이 한 단계의 산출�
 
 ### 결정 3: 한국어 placeholder + 미래 자리 안내 (옵션 A)
 
-`.beoreum/project/verify-report.md`는 다음과 같은 placeholder로 채워진다.
+`.byeorim/project/verify-report.md`는 다음과 같은 placeholder로 채워진다.
 
 ```markdown
 # Verify Report
@@ -121,11 +121,11 @@ ADR 0014의 test_code TODO와 같은 결. 빈 자리가 명시적으로 보이�
 
 ### 결정 4: README.md만 두고 미래 확장은 ADR (옵션 A)
 
-`.beoreum/project/generated/`에 이번 출시는 README.md 한 파일만 둔다. 빈 디렉토리(src/, test/) placeholder는 두지 않는다.
+`.byeorim/project/generated/`에 이번 출시는 README.md 한 파일만 둔다. 빈 디렉토리(src/, test/) placeholder는 두지 않는다.
 
 미래에 언어별 코드 생성 ADR이 들어오면 그 ADR이 `generated/` 안의 디렉토리 구조를 함께 결정한다(예: node 코드 생성 ADR이 `generated/src/`, `generated/test/` 구조를 박는다).
 
-`.beoreum/.gitignore`(ADR 0007)가 `project/generated/`를 무시하므로 README는 git에 올라가지 않는다. 다만 사용자가 직접 봐야 하는 문서이므로, 사용자가 commit할지는 본인 선택이다(.gitignore에 예외를 추가).
+`.byeorim/.gitignore`(ADR 0007)가 `project/generated/`를 무시하므로 README는 git에 올라가지 않는다. 다만 사용자가 직접 봐야 하는 문서이므로, 사용자가 commit할지는 본인 선택이다(.gitignore에 예외를 추가).
 
 ## 결과
 

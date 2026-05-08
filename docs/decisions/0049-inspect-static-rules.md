@@ -8,7 +8,7 @@
 
 ADR 0016이 inspect 단계의 6영역(보안/성능/운영/확장성/법적 리스크/시장 재검)과 정적 한국어 체크리스트 형식을 박았다. MVP에서는 사용자 자기 점검 질문만 emit하는 결로 출시했다. 결정 2 옵션 A를 골랐고 옵션 B(프로젝트 맞춤)와 옵션 C(AI 기반 검수)는 미래 ADR로 미뤘다.
 
-ADR 0046/0047/0048이 set 단계의 로컬 실행 baseline과 verify smoke를 박은 뒤 inspect의 결을 한 단계 깊게 갈 결이 분명해졌다. set이 만든 generated 코드(.beoreum/project/generated/)와 프로젝트 메타데이터(intent.yml, architecture.yml, contracts.yml 등)가 다 모여있어 inspect가 그것들을 비춰 결함을 보고할 결.
+ADR 0046/0047/0048이 set 단계의 로컬 실행 baseline과 verify smoke를 박은 뒤 inspect의 결을 한 단계 깊게 갈 결이 분명해졌다. set이 만든 generated 코드(.byeorim/project/generated/)와 프로젝트 메타데이터(intent.yml, architecture.yml, contracts.yml 등)가 다 모여있어 inspect가 그것들을 비춰 결함을 보고할 결.
 
 MANIFESTO III장이 박은 비춤의 결: "빛에 비춰 결함을 보는 일이다. 보안, 성능, 운영, 확장성, 그리고 다시 시장의 관점까지." 정적 체크리스트는 이 결을 부분적으로만 풀고 있다. 이번 ADR이 다음 한 결을 박는다.
 
@@ -129,7 +129,7 @@ MANIFESTO III장이 박은 비춤의 결: "빛에 비춰 결함을 보는 일이
 - (Backend, all) `/health` endpoint 존재 (보안과 같은 검사를 운영 영역에서 다른 시각으로 보고)
 - (Backend, all) 로깅이 구성되었는가 (Node: pino, Java: Spring Boot 기본, Python: structlog)
 - (Backend, all) `.env.production` 파일이 존재하는가 (ADR 0046 결정 2)
-- (All) `.beoreum/state.yml`의 단계 상태가 inspect 진행 가능한가
+- (All) `.byeorim/state.yml`의 단계 상태가 inspect 진행 가능한가
 - (Node, Frontend) `package.json`에 `dev` 또는 `start` 스크립트가 있는가
 
 성능/확장성/법적 리스크/시장 재검 영역은 코드 검수 섹션이 비어있음을 명시(`(이 영역은 ADR 0050의 AI 검수에서 보강됩니다)` 한 줄). 사용자가 빈 결로 느끼지 않도록.

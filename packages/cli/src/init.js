@@ -1,4 +1,4 @@
-// beoreum init. 현재 디렉토리에 .beoreum/ 작업 공간을 만든다.
+// byeorim init. 현재 디렉토리에 .byeorim/ 작업 공간을 만든다.
 // ADR 0007의 결정을 그대로 따른다(루트 위치, project/ 자리, state.yml, gitignore 정책, 확장자).
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -27,22 +27,22 @@ function buildInitialState(now = new Date()) {
   };
 }
 
-// 현재 디렉토리에 .beoreum/ 작업 공간을 만든다.
-// 반환: { beoreumDir, stateFile, diaryFile, gitignoreFile } 생성된 자리들의 절대 경로
+// 현재 디렉토리에 .byeorim/ 작업 공간을 만든다.
+// 반환: { byeorimDir, stateFile, diaryFile, gitignoreFile } 생성된 자리들의 절대 경로
 export function runInit({ cwd, now } = {}) {
   if (!cwd) {
     throw new Error('runInit({ cwd })가 필요합니다');
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const projectDir = join(beoreumDir, 'project');
-  const stateFile = join(beoreumDir, 'state.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const projectDir = join(byeorimDir, 'project');
+  const stateFile = join(byeorimDir, 'state.yml');
   const diaryFile = join(projectDir, 'diary.md');
-  const gitignoreFile = join(beoreumDir, '.gitignore');
+  const gitignoreFile = join(byeorimDir, '.gitignore');
 
-  if (existsSync(beoreumDir)) {
+  if (existsSync(byeorimDir)) {
     throw new Error(
-      `.beoreum/ 작업 공간이 이미 있습니다: ${beoreumDir}\n` +
+      `.byeorim/ 작업 공간이 이미 있습니다: ${byeorimDir}\n` +
         `처음부터 다시 시작하려면 이 디렉토리를 직접 삭제한 뒤 다시 init을 실행해주세요.`,
     );
   }
@@ -54,5 +54,5 @@ export function runInit({ cwd, now } = {}) {
   writeFileSync(diaryFile, DIARY_TEMPLATE, 'utf8');
   writeFileSync(gitignoreFile, GITIGNORE_TEMPLATE, 'utf8');
 
-  return { beoreumDir, stateFile, diaryFile, gitignoreFile };
+  return { byeorimDir, stateFile, diaryFile, gitignoreFile };
 }

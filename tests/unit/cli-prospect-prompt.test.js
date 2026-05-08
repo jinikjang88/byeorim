@@ -10,7 +10,7 @@ import { runInit, runProspect, buildCatalogPromptMarkdown } from '../../packages
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-prompt-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-prompt-'));
 }
 
 async function withTempCwd(fn) {

@@ -1,5 +1,5 @@
 {
-  "name": "@beoreum/ai",
+  "name": "@byeorim/ai",
   "version": "0.1.0",
   "description": "모델 무관 AI 어댑터. Claude, GPT, Gemini",
   "type": "module",
@@ -10,7 +10,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@beoreum/core": "0.1.0",
+    "@byeorim/core": "0.1.0",
     "@anthropic-ai/sdk": "^0.91.1"
   }
 }

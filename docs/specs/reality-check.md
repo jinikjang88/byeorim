@@ -118,7 +118,7 @@ prospect가 AI 출력을 받아 사용자에게 보여주는 결. 6영역 머리
 
 ## 다이어리 통합
 
-prospect 7항목에서 답하지 못한 자리와 Reality Check 질문은 다이어리(`.beoreum/project/diary.md`)에 머리를 분리해 적는다.
+prospect 7항목에서 답하지 못한 자리와 Reality Check 질문은 다이어리(`.byeorim/project/diary.md`)에 머리를 분리해 적는다.
 
 ```markdown
 ## YYYY-MM-DD prospect 의도에서 미뤄둔 질문

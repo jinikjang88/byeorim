@@ -31,13 +31,13 @@ function pathToTemplate(path) {
 
 function buildProjectName(intent) {
   const what = getIntentWhat(intent);
-  if (!what) return 'beoreum-frontend';
+  if (!what) return 'byeorim-frontend';
   const slug = what
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug ? `${slug}-frontend` : 'beoreum-frontend';
+  return slug ? `${slug}-frontend` : 'byeorim-frontend';
 }
 
 // ── 루트 파일 ───────────────────────────────────────────────
@@ -78,7 +78,7 @@ import react from '@vitejs/plugin-react';
 
 // ADR 0021: Vite + React. dev server는 backend의 CORS origin 화이트리스트에 등록되어야 한다.
 // ADR 0046 결정 4 안전망 2: prod build에서 dev placeholder가 그대로 남아있으면 빌드 실패.
-const DEV_PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_';
+const DEV_PLACEHOLDER_PREFIX = 'BYEORIM_DEV_PLACEHOLDER_';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
@@ -116,7 +116,7 @@ VITE_API_BASE=http://localhost:3000
 // .env.production (prod 템플릿). ADR 0046 결정 2.
 function buildEnvProduction() {
   return `# 자동 생성된 prod 환경 변수 템플릿. ADR 0046을 따른다.
-# 이 파일을 prod 빌드 전에 모든 BEOREUM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
+# 이 파일을 prod 빌드 전에 모든 BYEORIM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
 # 채우지 않은 채로 npm run build (production mode)를 돌리면 빌드가 거부된다.
 
 # Backend API 주소. 실제 prod 도메인으로 교체.
@@ -187,7 +187,7 @@ function buildIndexHtml(name) {
 function buildFrontendReadme(name, featureCount) {
   return `# ${name}
 
-벼름이 자동 생성한 React + Vite + TypeScript 프론트엔드 스켈레톤입니다. ADR 0021과 ADR 0046을 따릅니다.
+벼림이 자동 생성한 React + Vite + TypeScript 프론트엔드 스켈레톤입니다. ADR 0021과 ADR 0046을 따릅니다.
 
 ## 시작하기 (dev)
 
@@ -200,7 +200,7 @@ function buildFrontendReadme(name, featureCount) {
 
 ## prod 빌드
 
-\`.env.production\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BEOREUM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 빌드합니다.
+\`.env.production\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BYEORIM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 빌드합니다.
 
 \`\`\`
 npm run build
@@ -302,7 +302,7 @@ export function AppRouter() {
         path="/"
         element={
           <main>
-            <h1>벼름 프로젝트</h1>
+            <h1>벼림 프로젝트</h1>
             <p>왼쪽 경로에서 feature를 선택하세요.</p>
           </main>
         }
@@ -467,7 +467,7 @@ export function ${className}Page() {
 //
 // 입력:
 //   inputs        - set.js의 loadInputs 결과
-//   generatedDir  - .beoreum/project/generated 절대 경로
+//   generatedDir  - .byeorim/project/generated 절대 경로
 //   now           - 테스트용 결정적 시각(현재 사용 안 함)
 //
 // 반환: { frontendDir, featureCount, fileCount }

@@ -148,7 +148,7 @@ runTemper({ cwd, adapter = null, now })
 
 adapter가 없거나 fillTestCode 메서드가 없으면 모든 test_code가 TODO(현재 동작). adapter가 있으면 각 시나리오마다 fillTestCode를 호출해 채움.
 
-bin/beoreum.js의 temper 핸들러는 항상 selectAdapter()의 결과를 주입. ADR 0023 forge와 같은 결.
+bin/byeorim.js의 temper 핸들러는 항상 selectAdapter()의 결과를 주입. ADR 0023 forge와 같은 결.
 
 기존 runTemper 호출자(테스트)는 adapter 없이 호출 → 기존 동작 보존. 새 테스트는 adapter 주입해 채움 검증.
 

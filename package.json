@@ -1,5 +1,5 @@
 {
-  "name": "beoreum",
+  "name": "byeorim",
   "version": "0.1.0",
   "description": "AI로 자신의 서비스를 만들고 싶은 사람을 돕는 협업 프로토콜",
   "type": "module",
@@ -12,7 +12,7 @@
     "packages/*"
   ],
   "bin": {
-    "beoreum": "bin/beoreum.js"
+    "byeorim": "bin/byeorim.js"
   },
   "scripts": {
     "test": "node --test \"tests/unit/**/*.test.js\" \"tests/integration/**/*.test.js\"",

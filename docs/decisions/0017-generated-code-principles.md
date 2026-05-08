@@ -14,7 +14,7 @@ ADR 0015가 set 단계의 MVP를 합성 README로 정하면서 실제 코드 생
 
 이번 ADR은 첫째 자리를 박는다. 7개 원칙을 표준으로 정하고, 미래의 언어별 ADR(0018 Node, 0019 Java, 0020 Python, 그 이후)이 이 7원칙을 어떻게 실천하는지 명시하도록 강제한다.
 
-7개 원칙은 사용자가 직접 정한 자리다. 벼름의 1순위 사용자(비기술 창업자)가 만들어낸 코드를 6개월/1년 뒤에 이어받을 다음 사람(개발자, AI 도우미)이 읽고 고칠 수 있어야 한다는 정신에서 나온 자리.
+7개 원칙은 사용자가 직접 정한 자리다. 벼림의 1순위 사용자(비기술 창업자)가 만들어낸 코드를 6개월/1년 뒤에 이어받을 다음 사람(개발자, AI 도우미)이 읽고 고칠 수 있어야 한다는 정신에서 나온 자리.
 
 ## 검토한 옵션
 
@@ -46,14 +46,14 @@ ADR 0015가 set 단계의 MVP를 합성 README로 정하면서 실제 코드 생
 - 장점: Node는 ESLint+Prettier 표준, Java는 Google Java Style 또는 Spring 표준, Python은 PEP 8 같은 자리. 각 언어 커뮤니티가 모이는 자리를 그대로 사용
 - 단점: 언어 간 비교가 어려워질 수 있음(예: snake_case vs camelCase)
 
-#### 옵션 B. 벼름 자체 컨벤션 표
+#### 옵션 B. 벼림 자체 컨벤션 표
 - 장점: 언어를 가로지르는 일관성
 - 단점: 각 언어 커뮤니티의 표준과 충돌. 외부 도구가 우리 컨벤션을 모름
 
 ### 결정 4. 의존성 단방향 또는 일관된 의존성 참조
 
 #### 옵션 A. 메타 ADR이 단방향 의존성 그래프를 표준으로
-- 장점: CLAUDE.md 섹션 3이 벼름 자체 코드(packages/core ← catalog ← cli)에 박은 의존성 방향 정신을 생성 코드에도 적용. domain 레이어는 infrastructure를 모르고, infrastructure는 web을 모름 같은 자리
+- 장점: CLAUDE.md 섹션 3이 벼림 자체 코드(packages/core ← catalog ← cli)에 박은 의존성 방향 정신을 생성 코드에도 적용. domain 레이어는 infrastructure를 모르고, infrastructure는 web을 모름 같은 자리
 - 단점: 언어별로 의존성 방향을 강제하는 도구가 다름(Java는 archunit, Node는 eslint-plugin-import, Python은 import-linter). 메타 ADR은 의도만, 구현은 언어별
 
 #### 옵션 B. 언어별 ADR이 자체 결정
@@ -127,17 +127,17 @@ ADR 0015가 set 단계의 MVP를 합성 README로 정하면서 실제 코드 생
 
 각 언어 ADR은 그 언어 커뮤니티의 표준 컨벤션을 그대로 따른다.
 
-- Node: Prettier + ESLint(Airbnb 또는 Standard 또는 Beoreum 자체) + 기본 Node/JS 관용
+- Node: Prettier + ESLint(Airbnb 또는 Standard 또는 Byeorim 자체) + 기본 Node/JS 관용
 - Java: Google Java Style 또는 Spring Boot 컨벤션
 - Python: PEP 8 + Black + isort
 
 언어 간 비교(naming case 등)에서 작은 차이는 받아들인다. 각 언어 안에서의 일관성이 더 중요.
 
-벼름 자체 컨벤션 표는 만들지 않는다. 언어 커뮤니티의 표준이 우리 표준.
+벼림 자체 컨벤션 표는 만들지 않는다. 언어 커뮤니티의 표준이 우리 표준.
 
 ### 결정 4: 단방향 의존성 그래프
 
-생성 코드의 모듈 간 의존성은 단방향이고 검증 가능해야 한다. CLAUDE.md 섹션 3이 벼름 자체 코드(core ← catalog ← cli)에 박은 정신을 생성 코드에도 적용.
+생성 코드의 모듈 간 의존성은 단방향이고 검증 가능해야 한다. CLAUDE.md 섹션 3이 벼림 자체 코드(core ← catalog ← cli)에 박은 정신을 생성 코드에도 적용.
 
 표준 의존성 방향:
 
@@ -216,4 +216,4 @@ generated/
 - 이전 결정: ADR 0006 (set 단계 도입), ADR 0012 (architecture.yml의 language 옵션), ADR 0015 (set MVP는 README 합성)
 - 짝 결정: ADR 0018 (Node), ADR 0019 (Java), ADR 0020 (Python)
 - 후속 작업 후보: frontend 자동 생성 ADR, feature 간 통신 ADR, 정량 지표 ADR
-- 관련 정책: CLAUDE.md 섹션 3(의존성 방향, 벼름 자체 코드와 같은 정신), 섹션 8(코드 컨벤션은 벼름 자체 코드용, 생성 코드는 별도)
+- 관련 정책: CLAUDE.md 섹션 3(의존성 방향, 벼림 자체 코드와 같은 정신), 섹션 8(코드 컨벤션은 벼림 자체 코드용, 생성 코드는 별도)

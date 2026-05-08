@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { loadCatalog } from '../../packages/catalog/index.js';
 
 function makeTempDir() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-catalog-load-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-catalog-load-'));
 }
 
 function writeYaml(dir, name, content) {

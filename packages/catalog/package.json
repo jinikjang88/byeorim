@@ -1,5 +1,5 @@
 {
-  "name": "@beoreum/catalog",
+  "name": "@byeorim/catalog",
   "version": "0.1.0",
   "description": "카탈로그 로더, 검증기, 의존성 해결기",
   "type": "module",
@@ -10,7 +10,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@beoreum/core": "0.1.0",
+    "@byeorim/core": "0.1.0",
     "ajv": "^8.17.1",
     "js-yaml": "^4.1.0"
   }

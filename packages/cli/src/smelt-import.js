@@ -1,4 +1,4 @@
-// beoreum smelt import-review. ADR 0052의 외부 검토 응답 import 자리.
+// byeorim smelt import-review. ADR 0052의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 제안된 변경 사항" 섹션의 ```yaml changes를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
 // state는 안 건드리고 selected-blocks.yml과 decisions.yml만 다듬는다(ADR 0052 결정 3, 4).
@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { resolveAll } from '@beoreum/core';
+import { resolveAll } from '@byeorim/core';
 import { parseReviewResponse, validateSmeltChange } from './review-response-parser.js';
 import {
   readResponseFile,
@@ -148,13 +148,13 @@ export async function applySmeltReview({
     );
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const selectedBlocksFile = join(beoreumDir, 'project', 'selected-blocks.yml');
-  const decisionsFile = join(beoreumDir, 'project', 'decisions.yml');
-  const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const selectedBlocksFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
+  const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
-  ensureFile(selectedBlocksFile, '먼저 beoreum smelt를 실행해주세요');
-  ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
+  ensureFile(selectedBlocksFile, '먼저 byeorim smelt를 실행해주세요');
+  ensureFile(catalogFile, '먼저 byeorim prospect를 실행해주세요');
 
   // 응답 파일 읽기 (ADR 0054 helpers).
   const responseText = readResponseFile(responsePath);

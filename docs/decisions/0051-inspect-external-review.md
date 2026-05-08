@@ -18,7 +18,7 @@ ADR 0049가 inspect의 정적 규칙 검수, ADR 0050이 AI 검수를 박았다.
 
 ### 결정 1. 부산물 위치와 이름
 
-#### 옵션 A. `.beoreum/project/prompts/inspect-review-prompt.md` (이번 출시)
+#### 옵션 A. `.byeorim/project/prompts/inspect-review-prompt.md` (이번 출시)
 
 - 장점: forge/temper와 같은 결. 사용자가 한 디렉토리에서 모든 단계 부산물을 본다
 - 단점: 없음
@@ -30,7 +30,7 @@ ADR 0049가 inspect의 정적 규칙 검수, ADR 0050이 AI 검수를 박았다.
 - 장점: forge/temper 결과 같음. 사용자가 별도 명령 안 침. inspect 한 번 돌리면 자기 점검 + 정적 + AI + 외부 검토 부산물이 한 번에
 - 단점: 사용자가 외부 검토를 안 쓸 때도 부산물이 생성됨. 다만 한 파일이라 비용 작음
 
-#### 옵션 B. 별도 명령(`beoreum inspect prompt`)
+#### 옵션 B. 별도 명령(`byeorim inspect prompt`)
 
 - 장점: 사용자 선택권
 - 단점: 학습 비용. 다른 단계와 결이 달라짐
@@ -60,14 +60,14 @@ findings:
 
 ### 결정 4. import-review 명령 결
 
-#### 옵션 A. `beoreum inspect import-review <file>` (이번 출시)
+#### 옵션 A. `byeorim inspect import-review <file>` (이번 출시)
 
 - 장점: forge/temper와 같은 결. 사용자가 같은 패턴으로 세 단계에서 사용
 - 단점: 없음
 
 ### 결정 5. 단일 진실 소스 (큰 결정)
 
-#### 옵션 A. `.beoreum/project/inspect-findings.yml` (이번 출시)
+#### 옵션 A. `.byeorim/project/inspect-findings.yml` (이번 출시)
 
 inspect-findings.yml에 static / ai / external 세 섹션을 둔다. inspect-report.md는 이 yml에서 derive.
 
@@ -142,13 +142,13 @@ ADR 0039/0040의 graceful degrade 결을 그대로. ```yaml 섹션 못 찾으면
 
 ## 결정
 
-### 결정 1: `.beoreum/project/prompts/inspect-review-prompt.md` (옵션 A)
+### 결정 1: `.byeorim/project/prompts/inspect-review-prompt.md` (옵션 A)
 
 forge/temper와 같은 위치. 사용자가 한 디렉토리에서 모든 부산물을 봄.
 
 ### 결정 2: inspect 명령이 자동 생성 (옵션 A)
 
-`beoreum inspect`가 inspect-report.md, inspect-findings.yml, inspect-review-prompt.md 셋을 만든다.
+`byeorim inspect`가 inspect-report.md, inspect-findings.yml, inspect-review-prompt.md 셋을 만든다.
 
 ### 결정 3: ```yaml findings 배열 (옵션 A)
 
@@ -171,17 +171,17 @@ findings:
 ```
 ```
 
-### 결정 4: `beoreum inspect import-review <file>` (옵션 A)
+### 결정 4: `byeorim inspect import-review <file>` (옵션 A)
 
 ```
-beoreum inspect import-review external-response.md
+byeorim inspect import-review external-response.md
 ```
 
 forge/temper와 같은 명령 결. <file>은 외부 AI 응답을 저장한 마크다운 파일.
 
 ### 결정 5: 단일 진실 소스 inspect-findings.yml (옵션 A)
 
-`.beoreum/project/inspect-findings.yml` 파일이 모든 finding의 진실. inspect-report.md는 이 yml에서 derive.
+`.byeorim/project/inspect-findings.yml` 파일이 모든 finding의 진실. inspect-report.md는 이 yml에서 derive.
 
 #### inspect-findings.yml 형식
 

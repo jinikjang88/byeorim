@@ -10,7 +10,7 @@ import { runInit, runProspect, importCatalog } from '../../packages/cli/index.js
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-import-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-import-'));
 }
 
 async function withTempCwd(fn) {
@@ -90,13 +90,13 @@ test('형식이 어긋난 yml은 한국어 에러로 거부하고 catalog.yml은
     // 빈 worlds라 catalog.schema.json의 minItems=1을 어김
     writeFileSync(sourcePath, 'worlds: []\nblocks: []\n', 'utf8');
     const beforeCatalog = readFileSync(
-      join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml'),
+      join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml'),
       'utf8',
     );
     assert.throws(() => importCatalog({ cwd, sourcePath, log: silentLog }), /형식 검증에 걸렸어요/);
     // catalog.yml이 변경되지 않았다
     const afterCatalog = readFileSync(
-      join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml'),
+      join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml'),
       'utf8',
     );
     assert.equal(beforeCatalog, afterCatalog);

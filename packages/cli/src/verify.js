@@ -1,4 +1,4 @@
-// beoreum verify. 생성된 backend/frontend의 컴파일과 테스트를 실행하고 리포트를 만든다.
+// byeorim verify. 생성된 backend/frontend의 컴파일과 테스트를 실행하고 리포트를 만든다.
 // ADR 0022(install + test)와 ADR 0048(--smoke 플래그로 server up → /health → kill)을 따른다.
 // 단계 독립 명령(answer/status와 같은 결).
 // runCommand는 의존성 주입(ADR 0022 결정 7), spawnProcess/fetchHealth는 ADR 0048 결정 6으로 주입.
@@ -106,8 +106,8 @@ ${truncated}
 ${sections}`;
 }
 
-function loadArchitecture(beoreumDir) {
-  const archFile = join(beoreumDir, 'project', 'architecture.yml');
+function loadArchitecture(byeorimDir) {
+  const archFile = join(byeorimDir, 'project', 'architecture.yml');
   if (!existsSync(archFile)) return null;
   try {
     return yaml.load(readFileSync(archFile, 'utf8')) || null;
@@ -116,11 +116,11 @@ function loadArchitecture(beoreumDir) {
   }
 }
 
-function buildTargets(beoreumDir, architecture) {
+function buildTargets(byeorimDir, architecture) {
   const targets = [];
   const language = architecture && architecture.language;
-  const backendDir = join(beoreumDir, 'project', 'generated', 'backend');
-  const frontendDir = join(beoreumDir, 'project', 'generated', 'frontend');
+  const backendDir = join(byeorimDir, 'project', 'generated', 'backend');
+  const frontendDir = join(byeorimDir, 'project', 'generated', 'frontend');
 
   if (existsSync(backendDir) && language && TARGET_COMMANDS[`backend:${language}`]) {
     targets.push({
@@ -168,8 +168,8 @@ async function runOneTarget(target, runCommand) {
 
 // loadIntent는 architecture와 함께 buildRunTargets에 전달할 intent 객체를 읽는다.
 // python의 backend 명령이 intent.extracted.what에서 패키지 이름을 추출(ADR 0047 결정 7).
-function loadIntent(beoreumDir) {
-  const file = join(beoreumDir, 'project', 'intent.yml');
+function loadIntent(byeorimDir) {
+  const file = join(byeorimDir, 'project', 'intent.yml');
   if (!existsSync(file)) return null;
   try {
     return yaml.load(readFileSync(file, 'utf8')) || null;
@@ -262,7 +262,7 @@ async function runSmokeTest({
 }
 
 function smokeTimeoutFromEnv() {
-  const raw = process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS;
+  const raw = process.env.BYEORIM_VERIFY_SMOKE_TIMEOUT_MS;
   if (!raw) return SMOKE_TIMEOUT_DEFAULT_MS;
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : SMOKE_TIMEOUT_DEFAULT_MS;
@@ -277,7 +277,7 @@ function smokeTimeoutFromEnv() {
 //   smoke                - true면 backend smoke test 추가(default: false, ADR 0048)
 //   spawnProcess         - smoke 전용 의존성 주입. 기본은 process-helpers의 defaultSpawnProcess
 //   fetchHealth          - smoke 전용 의존성 주입. (url, opts) => Promise<boolean>
-//   smokeTimeoutMs       - smoke /health 폴링 timeout(기본 60초 또는 BEOREUM_VERIFY_SMOKE_TIMEOUT_MS)
+//   smokeTimeoutMs       - smoke /health 폴링 timeout(기본 60초 또는 BYEORIM_VERIFY_SMOKE_TIMEOUT_MS)
 //   smokeIntervalMs      - smoke 폴링 간격(기본 1초)
 //   now                  - 테스트용 결정적 시각(선택)
 //
@@ -296,18 +296,18 @@ export async function runVerify({
 } = {}) {
   if (!cwd) throw new Error('runVerify({ cwd })가 필요합니다');
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
 
   if (!existsSync(stateFile)) {
-    throw new Error('.beoreum/state.yml이 없습니다. 먼저 beoreum init을 실행해주세요');
+    throw new Error('.byeorim/state.yml이 없습니다. 먼저 byeorim init을 실행해주세요');
   }
 
-  const architecture = loadArchitecture(beoreumDir);
-  const targets = buildTargets(beoreumDir, architecture);
+  const architecture = loadArchitecture(byeorimDir);
+  const targets = buildTargets(byeorimDir, architecture);
 
   if (targets.length === 0) {
-    throw new Error('생성된 backend/frontend가 없습니다. 먼저 beoreum set을 실행해주세요');
+    throw new Error('생성된 backend/frontend가 없습니다. 먼저 byeorim set을 실행해주세요');
   }
 
   const results = [];
@@ -317,7 +317,7 @@ export async function runVerify({
 
   // ADR 0048: --smoke 플래그가 있으면 backend smoke test 추가.
   if (smoke) {
-    const intent = loadIntent(beoreumDir);
+    const intent = loadIntent(byeorimDir);
     const smokeResult = await runSmokeTest({
       cwd,
       intent,
@@ -330,7 +330,7 @@ export async function runVerify({
     if (smokeResult) results.push(smokeResult);
   }
 
-  const reportFile = join(beoreumDir, 'project', 'verify-report.md');
+  const reportFile = join(byeorimDir, 'project', 'verify-report.md');
   writeFileSync(reportFile, buildReport(results, now), 'utf8');
 
   const passedCount = results.filter((r) => r.passed).length;

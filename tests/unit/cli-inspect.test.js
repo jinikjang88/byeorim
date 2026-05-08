@@ -19,7 +19,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-inspect-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-inspect-'));
 }
 
 async function withTempCwd(fn) {
@@ -58,7 +58,7 @@ async function setupReadyForInspect(cwd, blockIds = ['order']) {
 }
 
 function readReport(cwd) {
-  return readFileSync(join(cwd, '.beoreum', 'project', 'inspect-report.md'), 'utf8');
+  return readFileSync(join(cwd, '.byeorim', 'project', 'inspect-report.md'), 'utf8');
 }
 
 test('정상 흐름: 7단계 끝까지 가서 inspect-report.md를 만들고 done marker로 전환된다', async () => {
@@ -73,7 +73,7 @@ test('정상 흐름: 7단계 끝까지 가서 inspect-report.md를 만들고 don
     assert.equal(result.isDone, true);
     const report = readReport(cwd);
     assert.match(report, /2026-04-28T12:00:00\.000Z/);
-    assert.match(report, /벼름의 마지막 단계 비춤/);
+    assert.match(report, /벼림의 마지막 단계 비춤/);
   });
 });
 
@@ -121,7 +121,7 @@ test('시장 재검 영역에 reality-check.md 경로 안내가 있다(ADR 0016 
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
     const report = readReport(cwd);
-    assert.match(report, /\.beoreum\/project\/reality-check\.md/);
+    assert.match(report, /\.byeorim\/project\/reality-check\.md/);
     assert.match(report, /다시 읽어보세요/);
   });
 });
@@ -132,8 +132,8 @@ test('마무리 섹션에 다이어리와 합성 README 경로 안내가 있다'
     await runInspect({ cwd });
     const report = readReport(cwd);
     assert.match(report, /## 마무리/);
-    assert.match(report, /\.beoreum\/project\/diary\.md/);
-    assert.match(report, /\.beoreum\/project\/generated\/README\.md/);
+    assert.match(report, /\.byeorim\/project\/diary\.md/);
+    assert.match(report, /\.byeorim\/project\/generated\/README\.md/);
     assert.match(report, /7단계 흐름이 끝났습니다/);
   });
 });
@@ -142,7 +142,7 @@ test('state.yml이 done marker로 전환되고 7단계 모두 completed_stages�
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
-    const state = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const state = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(state.current_stage, 'done');
     assert.deepEqual(state.completed_stages, [
       'prospect',
@@ -195,7 +195,7 @@ test('ADR 0046 baseline이 박힌 코드는 보안 영역에 pass finding이 여
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
-    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const reportFile = join(cwd, '.byeorim', 'project', 'inspect-report.md');
     const report = readFileSync(reportFile, 'utf8');
     // pass 마커가 보안 영역에 여러 개
     assert.match(report, /✓.*JWT_SECRET startup 검사가 박혀 있습니다/);
@@ -209,7 +209,7 @@ test('frontend의 CSP meta와 vite prod 가드가 pass로 박힌다', async () =
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
-    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const reportFile = join(cwd, '.byeorim', 'project', 'inspect-report.md');
     const report = readFileSync(reportFile, 'utf8');
     assert.match(report, /✓.*index\.html에 CSP meta가 박혀 있습니다/);
     assert.match(report, /✓.*prod build에서 placeholder 가드가 동작합니다/);
@@ -230,7 +230,7 @@ test('정적 finding이 비어있는 영역은 빈 안내 한 줄로 박힌다',
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
-    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const reportFile = join(cwd, '.byeorim', 'project', 'inspect-report.md');
     const report = readFileSync(reportFile, 'utf8');
     // 새 메시지 결
     const matches =
@@ -244,7 +244,7 @@ test('concern severity가 있으면 머리에 강한 신호 blockquote가 박힌
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     // generated/backend의 server.js를 의도적으로 망가뜨려 concern 발생 시뮬레이션
-    const serverFile = join(cwd, '.beoreum', 'project', 'generated', 'backend', 'src', 'server.js');
+    const serverFile = join(cwd, '.byeorim', 'project', 'generated', 'backend', 'src', 'server.js');
     const broken = `// 망가진 server.js (테스트용)\nimport Fastify from 'fastify';\nconst app = Fastify();\napp.listen({ port: 3000 });\n`;
     writeFileSync(serverFile, broken, 'utf8');
 
@@ -260,7 +260,7 @@ test('finding이 영역별로 grouping되어 표시된다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
-    const reportFile = join(cwd, '.beoreum', 'project', 'inspect-report.md');
+    const reportFile = join(cwd, '.byeorim', 'project', 'inspect-report.md');
     const report = readFileSync(reportFile, 'utf8');
     // 보안 섹션과 운영 섹션 안에 코드 검수가 있어야 한다
     const securityIdx = report.indexOf('## 1. 보안');
@@ -326,7 +326,7 @@ test('finding의 source prefix가 [정적]/[AI]로 박힌다(ADR 0050 결정 8)'
       },
     ]);
     await runInspect({ cwd, adapter });
-    const report = readFileSync(join(cwd, '.beoreum', 'project', 'inspect-report.md'), 'utf8');
+    const report = readFileSync(join(cwd, '.byeorim', 'project', 'inspect-report.md'), 'utf8');
     // 정적 finding은 [정적] prefix
     assert.match(report, /\[정적\] ✓.*JWT_SECRET startup 검사/);
     // AI finding은 [AI] prefix
@@ -351,10 +351,10 @@ test('AI 검수 실패 시 graceful degrade로 정적만 보고하고 안내가 
     // 정적 finding은 그대로 박힘
     assert.ok(result.staticFindingCount > 0);
     // report 머리에 안내
-    const report = readFileSync(join(cwd, '.beoreum', 'project', 'inspect-report.md'), 'utf8');
+    const report = readFileSync(join(cwd, '.byeorim', 'project', 'inspect-report.md'), 'utf8');
     assert.match(report, /AI 검수가 실패했습니다/);
     assert.match(report, /네트워크 연결 실패/);
-    assert.match(report, /BEOREUM_AI_ADAPTER/);
+    assert.match(report, /BYEORIM_AI_ADAPTER/);
   });
 });
 
@@ -379,7 +379,7 @@ test('AI finding이 source 필드 없이 와도 source=ai로 박힌다', async (
       },
     };
     await runInspect({ cwd, adapter });
-    const report = readFileSync(join(cwd, '.beoreum', 'project', 'inspect-report.md'), 'utf8');
+    const report = readFileSync(join(cwd, '.byeorim', 'project', 'inspect-report.md'), 'utf8');
     // [AI] prefix가 박혀야 함(폴백)
     assert.match(report, /\[AI\] ⚠.*no source/);
   });

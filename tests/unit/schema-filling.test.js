@@ -20,7 +20,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-schema-fill-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-schema-fill-'));
 }
 
 async function withTempCwd(fn) {
@@ -126,7 +126,7 @@ test('Node schemas.js가 채워진 schema에서 JSON Schema body/response를 emi
     await setupWithSchemaFill(cwd, ['order'], 'node');
     const schemasPath = join(
       cwd,
-      '.beoreum',
+      '.byeorim',
       'project',
       'generated',
       'backend',
@@ -151,7 +151,7 @@ test('Java DTO record가 채워진 schema에서 record 필드를 emit한다', as
     await setupWithSchemaFill(cwd, ['order'], 'java');
     const controllerPath = join(
       cwd,
-      '.beoreum',
+      '.byeorim',
       'project',
       'generated',
       'backend',
@@ -162,7 +162,7 @@ test('Java DTO record가 채워진 schema에서 record 필드를 emit한다', as
       'java',
       'com',
       'example',
-      'beoreum',
+      'byeorim',
       'order',
       'web',
       'OrderController.java',
@@ -183,12 +183,12 @@ test('Python Pydantic 모델이 채워진 schema에서 필드를 emit한다', as
     await setupWithSchemaFill(cwd, ['order'], 'python');
     const schemasPath = join(
       cwd,
-      '.beoreum',
+      '.byeorim',
       'project',
       'generated',
       'backend',
       'src',
-      'beoreum',
+      'byeorim',
       'features',
       'order',
       'schemas.py',
@@ -210,7 +210,7 @@ test('Frontend types.ts가 채워진 schema에서 TS interface 필드를 emit한
     await setupWithSchemaFill(cwd, ['order'], 'node');
     const typesPath = join(
       cwd,
-      '.beoreum',
+      '.byeorim',
       'project',
       'generated',
       'frontend',
@@ -237,7 +237,7 @@ test('internal 블럭은 schema 채움이 안 된다(공개 API 없음)', async 
   await withTempCwd(async (cwd) => {
     await setupWithSchemaFill(cwd, ['payment'], 'node'); // pg-integration이 internal로 따라옴
     const contracts = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'contracts.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'),
     );
     const pg = contracts.contracts.find((c) => c.block_id === 'pg-integration');
     assert.equal(pg.internal, true);

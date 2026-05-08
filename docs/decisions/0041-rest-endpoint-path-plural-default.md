@@ -11,7 +11,7 @@ forge가 contracts.yml을 만들 때 endpoint path를 `pathFromBlockId(block.id)
 
 업계 관례를 보면 REST API path는 압도적으로 복수형이다. Microsoft REST API Guidelines, Google API Design Guide, Stripe, GitHub, PayPal, Twilio, Heroku 등 주요 스타일 가이드 모두 컬렉션에 복수형 명사를 쓴다("Resource names should be plural"). 의미상 `GET /orders`는 컬렉션 목록, `GET /orders/{id}`는 한 건이라는 결이 자연스럽다. OpenAPI 스펙 자체는 단수/복수에 중립이지만 OpenAPI 도구 예시(`/pets`, `/users`)도 복수형을 쓴다.
 
-Beoreum의 1순위 사용자(비기술 창업자)는 path 결을 직접 못 본다. 다만 만든 API를 받아 쓸 엔지니어들이 단수형을 어색하게 여길 자리. CLAUDE.md 섹션 1(프로토타입이지만 프로덕션급 코드 품질)과 섹션 0(글로벌 오픈소스 표준 비전) 정신상 관례에 맞추는 결이 옳다.
+Byeorim의 1순위 사용자(비기술 창업자)는 path 결을 직접 못 본다. 다만 만든 API를 받아 쓸 엔지니어들이 단수형을 어색하게 여길 자리. CLAUDE.md 섹션 1(프로토타입이지만 프로덕션급 코드 품질)과 섹션 0(글로벌 오픈소스 표준 비전) 정신상 관례에 맞추는 결이 옳다.
 
 이 ADR로 forge의 path 매핑을 복수형으로 갱신한다. 이전 단수형 결은 미래 ADR로 대체된다.
 
@@ -62,10 +62,10 @@ Beoreum의 1순위 사용자(비기술 창업자)는 path 결을 직접 못 본�
 ### 결정 4. 기존 사용자 마이그레이션
 
 #### 옵션 A. 자동 마이그레이션 없음(사용자가 forge 다시 돌리거나 import-review로 다듬음)
-- 장점: 자동 마이그레이션은 위험. 기존 contracts.yml에 사용자가 직접 다듬은 자리도 있을 수 있어 자동 변환은 사용자 의지 무시. 사용자가 forge를 다시 돌리면 새 path로 갱신. import-review(ADR 0039)로 자리마다 path를 바꾸는 결도 가능. Beoreum이 아직 production 사용자 없는 결이라 부담 작음
+- 장점: 자동 마이그레이션은 위험. 기존 contracts.yml에 사용자가 직접 다듬은 자리도 있을 수 있어 자동 변환은 사용자 의지 무시. 사용자가 forge를 다시 돌리면 새 path로 갱신. import-review(ADR 0039)로 자리마다 path를 바꾸는 결도 가능. Byeorim이 아직 production 사용자 없는 결이라 부담 작음
 - 단점: 사용자가 마이그레이션 자리를 자기 결로 풀어야 함. 다만 안내 한 줄로 풀어줌
 
-#### 옵션 B. 자동 마이그레이션 도구(`beoreum forge migrate-paths`)
+#### 옵션 B. 자동 마이그레이션 도구(`byeorim forge migrate-paths`)
 - 장점: 사용자 부담 적음
 - 단점: 사용자가 직접 다듬은 path를 덮어쓸 위험. 이번 출시는 over-design. 미래에 사용자 피드백이 쌓이면 후속 ADR
 
@@ -107,10 +107,10 @@ function pathFromBlockId(blockId) {
 
 ### 결정 4: 자동 마이그레이션 없음 (옵션 A)
 
-기존 사용자(.beoreum/contracts.yml에 단수형 path가 있음)는 다음 자리에서 갱신.
+기존 사용자(.byeorim/contracts.yml에 단수형 path가 있음)는 다음 자리에서 갱신.
 
 - forge를 다시 돌리면 새 복수형 path로 갱신(state가 forge 단계여야 함. 이미 진행한 사용자는 state 자리를 손으로 되돌리는 결)
-- 또는 `beoreum forge import-review`(ADR 0039)로 외부 AI 응답을 받아 path를 자리마다 다듬는 결
+- 또는 `byeorim forge import-review`(ADR 0039)로 외부 AI 응답을 받아 path를 자리마다 다듬는 결
 - 또는 contracts.yml을 직접 수정(절대 금지선 5번 정신상 권장 안 함)
 
 CLI 출력에 안내. forge가 처음 돌 때 또는 사용자가 status로 볼 때 한 번 안내.
@@ -126,7 +126,7 @@ CLI 출력에 안내. forge가 처음 돌 때 또는 사용자가 status로 볼 
 
 ### 부정적 / 트레이드오프
 - pluralize 의존성 한 자리 추가. ~2KB라 무게 작지만 의존성 자리는 한 번 더 자라남
-- 기존 사용자(.beoreum/contracts.yml)는 자동 마이그레이션 안 됨. 사용자가 forge를 다시 돌리거나 import-review로 다듬어야 함. Beoreum이 아직 production 사용자 없는 결이라 부담 작지만 미래 사용자에는 안내 자리 필요
+- 기존 사용자(.byeorim/contracts.yml)는 자동 마이그레이션 안 됨. 사용자가 forge를 다시 돌리거나 import-review로 다듬어야 함. Byeorim이 아직 production 사용자 없는 결이라 부담 작지만 미래 사용자에는 안내 자리 필요
 - 하이픈 복합어의 마지막 단어가 동사형(예: `inventory-manage`, `product-register`)이면 결과가 어색(`inventory-manages`, `product-registers`). 카탈로그 작성자가 명사형 id를 박는 결이 자연스러움. 미래에 카탈로그 path override 자리(별도 ADR)가 풀어줄 자리
 - 한국어 block id는 단수형 폴백이라 path가 한국어 char 그대로(URL 인코딩 자리). 카탈로그 작성자가 영문 id를 쓰는 결이 권장. 미래 ADR로 path 필드 옵셔널을 추가할 자리
 

@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0007이 `.beoreum/project/architecture.yml`을 Shape 단계 산출물 자리로 박았다. 그러나 그 파일 안이 어떻게 생겼는지, Shape이 어떤 결정을 책임지는지는 정하지 않았다. 이 ADR이 그 자리를 채운다.
+ADR 0007이 `.byeorim/project/architecture.yml`을 Shape 단계 산출물 자리로 박았다. 그러나 그 파일 안이 어떻게 생겼는지, Shape이 어떤 결정을 책임지는지는 정하지 않았다. 이 ADR이 그 자리를 채운다.
 
 Shape는 "쇳물을 거푸집에 부어 형태를 잡는 일"이다(MANIFESTO III장). 직전 단계(Smelt)가 정한 블럭과 의존성을 입력으로 받아, 그 블럭들이 어떤 기술적 형태를 가질지 결정한다. 데이터베이스, 언어, API 형식, 구조 패턴 같은 자리.
 
@@ -118,7 +118,7 @@ interactiveShape는 decisions.yml을 읽어 답한 결정 수와 빈 결정 수�
 
 Shape는 architecture.yml에 결정만 기록한다. ADR 파일을 자동으로 만들지 않는다.
 
-CLAUDE.md 섹션 6의 약속(아키텍처 결정에 ADR)은 사용자가 직접 ADR을 작성하거나, 미래의 별도 명령어(`beoreum decide`나 `beoreum adr` 같은 자리)가 architecture.yml의 결정을 토대로 ADR 빈 템플릿을 만드는 흐름으로 지킬 수 있다.
+CLAUDE.md 섹션 6의 약속(아키텍처 결정에 ADR)은 사용자가 직접 ADR을 작성하거나, 미래의 별도 명령어(`byeorim decide`나 `byeorim adr` 같은 자리)가 architecture.yml의 결정을 토대로 ADR 빈 템플릿을 만드는 흐름으로 지킬 수 있다.
 
 이번 출시는 ADR 자동 생성을 하지 않으므로, 사용자가 architecture.yml의 결정을 ADR로 옮기는 일은 수동이다. 다만 architecture.yml 자체가 결정의 단일 출처이므로 추적이 어렵지 않다.
 
@@ -145,6 +145,6 @@ CLAUDE.md 섹션 6의 약속(아키텍처 결정에 ADR)은 사용자가 직접 
 - 자동 ADR 생성은 미래 ADR로 결정한다. 도입 시 빈 템플릿이 양산되지 않는 매커니즘(예: 사용자가 ADR 작성 시작 시점에 명시적 호출)이 함께 와야 한다
 
 ## 링크
-- 이전 결정: ADR 0007 (.beoreum/ 자리), ADR 0010 (decisions.yml 형식), ADR 0011 (인터랙티브 prompt 정책)
+- 이전 결정: ADR 0007 (.byeorim/ 자리), ADR 0010 (decisions.yml 형식), ADR 0011 (인터랙티브 prompt 정책)
 - 후속 작업 후보: 추가 결정 자리(인증/캐시/큐) ADR, cascade 답안 매핑 규칙 ADR, 자동 ADR 생성 ADR
 - 관련 정책: CLAUDE.md 섹션 0(사용자 우선순위), 섹션 6(ADR 작성 정책), 섹션 8(파일당 책임, 한국어 메시지)

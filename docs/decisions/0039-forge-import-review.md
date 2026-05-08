@@ -7,7 +7,7 @@
 
 ## 맥락
 
-ADR 0035가 forge에 외부 검토 프롬프트 부산물(`.beoreum/project/prompts/contracts-review-prompt.md`)을 박았다. 사용자는 이 마크다운을 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 endpoint 누락/과다, schema 도메인 적합성, 시작 무게를 자세히 검토받는다. 그러나 받은 응답을 다시 contracts.yml에 반영하는 자리가 비어있다. 사용자가 응답을 읽고 yml을 직접 다듬는 결로만 풀린다.
+ADR 0035가 forge에 외부 검토 프롬프트 부산물(`.byeorim/project/prompts/contracts-review-prompt.md`)을 박았다. 사용자는 이 마크다운을 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 endpoint 누락/과다, schema 도메인 적합성, 시작 무게를 자세히 검토받는다. 그러나 받은 응답을 다시 contracts.yml에 반영하는 자리가 비어있다. 사용자가 응답을 읽고 yml을 직접 다듬는 결로만 풀린다.
 
 비기술 창업자(1순위 사용자) 시점에서 두 자리가 비어있다.
 
@@ -15,7 +15,7 @@ ADR 0035가 forge에 외부 검토 프롬프트 부산물(`.beoreum/project/prom
 
 둘째, 응답 형식 신뢰 자리. 외부 AI는 자유 형식으로 답한다. 사용자가 응답을 한 줄씩 읽고 어떤 자리가 endpoint 추가인지, schema 수정인지를 판단하는 결은 비기술 창업자에게 부담이다. 동행 톤(ADR 0003 결정 2) 정신상 코드가 응답을 읽고 사용자가 자리마다 적용/건너뛰기 결정만 하는 결이 옳다.
 
-이 두 자리를 한 묶음으로 푼다. 외부 AI에게 자유 형식 검토 끝에 구조화된 "제안된 변경 사항" 섹션을 한 번 더 추가하라고 안내한다(검토 프롬프트에 형식 가이드 박음). 사용자는 받은 응답을 `beoreum forge import-review <file>`로 가져온다. 코드는 구조화 섹션을 파싱하고 각 제안마다 사용자에게 picker로 묻는다.
+이 두 자리를 한 묶음으로 푼다. 외부 AI에게 자유 형식 검토 끝에 구조화된 "제안된 변경 사항" 섹션을 한 번 더 추가하라고 안내한다(검토 프롬프트에 형식 가이드 박음). 사용자는 받은 응답을 `byeorim forge import-review <file>`로 가져온다. 코드는 구조화 섹션을 파싱하고 각 제안마다 사용자에게 picker로 묻는다.
 
 ## 검토한 옵션
 
@@ -63,11 +63,11 @@ ADR 0035가 forge에 외부 검토 프롬프트 부산물(`.beoreum/project/prom
 
 ### 결정 4. 명령어 자리
 
-#### 옵션 A. 서브커맨드 `beoreum forge import-review <file>`
-- 장점: prospect의 `beoreum prospect import-catalog`(ADR 0028) 결과 평행. 단계마다 다른 yml을 다른 결로 파싱하므로 명령어를 갈라두는 게 코드 자리도 깨끗
+#### 옵션 A. 서브커맨드 `byeorim forge import-review <file>`
+- 장점: prospect의 `byeorim prospect import-catalog`(ADR 0028) 결과 평행. 단계마다 다른 yml을 다른 결로 파싱하므로 명령어를 갈라두는 게 코드 자리도 깨끗
 - 단점: 명령어 자리가 둘(forge, temper) 자라남
 
-#### 옵션 B. 독립 명령 `beoreum import-review <file>`(단계 자동 감지)
+#### 옵션 B. 독립 명령 `byeorim import-review <file>`(단계 자동 감지)
 - 장점: 명령어 한 자리
 - 단점: 단계 자동 감지 결이 어긋날 자리(예: 사용자가 temper 응답을 forge 단계에서 import하려고 할 때). 명령어와 단계 짝이 흐려짐
 
@@ -199,11 +199,11 @@ invalid 자리는 picker 시작 전에 한 번에 안내(예: "변경 7개 중 2
 
 ### 결정 4: 서브커맨드 (옵션 A)
 
-`beoreum forge import-review <file>`. prospect의 import-catalog 결과 평행. temper는 후속 PR(ADR 0040 자리)에서 같은 결로 박힘.
+`byeorim forge import-review <file>`. prospect의 import-catalog 결과 평행. temper는 후속 PR(ADR 0040 자리)에서 같은 결로 박힘.
 
 ### 결정 5: 파일 경로 (옵션 A)
 
-`beoreum forge import-review ./response.md`. 사용자가 외부 AI에서 받은 응답을 텍스트 파일로 저장한 뒤 경로를 적는 결.
+`byeorim forge import-review ./response.md`. 사용자가 외부 AI에서 받은 응답을 텍스트 파일로 저장한 뒤 경로를 적는 결.
 
 ### 결정 6: graceful degrade (옵션 A)
 
@@ -221,7 +221,7 @@ import는 contracts.yml만 다듬는 자리라 state.current_stage를 안 건드
 
 ```
 contracts.yml을 갱신했어요(N개 적용, M개 건너뜀).
-test-scenarios.yml이 이미 있어요. contracts가 바뀌었으니 beoreum temper를 다시 돌리는 결을 검토해주세요.
+test-scenarios.yml이 이미 있어요. contracts가 바뀌었으니 byeorim temper를 다시 돌리는 결을 검토해주세요.
 ```
 
 stage가 forge가 아닐 때(예: temper, set, inspect로 진행했을 때)도 import 가능. contracts.yml만 있으면 동작. ensure는 contracts.yml 존재만.

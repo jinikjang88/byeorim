@@ -83,10 +83,10 @@ export function springAnnotation(method) {
 // dev placeholder 표준 마커. ADR 0046 결정 5.
 // .env / application.yml / .env.production 등에 박히는 dev-only 값의 prefix.
 // 모든 generator의 prod-mode 가드가 이 prefix를 검사한다.
-export const DEV_PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_';
+export const DEV_PLACEHOLDER_PREFIX = 'BYEORIM_DEV_PLACEHOLDER_';
 
 // dev placeholder 값을 만든다. 키 이름을 받아 prefix + 키 + suffix로 한 줄 마커.
-// 예: devPlaceholder('jwt_secret') → 'BEOREUM_DEV_PLACEHOLDER_jwt_secret_change_before_production'
+// 예: devPlaceholder('jwt_secret') → 'BYEORIM_DEV_PLACEHOLDER_jwt_secret_change_before_production'
 export function devPlaceholder(keyName) {
   const safe = String(keyName || 'value')
     .toLowerCase()

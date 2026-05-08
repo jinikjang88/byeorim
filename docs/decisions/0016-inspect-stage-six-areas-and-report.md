@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0006이 7단계 메타포의 마지막 자리로 비춤(Inspect)을 박았다. ADR 0007이 산출물 자리(`.beoreum/project/inspect-report.md`)를 박았다. MANIFESTO III장이 비춤의 의미를 정의했다. "빛에 비춰 결함을 보는 일이다. 보안, 성능, 운영, 확장성, 그리고 다시 시장의 관점까지. 여러 각도에서 한 번 더 본다."
+ADR 0006이 7단계 메타포의 마지막 자리로 비춤(Inspect)을 박았다. ADR 0007이 산출물 자리(`.byeorim/project/inspect-report.md`)를 박았다. MANIFESTO III장이 비춤의 의미를 정의했다. "빛에 비춰 결함을 보는 일이다. 보안, 성능, 운영, 확장성, 그리고 다시 시장의 관점까지. 여러 각도에서 한 번 더 본다."
 
 ADR 0003 결정 3이 비춤 단계에 한 가지 자리를 더 추가했다. "Inspect 단계 또는 출시 직전 + 법적 리스크의 즉각 손해 항목"에 강한 신호를 사용한다. 평소 동행 톤을 유지하되 법적 리스크는 예외.
 
@@ -134,7 +134,7 @@ forge/temper/set이 모두 deterministic skeleton을 만든 결과 같다. 한 �
 
 prospect 단계에서 본 시장을 다시 봅니다. 만들기 시작했을 때와 출시 직전의 시각은 다릅니다.
 
-`.beoreum/project/reality-check.md`를 다시 읽어보세요. 그때와 시장이 달라진 자리가 있나요?
+`.byeorim/project/reality-check.md`를 다시 읽어보세요. 그때와 시장이 달라진 자리가 있나요?
 
 - [ ] ...
 ```

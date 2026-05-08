@@ -14,7 +14,7 @@ import {
   devPlaceholder,
 } from './util.js';
 
-const PROJECT_PACKAGE_FALLBACK = 'beoreum';
+const PROJECT_PACKAGE_FALLBACK = 'byeorim';
 const PYTHON_VERSION = '^3.11';
 
 // endpoints의 base path 결정. forge가 첫 endpoint를 컬렉션/싱글톤 base로 박는다.
@@ -39,13 +39,13 @@ function buildProjectPackage(intent) {
 
 function buildProjectName(intent) {
   const what = getIntentWhat(intent);
-  if (!what) return 'beoreum-project';
+  if (!what) return 'byeorim-project';
   const slug = what
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || 'beoreum-project';
+  return slug || 'byeorim-project';
 }
 
 // ── 루트 파일 ──────────────────────────────────────────────
@@ -54,7 +54,7 @@ function buildPyprojectToml(projectName, projectPackage) {
   return `[tool.poetry]
 name = "${projectName}"
 version = "0.1.0"
-description = "벼름이 자동 생성한 FastAPI 백엔드. ADR 0020을 따른다."
+description = "벼림이 자동 생성한 FastAPI 백엔드. ADR 0020을 따른다."
 authors = ["DevSmith"]
 packages = [{ include = "${projectPackage}", from = "src" }]
 
@@ -94,7 +94,7 @@ testpaths = ["tests"]
 function buildBackendReadme(projectName, projectPackage, featureCount) {
   return `# ${projectName} (Python)
 
-벼름이 자동 생성한 FastAPI 백엔드 스켈레톤입니다. ADR 0020과 ADR 0046을 따릅니다.
+벼림이 자동 생성한 FastAPI 백엔드 스켈레톤입니다. ADR 0020과 ADR 0046을 따릅니다.
 
 ## 시작하기 (dev)
 
@@ -109,7 +109,7 @@ function buildBackendReadme(projectName, projectPackage, featureCount) {
 
 ## prod로 옮기기
 
-\`.env.production\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BEOREUM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 다음으로 띄웁니다.
+\`.env.production\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BYEORIM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 다음으로 띄웁니다.
 
 \`\`\`
 PYTHON_ENV=production poetry run uvicorn ${projectPackage}.main:app
@@ -238,7 +238,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # dev placeholder 표준 마커(ADR 0046 결정 5).
 # 모든 generator의 prod-mode 가드가 이 prefix를 검사한다.
-DEV_PLACEHOLDER_PREFIX = "BEOREUM_DEV_PLACEHOLDER_"
+DEV_PLACEHOLDER_PREFIX = "BYEORIM_DEV_PLACEHOLDER_"
 
 # PYTHON_ENV로 dev/.env 또는 prod/.env.production 분기 로드.
 _env_file = ".env.production" if os.environ.get("PYTHON_ENV") == "production" else ".env"
@@ -301,7 +301,7 @@ LOG_LEVEL=DEBUG
 // .env.production (prod 템플릿). ADR 0046 결정 2.
 function buildEnvProduction() {
   return `# 자동 생성된 prod 환경 변수 템플릿. ADR 0046을 따른다.
-# 이 파일을 prod에 배포하기 전에 모든 BEOREUM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
+# 이 파일을 prod에 배포하기 전에 모든 BYEORIM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
 # 채우지 않은 채로 PYTHON_ENV=production으로 기동하면 시작이 거부된다.
 
 PYTHON_ENV=production
@@ -572,7 +572,7 @@ ${handlers}
 //
 // 입력:
 //   inputs        - set.js의 loadInputs 결과
-//   generatedDir  - .beoreum/project/generated 절대 경로
+//   generatedDir  - .byeorim/project/generated 절대 경로
 //   now           - 테스트용 결정적 시각(현재 사용 안 함)
 //
 // 반환: { backendDir, featureCount, fileCount }

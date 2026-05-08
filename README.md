@@ -1,6 +1,6 @@
-# 벼름 (Beoreum)
+# 벼림 (Byeorim)
 
-벼름은 AI로 자기 서비스를 만들고 싶은 사람을 돕는 도구다. 막연한 아이디어를 곧장 코드로 바꾸기 전에, 그 서비스가 어떤 모양으로 이루어질지 함께 본다. AI는 동료처럼 꼼꼼히 묻는다. 답을 강요하지 않는다. 답하지 못한 질문은 다이어리에 남겨두고 함께 다음 단계로 간다.
+벼림은 AI로 자기 서비스를 만들고 싶은 사람을 돕는 도구다. 막연한 아이디어를 곧장 코드로 바꾸기 전에, 그 서비스가 어떤 모양으로 이루어질지 함께 본다. AI는 동료처럼 꼼꼼히 묻는다. 답을 강요하지 않는다. 답하지 못한 질문은 다이어리에 남겨두고 함께 다음 단계로 간다.
 
 자세한 배경은 [docs/MANIFESTO.md](docs/MANIFESTO.md)에서 본다.
 
@@ -16,17 +16,17 @@
 
 ## 7단계로 만든다
 
-벼름은 대장장이의 일곱 단계로 일을 진행한다. 각 단계가 끝나면 다음 단계로 자연스럽게 넘어간다.
+벼림은 대장장이의 일곱 단계로 일을 진행한다. 각 단계가 끝나면 다음 단계로 자연스럽게 넘어간다.
 
 | 단계 | 한국어 | 명령어 | 무엇을 하는가 |
 |------|--------|--------|---------|
-| 0 | 탐광 | `beoreum prospect` | 7가지 질문에 답하면서 만들고 싶은 서비스를 그린다. AI가 도메인 카탈로그(블럭 모음)를 가져온다 |
-| 1 | 제련 | `beoreum smelt` | 카탈로그에서 필요한 블럭을 고른다. AI가 어울리는 블럭을 추천한다 |
-| 2 | 빚다 | `beoreum shape` | 4가지 핵심을 정한다. 어떤 언어, 어떤 데이터베이스, 어떤 API 형태, 어떤 코드 구조 |
-| 3 | 단조 | `beoreum forge` | API 계약을 만든다. AI가 입출력 데이터 모양을 채운다 |
-| 4 | 다듬 | `beoreum temper` | 시나리오로 무엇을 검증할지 정한다. AI가 테스트 코드를 채운다 |
-| 5 | 세움 | `beoreum set` | 실제 코드(Backend + Frontend)를 만든다 |
-| 6 | 비춤 | `beoreum inspect` | 만든 서비스를 보안/성능/운영/확장성/법적/시장 6각도에서 점검한다 |
+| 0 | 탐광 | `byeorim prospect` | 7가지 질문에 답하면서 만들고 싶은 서비스를 그린다. AI가 도메인 카탈로그(블럭 모음)를 가져온다 |
+| 1 | 제련 | `byeorim smelt` | 카탈로그에서 필요한 블럭을 고른다. AI가 어울리는 블럭을 추천한다 |
+| 2 | 빚다 | `byeorim shape` | 4가지 핵심을 정한다. 어떤 언어, 어떤 데이터베이스, 어떤 API 형태, 어떤 코드 구조 |
+| 3 | 단조 | `byeorim forge` | API 계약을 만든다. AI가 입출력 데이터 모양을 채운다 |
+| 4 | 다듬 | `byeorim temper` | 시나리오로 무엇을 검증할지 정한다. AI가 테스트 코드를 채운다 |
+| 5 | 세움 | `byeorim set` | 실제 코드(Backend + Frontend)를 만든다 |
+| 6 | 비춤 | `byeorim inspect` | 만든 서비스를 보안/성능/운영/확장성/법적/시장 6각도에서 점검한다 |
 
 별칭이 있다. `prs`(prospect), `sml`(smelt), `shp`(shape), `frg`(forge), `tmr`(temper), `set`, `ins`(inspect).
 
@@ -34,22 +34,22 @@
 
 | 명령어 | 무엇을 하는가 |
 |---|---|
-| `beoreum init` | 작업 공간을 만든다 (다른 명령 전에 한 번만) |
-| `beoreum status` | 지금 어디까지 왔는지 본다 |
-| `beoreum answer` | smelt에서 미뤄둔 질문에 답한다 |
-| `beoreum run` | 만든 Backend + Frontend를 한 번에 띄운다 |
-| `beoreum verify` | 만든 코드가 잘 컴파일되고 테스트가 통과하는지 본다. `--smoke` 옵션을 더하면 실제로 띄워서 살아있는지도 확인 |
-| `beoreum <단계> import-review <응답파일>` | 외부 AI(Claude.ai/ChatGPT/Gemini 등)에서 받은 검토 응답을 다시 가져온다. smelt/shape/forge/temper/inspect 단계에서 모두 같은 결로 동작(아래 "외부 AI에 검토받기" 참고). prospect는 `import-catalog`로 카탈로그 자체를 교체 |
+| `byeorim init` | 작업 공간을 만든다 (다른 명령 전에 한 번만) |
+| `byeorim status` | 지금 어디까지 왔는지 본다 |
+| `byeorim answer` | smelt에서 미뤄둔 질문에 답한다 |
+| `byeorim run` | 만든 Backend + Frontend를 한 번에 띄운다 |
+| `byeorim verify` | 만든 코드가 잘 컴파일되고 테스트가 통과하는지 본다. `--smoke` 옵션을 더하면 실제로 띄워서 살아있는지도 확인 |
+| `byeorim <단계> import-review <응답파일>` | 외부 AI(Claude.ai/ChatGPT/Gemini 등)에서 받은 검토 응답을 다시 가져온다. smelt/shape/forge/temper/inspect 단계에서 모두 같은 결로 동작(아래 "외부 AI에 검토받기" 참고). prospect는 `import-catalog`로 카탈로그 자체를 교체 |
 
 ## 시작하기
 
 ```bash
 npm install
-node bin/beoreum.js init
-node bin/beoreum.js prospect
+node bin/byeorim.js init
+node bin/byeorim.js prospect
 ```
 
-prospect가 7가지 질문을 차례로 한다. 답하기 어려운 질문은 비워둬도 된다. 다이어리(`.beoreum/project/diary.md`)에 모인다. 만들면서 다시 돌아와 답할 수 있다.
+prospect가 7가지 질문을 차례로 한다. 답하기 어려운 질문은 비워둬도 된다. 다이어리(`.byeorim/project/diary.md`)에 모인다. 만들면서 다시 돌아와 답할 수 있다.
 
 prospect가 끝나면 두 결과가 만들어진다.
 
@@ -59,7 +59,7 @@ prospect가 끝나면 두 결과가 만들어진다.
 비대화형으로 한 줄만 적고 싶다면 다음과 같이 한다.
 
 ```bash
-node bin/beoreum.js prospect 동네 빵집 단골 주문 앱
+node bin/byeorim.js prospect 동네 빵집 단골 주문 앱
 ```
 
 ## 외부 AI에 검토받기
@@ -67,7 +67,7 @@ node bin/beoreum.js prospect 동네 빵집 단골 주문 앱
 각 단계가 끝나면 부산물로 검토용 프롬프트가 자동으로 만들어진다. 사용자는 그 프롬프트를 외부 AI(Claude.ai, ChatGPT, Gemini 등)에 그대로 붙여넣어 자세한 검토를 받을 수 있다.
 
 ```
-.beoreum/project/prompts/
+.byeorim/project/prompts/
 ├── catalog-prompt.md                       # prospect: 더 자세한 카탈로그
 ├── block-review-prompt.md                  # smelt: 블럭 선택 검토
 ├── architecture-review-prompt.md           # shape: 아키텍처 검토
@@ -76,15 +76,15 @@ node bin/beoreum.js prospect 동네 빵집 단골 주문 앱
 └── inspect-review-prompt.md                # inspect: 6각도 코드 검수
 ```
 
-받은 답을 다시 벼름에 가져오는 명령도 있다. 단계마다 다음 명령을 쓴다.
+받은 답을 다시 벼림에 가져오는 명령도 있다. 단계마다 다음 명령을 쓴다.
 
 ```bash
-node bin/beoreum.js prospect import-catalog ./응답.yml      # 카탈로그 교체
-node bin/beoreum.js smelt import-review ./응답.md           # 블럭 추가/삭제
-node bin/beoreum.js shape import-review ./응답.md           # 아키텍처 4가지 변경
-node bin/beoreum.js forge import-review ./응답.md           # API 계약 갱신
-node bin/beoreum.js temper import-review ./응답.md          # 시나리오 갱신
-node bin/beoreum.js inspect import-review ./응답.md         # 검수 결과 추가
+node bin/byeorim.js prospect import-catalog ./응답.yml      # 카탈로그 교체
+node bin/byeorim.js smelt import-review ./응답.md           # 블럭 추가/삭제
+node bin/byeorim.js shape import-review ./응답.md           # 아키텍처 4가지 변경
+node bin/byeorim.js forge import-review ./응답.md           # API 계약 갱신
+node bin/byeorim.js temper import-review ./응답.md          # 시나리오 갱신
+node bin/byeorim.js inspect import-review ./응답.md         # 검수 결과 추가
 ```
 
 가져올 때 변경마다 "적용/건너뛰기/모두 적용" 등을 묻는다. 외부 AI가 가짜 안내를 줘도 사용자가 골라서 받을 수 있다.
@@ -94,7 +94,7 @@ node bin/beoreum.js inspect import-review ./응답.md         # 검수 결과 �
 `set` 단계가 끝나면 실제 Backend + Frontend 코드가 만들어진다. 두 서버를 한 번에 띄울 수 있다.
 
 ```bash
-node bin/beoreum.js run
+node bin/byeorim.js run
 ```
 
 콘솔에 두 서버 출력이 `[backend]` / `[frontend]` 표시로 함께 나온다. Backend가 준비되면 "✓ ready: http://localhost:3000" 같은 안내가 박힌다. Ctrl-C로 두 서버를 한 번에 정리한다.
@@ -104,8 +104,8 @@ node bin/beoreum.js run
 CI나 배포 직전 검증은 `verify` 명령으로 한다.
 
 ```bash
-node bin/beoreum.js verify          # 의존성 설치 + 테스트
-node bin/beoreum.js verify --smoke  # 위 + 실제 띄워서 살아있는지 확인
+node bin/byeorim.js verify          # 의존성 설치 + 테스트
+node bin/byeorim.js verify --smoke  # 위 + 실제 띄워서 살아있는지 확인
 ```
 
 ## 만든 코드의 안전망
@@ -149,19 +149,19 @@ set 단계가 만드는 코드는 단순한 빈 껍질이 아니다. 처음부�
 
 | 환경 변수 | 값 | 무엇 |
 | --- | --- | --- |
-| `BEOREUM_AI_ADAPTER` | `mock` 또는 `claude` | 어떤 AI를 쓸지 |
+| `BYEORIM_AI_ADAPTER` | `mock` 또는 `claude` | 어떤 AI를 쓸지 |
 | `ANTHROPIC_API_KEY` | `sk-ant-...` | Anthropic API 키 (직접 호출 시) |
 | `ANTHROPIC_BASE_URL` | `http://localhost:3000` 등 | API 키 없이 Claude Code 같은 도구를 거쳐 호출 |
-| `BEOREUM_AI_MODEL` | `claude-opus-4-7` (기본) | 모델 변경 (선택) |
+| `BYEORIM_AI_MODEL` | `claude-opus-4-7` (기본) | 모델 변경 (선택) |
 
 ### 두 가지 호출 경로
 
 **경로 1. Anthropic API 키로 직접**
 
 ```bash
-export BEOREUM_AI_ADAPTER=claude
+export BYEORIM_AI_ADAPTER=claude
 export ANTHROPIC_API_KEY=sk-ant-...
-node bin/beoreum.js prospect "온라인 책방"
+node bin/byeorim.js prospect "온라인 책방"
 ```
 
 한 흐름을 끝까지 도는 비용은 일반적으로 1달러 미만이다.
@@ -174,25 +174,25 @@ node bin/beoreum.js prospect "온라인 책방"
 # 1) Claude Code 브릿지 도구를 띄운다 (도구마다 명령이 다름)
 npx some-claude-bridge --port 3000
 
-# 2) 벼름이 그곳을 보게 한다
-export BEOREUM_AI_ADAPTER=claude
+# 2) 벼림이 그곳을 보게 한다
+export BYEORIM_AI_ADAPTER=claude
 export ANTHROPIC_BASE_URL=http://localhost:3000
-node bin/beoreum.js prospect "온라인 책방"
+node bin/byeorim.js prospect "온라인 책방"
 ```
 
-이 경로는 인증을 브릿지가 처리한다. 브릿지 도구는 외부 프로젝트라 벼름이 보증하지는 않는다. 사용자가 자기 환경에 맞는 도구를 고른다.
+이 경로는 인증을 브릿지가 처리한다. 브릿지 도구는 외부 프로젝트라 벼림이 보증하지는 않는다. 사용자가 자기 환경에 맞는 도구를 고른다.
 
-키도 baseURL도 없이 `BEOREUM_AI_ADAPTER=claude`를 켜면 한국어 안내로 멈춘다. 비용 걱정이 있으면 `BEOREUM_AI_ADAPTER`를 지우거나 `mock`으로 둔다.
+키도 baseURL도 없이 `BYEORIM_AI_ADAPTER=claude`를 켜면 한국어 안내로 멈춘다. 비용 걱정이 있으면 `BYEORIM_AI_ADAPTER`를 지우거나 `mock`으로 둔다.
 
 ## 약속
 
 - **무료 오픈소스 프로토타입**이다. 유료 등급, 게이트 기능, 옵트인 없는 사용 정보 수집은 없다
-- **모델 무관**이다. Claude, GPT, Gemini 어느 모델로도 `.beoreum/` 디렉토리를 읽을 수 있다
+- **모델 무관**이다. Claude, GPT, Gemini 어느 모델로도 `.byeorim/` 디렉토리를 읽을 수 있다
 - **한국에서 시작된 글로벌 표준**을 지향한다
 
 ## 자세한 배경
 
-각 단계의 결정 배경은 [docs/decisions/](docs/decisions/)에 ADR(Architecture Decision Records)로 정리되어 있다. ADR을 읽어야 벼름을 쓸 수 있는 것은 아니다. 위 명령어만으로 충분하다.
+각 단계의 결정 배경은 [docs/decisions/](docs/decisions/)에 ADR(Architecture Decision Records)로 정리되어 있다. ADR을 읽어야 벼림을 쓸 수 있는 것은 아니다. 위 명령어만으로 충분하다.
 
 ## 라이선스
 

@@ -119,7 +119,7 @@ LLM이 비표준 식별자(예: `'kotlin'`, `'redis'`)를 돌려주면 어댑터
 
 ## 외부 검토 프롬프트 부산물 (ADR 0033)
 
-shape가 끝나면 항상 `.beoreum/project/prompts/architecture-review-prompt.md`가 자리잡는다. 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에 마크다운을 그대로 붙여넣어 4개 결정의 도메인 적합성, 결정 사이 트레이드오프, 시작 무게를 자세히 검토받는 자리.
+shape가 끝나면 항상 `.byeorim/project/prompts/architecture-review-prompt.md`가 자리잡는다. 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에 마크다운을 그대로 붙여넣어 4개 결정의 도메인 적합성, 결정 사이 트레이드오프, 시작 무게를 자세히 검토받는 자리.
 
 ### 부산물에 담기는 정보
 
@@ -143,6 +143,6 @@ ADR 0030의 단축어 가이드(PG, DTO, API, REST, CRUD, SDK, JWT, OAuth 8개)�
 ## 미래 자리
 
 - 추천 점수(0~1)를 노출해 picker에서 강한 추천과 약한 추천을 구분하는 자리. 후속 ADR
-- 부산물 응답을 다시 import하는 자리(예: `beoreum shape import-architecture-review`). 후속 ADR
+- 부산물 응답을 다시 import하는 자리(예: `byeorim shape import-architecture-review`). 후속 ADR
 - 4개 결정 외 추가 결정(인증, 캐시, 메시지 큐)에 대한 추천. ADR 0012가 결정 자리 추가를 별도 ADR로 미뤄둠
 - 부분 재선택(예: 언어만 다시 고르기). 이번 출시는 "다시 고르기"가 4개 결정을 모두 다시 묻는다

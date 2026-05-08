@@ -1,4 +1,4 @@
-// beoreum prospect. 사용자에게 7항목을 차례로 묻고 답변에서 의도를 정리한다.
+// byeorim prospect. 사용자에게 7항목을 차례로 묻고 답변에서 의도를 정리한다.
 // 같은 단계에서 카탈로그 출처를 고르고 Reality Check 6영역 리포트를 만든다.
 // 따르는 ADR: 0007(디렉토리), 0008(intent.yml), 0009(AI 어댑터),
 //             0026(7항목 동행 질문), 0027(카탈로그 출처와 AI 생성),
@@ -16,9 +16,9 @@ import {
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { input, select } from '@inquirer/prompts';
-import { templates, templatePath } from '@beoreum/templates';
-import { validateCatalog, loadCatalog } from '@beoreum/catalog';
-import { REALITY_CHECK_AREAS, REALITY_CHECK_AREA_TITLES } from '@beoreum/core';
+import { templates, templatePath } from '@byeorim/templates';
+import { validateCatalog, loadCatalog } from '@byeorim/catalog';
+import { REALITY_CHECK_AREAS, REALITY_CHECK_AREA_TITLES } from '@byeorim/core';
 import { FIELDS, QUESTIONS } from './prospect-questions.js';
 import { buildCatalogPromptMarkdown } from './prospect-prompt.js';
 
@@ -39,7 +39,7 @@ function listAvailableTemplates() {
 
 function loadState(stateFile) {
   if (!existsSync(stateFile)) {
-    throw new Error('.beoreum/state.yml이 없습니다. 먼저 beoreum init을 실행해주세요');
+    throw new Error('.byeorim/state.yml이 없습니다. 먼저 byeorim init을 실행해주세요');
   }
   return yaml.load(readFileSync(stateFile, 'utf8'));
 }
@@ -261,15 +261,15 @@ export async function runProspect({
     );
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
   const extracted = preExtracted || (await adapter.extractIntent(normalized));
 
-  const catalogDir = join(beoreumDir, 'project', 'catalog');
+  const catalogDir = join(byeorimDir, 'project', 'catalog');
   mkdirSync(catalogDir, { recursive: true });
   const catalogFile = join(catalogDir, 'catalog.yml');
   const sourceField = await resolveCatalogSource({
@@ -282,8 +282,8 @@ export async function runProspect({
 
   // Reality Check 6영역 리포트 생성(ADR 0003 + docs/specs/reality-check.md).
   // 어댑터가 generateRealityCheck를 구현하지 않은 경우(미래의 다른 어댑터)는 status='skipped'로 둔다.
-  const realityCheckFile = join(beoreumDir, 'project', 'reality-check.md');
-  const diaryFile = join(beoreumDir, 'project', 'diary.md');
+  const realityCheckFile = join(byeorimDir, 'project', 'reality-check.md');
+  const diaryFile = join(byeorimDir, 'project', 'diary.md');
   let realityCheckStatus = 'skipped';
   if (typeof adapter.generateRealityCheck === 'function') {
     const catalogObj = loadCatalog(catalogFile);
@@ -300,14 +300,14 @@ export async function runProspect({
   }
 
   const intentDoc = buildIntent(normalized, extracted, sourceField, realityCheckStatus, now);
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
   writeFileSync(intentFile, yaml.dump(intentDoc, { sortKeys: false }), 'utf8');
 
   appendIntentDiary(diaryFile, intentDoc.unanswered, now);
 
   // 외부 AI 경로용 부산물 프롬프트 작성(ADR 0028). source가 무엇이든 항상 만들어둔다.
   // 사용자가 카탈로그 품질에 만족 못 하거나 더 자세한 자리를 원할 때 쓰는 결.
-  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  const promptsDir = join(byeorimDir, 'project', 'prompts');
   mkdirSync(promptsDir, { recursive: true });
   const catalogPromptFile = join(promptsDir, 'catalog-prompt.md');
   writeFileSync(
@@ -332,10 +332,10 @@ export async function runProspect({
   }
   log(`카탈로그 출처: ${sourceField}`);
   log(
-    '더 자세한 카탈로그를 원하시면 .beoreum/project/prompts/catalog-prompt.md를 외부 AI에 붙여넣고',
+    '더 자세한 카탈로그를 원하시면 .byeorim/project/prompts/catalog-prompt.md를 외부 AI에 붙여넣고',
   );
-  log('  beoreum prospect import-catalog <받은-파일.yml>  명령으로 가져오세요(ADR 0028).');
-  log(`다음 단계로 같이 갑니다: beoreum ${NEXT_STAGE}`);
+  log('  byeorim prospect import-catalog <받은-파일.yml>  명령으로 가져오세요(ADR 0028).');
+  log(`다음 단계로 같이 갑니다: byeorim ${NEXT_STAGE}`);
 
   return {
     intentFile,
@@ -425,7 +425,7 @@ export async function interactiveProspect({
 
   // askAnswers를 띄우기 전에 단계를 먼저 검증한다. 사용자가 7항목을 다 적은 뒤
   // 단계 불일치로 거부당하는 일을 막는 자리(ADR 0011 결정 5의 정신).
-  const stateFile = join(cwd, '.beoreum', 'state.yml');
+  const stateFile = join(cwd, '.byeorim', 'state.yml');
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 

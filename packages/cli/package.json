@@ -1,7 +1,7 @@
 {
-  "name": "@beoreum/cli",
+  "name": "@byeorim/cli",
   "version": "0.1.0",
-  "description": "사용자 대면 CLI. beoreum prospect, smelt, shape, forge, temper, set, inspect",
+  "description": "사용자 대면 CLI. byeorim prospect, smelt, shape, forge, temper, set, inspect",
   "type": "module",
   "license": "MIT",
   "main": "index.js",
@@ -10,10 +10,10 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@beoreum/ai": "0.1.0",
-    "@beoreum/catalog": "0.1.0",
-    "@beoreum/core": "0.1.0",
-    "@beoreum/templates": "0.1.0",
+    "@byeorim/ai": "0.1.0",
+    "@byeorim/catalog": "0.1.0",
+    "@byeorim/core": "0.1.0",
+    "@byeorim/templates": "0.1.0",
     "@inquirer/prompts": "^7.0.0",
     "js-yaml": "^4.1.0",
     "pluralize": "^8.0.0"

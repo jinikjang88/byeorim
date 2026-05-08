@@ -9,7 +9,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { validateCatalog, loadCatalog } from '@beoreum/catalog';
+import { validateCatalog, loadCatalog } from '@byeorim/catalog';
 
 // ajv schema 에러를 한국어로 풀어쓴다. params 자리에서 자세한 정보를 꺼낸다.
 // reference 에러(kind: 'reference')는 이미 한국어라 그대로 두고 schema kind만 번역한다.
@@ -91,7 +91,7 @@ function loadYamlFile(filePath) {
   return parsed;
 }
 
-// importCatalog는 외부 AI에서 받은 카탈로그 파일을 가져와 .beoreum/project/catalog/catalog.yml로 교체한다.
+// importCatalog는 외부 AI에서 받은 카탈로그 파일을 가져와 .byeorim/project/catalog/catalog.yml로 교체한다.
 //
 // 입력:
 //   cwd        - 프로젝트 루트 절대 경로
@@ -108,14 +108,14 @@ export function importCatalog({ cwd, sourcePath, log = console.log } = {}) {
     );
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
   if (!existsSync(intentFile)) {
     throw new Error(
-      'intent.yml이 없습니다. 먼저 beoreum init과 prospect를 한 번 끝내주세요.\n' +
-        'import-catalog는 prospect를 거쳐 자리잡은 .beoreum/ 위에서만 동작합니다',
+      'intent.yml이 없습니다. 먼저 byeorim init과 prospect를 한 번 끝내주세요.\n' +
+        'import-catalog는 prospect를 거쳐 자리잡은 .byeorim/ 위에서만 동작합니다',
     );
   }
   if (!existsSync(catalogFile)) {

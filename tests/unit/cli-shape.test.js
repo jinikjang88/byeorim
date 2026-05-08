@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-shape-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-shape-'));
 }
 
 async function withTempCwd(fn) {
@@ -154,7 +154,7 @@ test('state.yml이 shape 완료를 반영한다', async () => {
       log: () => {},
     });
     // Then: current_stage가 forge로, completed_stages에 prospect/smelt/shape가 모두 들어간다
-    const state = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const state = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(state.current_stage, 'forge');
     assert.deepEqual(state.completed_stages, ['prospect', 'smelt', 'shape']);
   });
@@ -187,7 +187,7 @@ test('selected-blocks.yml이 누락되면 smelt 안내 메시지로 거부한다
   await withTempCwd(async (cwd) => {
     // Given: init만 하고 state.yml을 강제로 shape로 옮긴 자리
     runInit({ cwd });
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'shape';
     state.completed_stages = ['prospect', 'smelt'];
@@ -201,7 +201,7 @@ test('selected-blocks.yml이 누락되면 smelt 안내 메시지로 거부한다
         confirmArchitecture: ALWAYS_PROCEED,
         log: () => {},
       }),
-      /beoreum smelt를 실행해주세요/,
+      /byeorim smelt를 실행해주세요/,
     );
   });
 });

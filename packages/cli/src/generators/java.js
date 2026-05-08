@@ -16,7 +16,7 @@ import {
 } from './util.js';
 
 const GROUP = 'com.example';
-const PROJECT_PACKAGE_FALLBACK = 'beoreum';
+const PROJECT_PACKAGE_FALLBACK = 'byeorim';
 const SPRING_BOOT_VERSION = '3.4.0';
 const JAVA_VERSION = '17';
 
@@ -82,13 +82,13 @@ function buildProjectPackage(intent) {
 
 function buildProjectName(intent) {
   const what = getIntentWhat(intent);
-  if (!what) return 'beoreum-project';
+  if (!what) return 'byeorim-project';
   const slug = what
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || 'beoreum-project';
+  return slug || 'byeorim-project';
 }
 
 // ── 루트 빌드 파일 ─────────────────────────────────────────
@@ -157,7 +157,7 @@ org.gradle.caching=true
 function buildBackendReadme(projectName, featureCount) {
   return `# ${projectName} (Java)
 
-벼름이 자동 생성한 Spring Boot 백엔드 스켈레톤입니다. ADR 0019와 ADR 0046을 따릅니다.
+벼림이 자동 생성한 Spring Boot 백엔드 스켈레톤입니다. ADR 0019와 ADR 0046을 따릅니다.
 
 ## 시작하기 (dev)
 
@@ -170,7 +170,7 @@ function buildBackendReadme(projectName, featureCount) {
 
 ## prod로 옮기기
 
-\`application-production.yml\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BEOREUM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 production profile로 띄웁니다.
+\`application-production.yml\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BYEORIM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 production profile로 띄웁니다.
 
 \`\`\`
 ./gradlew :app:bootRun --args='--spring.profiles.active=production'
@@ -234,7 +234,7 @@ server:
 
 spring:
   application:
-    name: beoreum-app
+    name: byeorim-app
   profiles:
     default: development
 
@@ -255,7 +255,7 @@ database:
 // 모든 시크릿이 dev placeholder로 박혀있어 사용자가 직접 채우지 않으면 prod 가드가 막는다.
 function buildApplicationProductionYml() {
   return `# 자동 생성된 prod 환경 설정 템플릿. ADR 0046을 따른다.
-# 이 파일을 prod에 배포하기 전에 모든 BEOREUM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
+# 이 파일을 prod에 배포하기 전에 모든 BYEORIM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
 # 채우지 않은 채로 spring.profiles.active=production으로 기동하면 시작이 거부된다.
 
 server:
@@ -307,7 +307,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("production")
 public class EnvSecretsValidator {
-  private static final String DEV_PLACEHOLDER_PREFIX = "BEOREUM_DEV_PLACEHOLDER_";
+  private static final String DEV_PLACEHOLDER_PREFIX = "BYEORIM_DEV_PLACEHOLDER_";
 
   @Value("\${jwt.secret:}")
   private String jwtSecret;
@@ -577,11 +577,11 @@ ${dtos}
 // ── 본체 ─────────────────────────────────────────────────────
 
 // generateJavaBackend는 architecture.language='java'일 때 set이 호출.
-// generatedDir(.beoreum/project/generated) 안에 backend/ 트리를 만든다.
+// generatedDir(.byeorim/project/generated) 안에 backend/ 트리를 만든다.
 //
 // 입력:
 //   inputs        - set.js의 loadInputs 결과
-//   generatedDir  - .beoreum/project/generated 절대 경로
+//   generatedDir  - .byeorim/project/generated 절대 경로
 //   now           - 테스트용 결정적 시각(현재 사용 안 함)
 //
 // 반환: { backendDir, featureCount, fileCount }

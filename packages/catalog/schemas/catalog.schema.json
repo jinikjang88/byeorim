@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://beoreum.dev/schemas/catalog.schema.json",
-  "title": "Beoreum Catalog",
-  "description": "벼름 도메인 카탈로그. World, Bundle, Block, Dependency, Cascade, Prerequisite로 이루어진다. ADR 0005 참조",
+  "$id": "https://byeorim.dev/schemas/catalog.schema.json",
+  "title": "Byeorim Catalog",
+  "description": "벼림 도메인 카탈로그. World, Bundle, Block, Dependency, Cascade, Prerequisite로 이루어진다. ADR 0005 참조",
   "type": "object",
   "required": ["worlds", "blocks"],
   "additionalProperties": false,

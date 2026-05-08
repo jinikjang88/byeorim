@@ -127,7 +127,7 @@ runForge({ cwd, adapter = null, now })
 
 adapter가 없으면 모든 schema가 TODO(현재 동작). adapter가 있으면 각 endpoint마다 extractSchema 호출해서 schema를 채운다.
 
-bin/beoreum.js의 forge 핸들러는 항상 createMockAdapter()를 주입. 미래의 실제 LLM 어댑터 도입 시 같은 자리만 갱신한다.
+bin/byeorim.js의 forge 핸들러는 항상 createMockAdapter()를 주입. 미래의 실제 LLM 어댑터 도입 시 같은 자리만 갱신한다.
 
 기존 forge 테스트는 adapter 없이 호출 → 기존 동작 보존. 새 테스트는 adapter를 주입해 schema 채움 검증.
 

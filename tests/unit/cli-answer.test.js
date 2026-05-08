@@ -10,7 +10,7 @@ import { runInit, runProspect, runSmelt, interactiveAnswer } from '../../package
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-answer-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-answer-'));
 }
 
 async function withTempCwd(fn) {
@@ -35,7 +35,7 @@ async function setupWithCouponDecisions(cwd) {
 }
 
 function readDecisions(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'decisions.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'decisions.yml'), 'utf8'));
 }
 
 test('빈 answer 항목을 차례로 askAnswer에 전달하고 답을 적용한다', async () => {
@@ -116,7 +116,7 @@ test('decisions.yml이 없으면 한국어 메시지로 smelt 실행을 안내�
     // When/Then
     await assert.rejects(
       interactiveAnswer({ cwd, askAnswer: async () => null }),
-      /beoreum smelt를 실행해주세요/,
+      /byeorim smelt를 실행해주세요/,
     );
   });
 });

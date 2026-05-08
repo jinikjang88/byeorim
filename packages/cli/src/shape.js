@@ -1,4 +1,4 @@
-// beoreum shape. 직전 단계의 산출물을 입력으로 받아 4개 핵심 아키텍처 결정을 만든다.
+// byeorim shape. 직전 단계의 산출물을 입력으로 받아 4개 핵심 아키텍처 결정을 만든다.
 // ADR 0007의 자리, ADR 0012의 architecture.yml 형식, ADR 0011의 인터랙티브 prompt 정책,
 // ADR 0032(아키텍처 추천과 검토 흐름), ADR 0033(외부 검토 프롬프트 부산물)을 따른다.
 // cascade 답안은 맥락으로만 보여주고 직접 참조하지 않는다(ADR 0012 결정 3).
@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 import { select } from '@inquirer/prompts';
-import { loadCatalog } from '@beoreum/catalog';
+import { loadCatalog } from '@byeorim/catalog';
 import { buildArchitectureReviewPromptMarkdown } from './shape-prompt.js';
 import {
   buildOptionDescription,
@@ -135,7 +135,7 @@ function ensureFile(path, hint) {
 }
 
 function loadState(stateFile) {
-  ensureFile(stateFile, '먼저 beoreum init을 실행해주세요');
+  ensureFile(stateFile, '먼저 byeorim init을 실행해주세요');
   return yaml.load(readFileSync(stateFile, 'utf8'));
 }
 
@@ -149,16 +149,16 @@ function ensureStage(state, expected) {
 
 // shape의 입력 자리들을 한 번에 읽는다. 모든 자리가 있어야 다음으로 간다.
 // 어댑터가 없어도 catalog는 항상 읽는다(다른 자리에서 쓰일 수 있음).
-function loadShapeInputs(beoreumDir) {
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const selectedFile = join(beoreumDir, 'project', 'selected-blocks.yml');
-  const decisionsFile = join(beoreumDir, 'project', 'decisions.yml');
-  const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
+function loadShapeInputs(byeorimDir) {
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
+  const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
-  ensureFile(selectedFile, '먼저 beoreum smelt를 실행해주세요');
-  ensureFile(intentFile, '먼저 beoreum prospect를 실행해주세요');
-  ensureFile(decisionsFile, '먼저 beoreum smelt를 실행해주세요');
-  ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
+  ensureFile(selectedFile, '먼저 byeorim smelt를 실행해주세요');
+  ensureFile(intentFile, '먼저 byeorim prospect를 실행해주세요');
+  ensureFile(decisionsFile, '먼저 byeorim smelt를 실행해주세요');
+  ensureFile(catalogFile, '먼저 byeorim prospect를 실행해주세요');
 
   const intent = yaml.load(readFileSync(intentFile, 'utf8')) || {};
   const selectedBlocks = yaml.load(readFileSync(selectedFile, 'utf8')) || {};
@@ -341,17 +341,17 @@ export async function interactiveShape({
 } = {}) {
   if (!cwd) throw new Error('interactiveShape({ cwd })가 필요합니다');
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
-  const architectureFile = join(beoreumDir, 'project', 'architecture.yml');
-  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
+  const architectureFile = join(byeorimDir, 'project', 'architecture.yml');
+  const promptsDir = join(byeorimDir, 'project', 'prompts');
   const architectureReviewPromptFile = join(promptsDir, 'architecture-review-prompt.md');
 
   // 단계 검증을 prompt 호출 전에 둔다(사용자가 4개 결정을 다 고른 뒤 거부당하는 일을 막음).
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
-  const inputs = loadShapeInputs(beoreumDir);
+  const inputs = loadShapeInputs(byeorimDir);
   const context = buildContext(inputs);
   const recommendation = await fetchArchitectureRecommendation({
     adapter,

@@ -278,30 +278,30 @@ test('알 수 없는 에러는 일반 한국어 메시지에 원본을 포함해
   );
 });
 
-test('BEOREUM_AI_MODEL 환경 변수가 model보다 우선시된다', async () => {
-  const original = process.env.BEOREUM_AI_MODEL;
-  process.env.BEOREUM_AI_MODEL = 'claude-haiku-4-5';
+test('BYEORIM_AI_MODEL 환경 변수가 model보다 우선시된다', async () => {
+  const original = process.env.BYEORIM_AI_MODEL;
+  process.env.BYEORIM_AI_MODEL = 'claude-haiku-4-5';
   try {
     const client = makeFakeClient(() => intentResponse({}));
     const adapter = createClaudeAdapter({ apiKey: 'sk-test', client });
     await adapter.extractIntent({ what: 'x' });
     assert.equal(client.captured[0].model, 'claude-haiku-4-5');
   } finally {
-    if (original === undefined) delete process.env.BEOREUM_AI_MODEL;
-    else process.env.BEOREUM_AI_MODEL = original;
+    if (original === undefined) delete process.env.BYEORIM_AI_MODEL;
+    else process.env.BYEORIM_AI_MODEL = original;
   }
 });
 
 test('명시적 model 인자는 환경 변수가 없을 때 사용된다', async () => {
-  const original = process.env.BEOREUM_AI_MODEL;
-  delete process.env.BEOREUM_AI_MODEL;
+  const original = process.env.BYEORIM_AI_MODEL;
+  delete process.env.BYEORIM_AI_MODEL;
   try {
     const client = makeFakeClient(() => intentResponse({}));
     const adapter = createClaudeAdapter({ apiKey: 'sk-test', model: 'claude-sonnet-4-6', client });
     await adapter.extractIntent({ what: 'x' });
     assert.equal(client.captured[0].model, 'claude-sonnet-4-6');
   } finally {
-    if (original !== undefined) process.env.BEOREUM_AI_MODEL = original;
+    if (original !== undefined) process.env.BYEORIM_AI_MODEL = original;
   }
 });
 

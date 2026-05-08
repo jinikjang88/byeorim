@@ -17,7 +17,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-temper-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-temper-'));
 }
 
 async function withTempCwd(fn) {
@@ -55,7 +55,7 @@ async function setupReadyForTemper(cwd, blockIds = ['order']) {
 }
 
 function readScenarios(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'));
 }
 
 test('정상 흐름: temper가 test-scenarios.yml을 만들고 단계가 set으로 넘어간다', async () => {
@@ -168,7 +168,7 @@ test('contracts.yml과 test-scenarios.yml의 endpoint가 정확히 일치한다(
     await runTemper({ cwd });
     // Then: 두 파일의 (block_id, operation, method, path) 튜플 집합이 같다
     const contracts = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'contracts.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'),
     );
     const scenarios = readScenarios(cwd);
     const triples = (doc) =>
@@ -205,13 +205,13 @@ test('contracts.yml이 없으면 forge 안내 메시지로 거부한다', async 
       log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'temper';
     state.completed_stages = ['prospect', 'smelt', 'shape', 'forge'];
     writeFileSync(stateFile, yaml.dump(state, { sortKeys: false }), 'utf8');
     // When/Then
-    await assert.rejects(runTemper({ cwd }), /beoreum forge를 실행해주세요/);
+    await assert.rejects(runTemper({ cwd }), /byeorim forge를 실행해주세요/);
   });
 });
 
@@ -248,7 +248,7 @@ test('adapter가 주어지면 모든 시나리오의 test_code를 채운다', as
     // Then: testCodeFilled true, 모든 시나리오의 test_code가 TODO 아님
     assert.equal(result.testCodeFilled, true);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {
@@ -288,7 +288,7 @@ test('adapter가 없으면 모든 test_code가 TODO 그대로(후행 호환)', a
     // Then: testCodeFilled false, 모든 test_code가 TODO
     assert.equal(result.testCodeFilled, false);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {
@@ -328,7 +328,7 @@ test('adapter가 fillTestCode 메서드를 구현 안 하면 TODO 그대로(grac
     // Then
     assert.equal(result.testCodeFilled, false);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {
@@ -373,7 +373,7 @@ test('어댑터의 fillTestCode가 빈 문자열을 돌려주면 test_code는 TO
     // Then: testCodeFilled true(어댑터는 호출됨)지만 test_code는 TODO 유지
     assert.equal(result.testCodeFilled, true);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {

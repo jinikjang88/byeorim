@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0022가 `beoreum verify`의 install + test 결을 박았다. ADR 0046이 4 generator에 `/health` endpoint를 표준으로 emit하는 baseline을 박았다. ADR 0047이 `beoreum run`으로 backend + frontend 동시 기동과 readiness 폴링 결을 박았다.
+ADR 0022가 `byeorim verify`의 install + test 결을 박았다. ADR 0046이 4 generator에 `/health` endpoint를 표준으로 emit하는 baseline을 박았다. ADR 0047이 `byeorim run`으로 backend + frontend 동시 기동과 readiness 폴링 결을 박았다.
 
 이 셋이 합쳐지면 verify가 한 결을 더 갖출 수 있다. install + test로 빌드/단위 테스트가 통과한 뒤, server를 잠깐 띄워 `/health`가 응답하는지 확인하고 종료. CI에서 "내 서비스가 진짜 뜨는가?"를 한 번에 검증한다. 스모크 테스트 결.
 
@@ -20,7 +20,7 @@ ADR 0046, 0047, 0048이 한 묶음의 후속 작업으로 마무리된다. set�
 
 #### 옵션 A. `--smoke` 플래그로 opt-in (이번 출시)
 
-- 장점: verify는 install + test로 이미 분 단위라 default에 더 무겁게 안 함. 사용자가 명시적으로 `beoreum verify --smoke`. 옵션 결이 분명
+- 장점: verify는 install + test로 이미 분 단위라 default에 더 무겁게 안 함. 사용자가 명시적으로 `byeorim verify --smoke`. 옵션 결이 분명
 - 단점: 사용자가 플래그 존재를 모르면 안 씀. README와 CLI help 안내로 푸는 결
 
 #### 옵션 B. verify에 항상 포함
@@ -28,7 +28,7 @@ ADR 0046, 0047, 0048이 한 묶음의 후속 작업으로 마무리된다. set�
 - 장점: 단순. 모든 verify가 같은 검증 깊이
 - 단점: CI에서 매번 분 단위 추가. 사용자가 install/test만 빠르게 돌리고 싶을 때 부담
 
-#### 옵션 C. 새 명령 `beoreum smoke`
+#### 옵션 C. 새 명령 `byeorim smoke`
 
 - 장점: 검증 단계 분리
 - 단점: 명령 추가 부담. answer/status/verify/run에 smoke까지 늘면 결이 흐려짐
@@ -73,7 +73,7 @@ ADR 0046, 0047, 0048이 한 묶음의 후속 작업으로 마무리된다. set�
 
 #### 옵션 A. 60초 default + 환경 변수 override (이번 출시)
 
-- 장점: ADR 0047과 같은 결. `BEOREUM_VERIFY_SMOKE_TIMEOUT_MS` 환경 변수로 override 가능
+- 장점: ADR 0047과 같은 결. `BYEORIM_VERIFY_SMOKE_TIMEOUT_MS` 환경 변수로 override 가능
 - 단점: Java gradle bootRun 첫 실행은 분 단위라 60초가 짧을 수 있음. 환경 변수로 풀어줌
 
 #### 옵션 B. 30초
@@ -92,11 +92,11 @@ ADR 0046, 0047, 0048이 한 묶음의 후속 작업으로 마무리된다. set�
 
 ### 결정 1: `--smoke` 플래그로 opt-in (옵션 A)
 
-`beoreum verify`는 default로 install + test만 실행. `--smoke`를 주면 추가로 server up → /health → kill 결을 실행.
+`byeorim verify`는 default로 install + test만 실행. `--smoke`를 주면 추가로 server up → /health → kill 결을 실행.
 
 ```
-beoreum verify              # install + test (기존 동작 유지)
-beoreum verify --smoke      # install + test + smoke
+byeorim verify              # install + test (기존 동작 유지)
+byeorim verify --smoke      # install + test + smoke
 ```
 
 verify-report.md의 형식은 smoke 결과가 추가된 결로 자라난다. 다른 target(Backend, Frontend)과 같은 섹션 결.
@@ -131,7 +131,7 @@ verify-report.md에 새 target 섹션이 박힌다.
 - 상태: 성공
 - 마지막 명령: `npm run dev → /health`
 - ready url: `http://localhost:3000/health`
-- cwd: `.beoreum/project/generated/backend`
+- cwd: `.byeorim/project/generated/backend`
 ```
 
 `allPassed`는 install/test/smoke 모든 결과를 합산. exit code도 합산 결과 따름.
@@ -139,11 +139,11 @@ verify-report.md에 새 target 섹션이 박힌다.
 ### 결정 5: 60초 default + 환경 변수 override (옵션 A)
 
 - default: 60000ms (60초)
-- override: `BEOREUM_VERIFY_SMOKE_TIMEOUT_MS` 환경 변수
+- override: `BYEORIM_VERIFY_SMOKE_TIMEOUT_MS` 환경 변수
 - 코드 인자: `runVerify({ smokeTimeoutMs })` (테스트가 줄여 결정적)
 
 ```bash
-BEOREUM_VERIFY_SMOKE_TIMEOUT_MS=120000 beoreum verify --smoke
+BYEORIM_VERIFY_SMOKE_TIMEOUT_MS=120000 byeorim verify --smoke
 ```
 
 ### 결정 6: spawnProcess + fetchHealth 의존성 주입 (옵션 A)
@@ -186,7 +186,7 @@ smoke=false면 spawnProcess/fetchHealth는 사용하지 않음(기존 동작 유
 
 ## 링크
 
-- 이전 결정: ADR 0006(set 단계 정의), ADR 0022(verify 실행 정책), ADR 0046(생성 코드의 로컬 실행 가능성), ADR 0047(beoreum run 명령)
+- 이전 결정: ADR 0006(set 단계 정의), ADR 0022(verify 실행 정책), ADR 0046(생성 코드의 로컬 실행 가능성), ADR 0047(byeorim run 명령)
 - 후속 작업 후보: frontend smoke 추가 ADR, process-helpers.js의 함수 확장
 - 동행 톤: ADR 0003 결정 2(smoke 실패는 동행 결로 안내, 막지 않음)
 - 관련 정책: CLAUDE.md 섹션 0(1순위 사용자), 섹션 4(테스트 결정성), 섹션 8(파일당 책임), 섹션 10(글쓰기 원칙)

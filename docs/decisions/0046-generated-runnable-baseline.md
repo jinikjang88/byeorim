@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0006이 set 단계의 책임을 박았다. "실제 코드를 짓고, 그 코드가 자기 발로 서는지 컴파일과 테스트로 확인한다." ADR 0018(Node), 0019(Java), 0020(Python), 0021(React)이 4 generator를 박아 generated/backend, generated/frontend가 만들어지는 결까지 왔다. ADR 0022는 `beoreum verify`가 install/test를 돌리는 결을 박았다.
+ADR 0006이 set 단계의 책임을 박았다. "실제 코드를 짓고, 그 코드가 자기 발로 서는지 컴파일과 테스트로 확인한다." ADR 0018(Node), 0019(Java), 0020(Python), 0021(React)이 4 generator를 박아 generated/backend, generated/frontend가 만들어지는 결까지 왔다. ADR 0022는 `byeorim verify`가 install/test를 돌리는 결을 박았다.
 
 여기까지 와도 1순위 사용자(비기술 창업자)가 생성된 코드를 실제로 띄워 자기 서비스가 살아 있는 것을 보려면 다음을 거쳐야 한다.
 
@@ -32,7 +32,7 @@ ADR 0006이 set 단계의 책임을 박았다. "실제 코드를 짓고, 그 코
 
 여섯째, 4 generator(Node, Java, Python, Frontend) 각각의 표준 결을 어떻게 정렬할지.
 
-`beoreum run` 명령(ADR 0047)과 verify 스모크 테스트(ADR 0048)는 이 ADR의 baseline이 박혀야 의미를 가진다. 셋이 한 묶음의 후속 작업.
+`byeorim run` 명령(ADR 0047)과 verify 스모크 테스트(ADR 0048)는 이 ADR의 baseline이 박혀야 의미를 가진다. 셋이 한 묶음의 후속 작업.
 
 ## 검토한 옵션
 
@@ -101,7 +101,7 @@ ADR 0006이 set 단계의 책임을 박았다. "실제 코드를 짓고, 그 코
 
 ### 결정 5. dev placeholder 표준 마커
 
-#### 옵션 A. `BEOREUM_DEV_PLACEHOLDER_` prefix (이번 출시)
+#### 옵션 A. `BYEORIM_DEV_PLACEHOLDER_` prefix (이번 출시)
 
 - 장점: 브랜드 prefix라 충돌 없음. 한국어/영문 모두에서 검색 가능. 의도가 분명. 마커가 prefix로 박혀있어 startup 검사가 단순(prefix 검사)
 - 단점: 길이가 23자라 짧진 않음. 다만 시크릿 자체가 길어야 안전한 결이라 큰 부담 아님
@@ -180,7 +180,7 @@ dev 모드는 `.env` 또는 application.yml(default profile)을 로드. prod 모
 
 #### 안전망 2. 런타임 placeholder throw
 
-서버 startup 시 prod 모드인데 시크릿 값이 `BEOREUM_DEV_PLACEHOLDER_` prefix로 시작하면 한국어 에러로 throw. 사용자가 .env.production을 안 채우고 띄우려 하면 즉시 막힌다.
+서버 startup 시 prod 모드인데 시크릿 값이 `BYEORIM_DEV_PLACEHOLDER_` prefix로 시작하면 한국어 에러로 throw. 사용자가 .env.production을 안 채우고 띄우려 하면 즉시 막힌다.
 
 ```
 startup 거부: PROD 모드에서 JWT_SECRET 값이 dev placeholder입니다.
@@ -189,21 +189,21 @@ startup 거부: PROD 모드에서 JWT_SECRET 값이 dev placeholder입니다.
 
 Frontend(Vite)는 빌드 타임이라 startup 자체가 없다. 대신 vite.config의 prod 빌드 hook에서 `import.meta.env`의 값들을 검사해 placeholder가 남아있으면 빌드를 실패시킨다.
 
-### 결정 5: `BEOREUM_DEV_PLACEHOLDER_` prefix 표준 마커 (옵션 A)
+### 결정 5: `BYEORIM_DEV_PLACEHOLDER_` prefix 표준 마커 (옵션 A)
 
-dev placeholder 값의 표준 마커는 `BEOREUM_DEV_PLACEHOLDER_` prefix.
+dev placeholder 값의 표준 마커는 `BYEORIM_DEV_PLACEHOLDER_` prefix.
 
 예시.
 
 ```
-JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_jwt_secret_change_before_production
-DATABASE_URL=BEOREUM_DEV_PLACEHOLDER_database_url_change_before_production
+JWT_SECRET=BYEORIM_DEV_PLACEHOLDER_jwt_secret_change_before_production
+DATABASE_URL=BYEORIM_DEV_PLACEHOLDER_database_url_change_before_production
 ```
 
 런타임 가드는 단순한 prefix 검사로 가드한다.
 
 ```js
-const PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_';
+const PLACEHOLDER_PREFIX = 'BYEORIM_DEV_PLACEHOLDER_';
 if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET?.startsWith(PLACEHOLDER_PREFIX)) {
   throw new Error('PROD 모드에서 JWT_SECRET 값이 dev placeholder입니다. .env.production을 채워주세요.');
 }
@@ -251,7 +251,7 @@ dev 모드에서는 placeholder가 그대로 동작한다(JWT가 약하지만 de
 
 - 1순위 사용자(비기술 창업자)가 generated 코드를 받자마자 한 명령으로 띄울 수 있다. 시크릿을 손으로 채우는 단계가 사라진다
 - prod 안전이 두 안전망(파일 분리 + 런타임 throw)으로 박혀 dev 값이 prod로 흘러갈 위험이 0에 가까움. 한 안전망이 뚫려도 다른 하나가 잡음
-- `BEOREUM_DEV_PLACEHOLDER_` prefix가 표준이라 4 generator에서 같은 검출 로직이 박힘. 미래에 새 언어 generator가 들어와도 같은 결
+- `BYEORIM_DEV_PLACEHOLDER_` prefix가 표준이라 4 generator에서 같은 검출 로직이 박힘. 미래에 새 언어 generator가 들어와도 같은 결
 - healthcheck endpoint가 표준이라 ADR 0047(run)과 ADR 0048(verify 스모크)이 의지할 표준이 한 곳에 박힘
 - in-memory/SQLite default가 외부 의존성 없이 동작하는 결을 살린다. 사용자가 PostgreSQL을 골라도 dev에서는 SQLite로 빠르게 띄움
 - 각 언어의 표준 idiom을 그대로 따라 학습 비용 낮음. Node 사용자는 dotenv를 본다, Java 사용자는 Spring profile을 본다
@@ -261,7 +261,7 @@ dev 모드에서는 placeholder가 그대로 동작한다(JWT가 약하지만 de
 - 두 .env 파일이 처음에 헷갈릴 수 있다. README의 안내로 푸는 결
 - dev에서는 SQLite, prod에서는 architecture.database라 dev/prod의 동작 결이 갈라진다. 사용자가 prod-like하게 테스트하려면 .env의 DATABASE_URL을 직접 바꿔야 함. 미래에 docker-compose 부산물 ADR이 들어오면 보강
 - 4 generator가 표준 idiom을 따르니 표가 길어짐. 다만 의미는 같으니 6개월 뒤 기여자가 한 generator를 익히면 다른 generator도 결을 안다
-- placeholder prefix 검사가 단순 prefix이라 사용자가 "BEOREUM_DEV_PLACEHOLDER_real_secret_for_prod" 같은 실수로 시작하는 prod 값을 박으면 검사가 잡는다. 다만 그런 사용자 실수는 검사가 잘 잡는 결로 결과적으로 옳음
+- placeholder prefix 검사가 단순 prefix이라 사용자가 "BYEORIM_DEV_PLACEHOLDER_real_secret_for_prod" 같은 실수로 시작하는 prod 값을 박으면 검사가 잡는다. 다만 그런 사용자 실수는 검사가 잘 잡는 결로 결과적으로 옳음
 
 ### 미래 묶임
 
@@ -274,5 +274,5 @@ dev 모드에서는 placeholder가 그대로 동작한다(JWT가 약하지만 de
 ## 링크
 
 - 이전 결정: ADR 0006(set 단계 정의), ADR 0017(생성 코드 7원칙, 결정 1 보안 최우선), ADR 0018/0019/0020/0021(4 generator 정책), ADR 0022(verify 실행 정책)
-- 후속 작업: ADR 0047(beoreum run 명령), ADR 0048(verify 스모크 테스트 추가)
+- 후속 작업: ADR 0047(byeorim run 명령), ADR 0048(verify 스모크 테스트 추가)
 - 관련 정책: CLAUDE.md 섹션 0(1순위 사용자 우선순위), 섹션 4(테스트 결정성), 섹션 8(데이터 무관성), 섹션 10(글쓰기 원칙)

@@ -132,7 +132,7 @@ mock 어댑터에서 redo가 헛흐름임을 사용자에게 알리는 안내 �
   (어댑터가 schema 채움을 지원하지 않아 모두 TODO로 남아있어요)
 ```
 
-기존 `runForge`의 비대화 시그니처는 후행 호환을 위해 그대로 유지(ADR 0023 결정 3과 같은 결). `bin/beoreum.js`의 forge 핸들러만 `interactiveForge`로 바꾼다.
+기존 `runForge`의 비대화 시그니처는 후행 호환을 위해 그대로 유지(ADR 0023 결정 3과 같은 결). `bin/byeorim.js`의 forge 핸들러만 `interactiveForge`로 바꾼다.
 
 ## 결과
 

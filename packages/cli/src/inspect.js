@@ -1,4 +1,4 @@
-// beoreum inspect. 7단계의 마지막. 6영역 다관점 체크리스트와 코드 검수로 inspect-report.md를 만든다.
+// byeorim inspect. 7단계의 마지막. 6영역 다관점 체크리스트와 코드 검수로 inspect-report.md를 만든다.
 // ADR 0007, ADR 0016(6영역과 정적 체크리스트), ADR 0003 결정 3(강한 신호),
 // ADR 0049(정적 규칙 코드 검수), ADR 0050(AI 검수), ADR 0051(외부 검토 + import-review)를 따른다.
 // 사용자 입력 없는 변환 단계라 picker 없음(import-review는 별도 명령).
@@ -69,7 +69,7 @@ const INSPECT_AREAS = [
     title: '시장 재검',
     // ADR 0016 결정 4: reality-check.md 경로 명시.
     intro:
-      'prospect 단계에서 본 시장을 다시 봅니다. 만들기 시작했을 때와 출시 직전의 시각은 다릅니다.\n\n`.beoreum/project/reality-check.md`를 다시 읽어보세요. 그때와 시장이 달라진 자리가 있나요?',
+      'prospect 단계에서 본 시장을 다시 봅니다. 만들기 시작했을 때와 출시 직전의 시각은 다릅니다.\n\n`.byeorim/project/reality-check.md`를 다시 읽어보세요. 그때와 시장이 달라진 자리가 있나요?',
     questions: [
       '첫 100명의 사용자를 어떻게 모으실 건가요?',
       '6개월 동안 운영비를 지탱할 자금이 있으신가요?',
@@ -86,7 +86,7 @@ function ensureFile(path, hint) {
 }
 
 function loadState(stateFile) {
-  ensureFile(stateFile, '먼저 beoreum init을 실행해주세요');
+  ensureFile(stateFile, '먼저 byeorim init을 실행해주세요');
   return yaml.load(readFileSync(stateFile, 'utf8'));
 }
 
@@ -176,11 +176,11 @@ function buildReport(now, findings, aiError) {
       : '';
   // ADR 0050 결정 6: AI 검수 실패 시 한국어 안내 한 줄.
   const aiErrorNotice = aiError
-    ? `\n> AI 검수가 실패했습니다. 정적 검수만 보고합니다(원인: ${aiError}). claude 어댑터 설정(BEOREUM_AI_ADAPTER, ANTHROPIC_API_KEY 또는 ANTHROPIC_BASE_URL)을 확인해주세요.\n`
+    ? `\n> AI 검수가 실패했습니다. 정적 검수만 보고합니다(원인: ${aiError}). claude 어댑터 설정(BYEORIM_AI_ADAPTER, ANTHROPIC_API_KEY 또는 ANTHROPIC_BASE_URL)을 확인해주세요.\n`
     : '';
   const header = `# Inspect Report
 
-벼름의 마지막 단계 비춤. 도구를 빛에 비춰 결함을 봅니다. 6영역으로 점검합니다.
+벼림의 마지막 단계 비춤. 도구를 빛에 비춰 결함을 봅니다. 6영역으로 점검합니다.
 ${concernNotice}${aiErrorNotice}
 생성 시각: ${createdAt}
 `;
@@ -190,11 +190,11 @@ ${concernNotice}${aiErrorNotice}
   ).join('\n');
   const closing = `## 마무리
 
-이 체크리스트는 자동으로 채워지지 않습니다. 답하지 못한 질문은 다이어리(\`.beoreum/project/diary.md\`)에 같이 남겨두세요. 만들면서, 출시 전에, 첫 사용자를 만났을 때, 그 질문이 다시 찾아옵니다.
+이 체크리스트는 자동으로 채워지지 않습니다. 답하지 못한 질문은 다이어리(\`.byeorim/project/diary.md\`)에 같이 남겨두세요. 만들면서, 출시 전에, 첫 사용자를 만났을 때, 그 질문이 다시 찾아옵니다.
 
 코드 검수 섹션은 set이 만든 코드를 정적 규칙으로 비춘 결과입니다. concern severity는 출시 전에 풀어주세요. warning은 검토 후 결정.
 
-7단계 흐름이 끝났습니다. 합성 README(\`.beoreum/project/generated/README.md\`)를 보면서 다음 일을 정해주세요.
+7단계 흐름이 끝났습니다. 합성 README(\`.byeorim/project/generated/README.md\`)를 보면서 다음 일을 정해주세요.
 `;
   return `${header}\n${sections}\n${closing}`;
 }
@@ -210,8 +210,8 @@ function advanceState(state, stage) {
   };
 }
 
-function loadArchitectureSafe(beoreumDir) {
-  const archFile = join(beoreumDir, 'project', 'architecture.yml');
+function loadArchitectureSafe(byeorimDir) {
+  const archFile = join(byeorimDir, 'project', 'architecture.yml');
   if (!existsSync(archFile)) return null;
   try {
     return yaml.load(readFileSync(archFile, 'utf8')) || null;
@@ -256,11 +256,11 @@ function firstSubdir(path) {
 // backend 엔트리 + features 첫 sample + frontend 엔트리 + 메타데이터.
 //
 // 입력:
-//   beoreumDir, architecture
+//   byeorimDir, architecture
 //
 // 반환: { language, files, intent, architecture, contracts, scenarios }
-function buildInspectInput({ beoreumDir, architecture }) {
-  const projectDir = join(beoreumDir, 'project');
+function buildInspectInput({ byeorimDir, architecture }) {
+  const projectDir = join(byeorimDir, 'project');
   const generatedDir = join(projectDir, 'generated');
   const language = architecture && architecture.language;
   const files = {};
@@ -472,9 +472,9 @@ function annotateSource(findings, source) {
 export async function runInspect({ cwd, now, adapter } = {}) {
   if (!cwd) throw new Error('runInspect({ cwd })가 필요합니다');
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const projectDir = join(beoreumDir, 'project');
-  const stateFile = join(beoreumDir, 'state.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const projectDir = join(byeorimDir, 'project');
+  const stateFile = join(byeorimDir, 'state.yml');
   const reportFile = join(projectDir, 'inspect-report.md');
   const findingsFile = join(projectDir, 'inspect-findings.yml');
   const promptsDir = join(projectDir, 'prompts');
@@ -484,7 +484,7 @@ export async function runInspect({ cwd, now, adapter } = {}) {
   ensureStage(state, STAGE);
 
   // ADR 0049: 정적 규칙으로 코드 검수
-  const architecture = loadArchitectureSafe(beoreumDir);
+  const architecture = loadArchitectureSafe(byeorimDir);
   const staticFindings = runAllRules({ cwd, architecture });
 
   // ADR 0050: AI 어댑터로 nuanced 검수(옵셔널). graceful degrade.
@@ -495,7 +495,7 @@ export async function runInspect({ cwd, now, adapter } = {}) {
   if (adapter && typeof adapter.inspectCode === 'function') {
     aiCalled = true;
     try {
-      const input = buildInspectInput({ beoreumDir, architecture });
+      const input = buildInspectInput({ byeorimDir, architecture });
       aiFindings = await adapter.inspectCode(input);
       aiFindings = (aiFindings || []).map((f) => ({ source: 'ai', ...f }));
     } catch (err) {
@@ -523,7 +523,7 @@ export async function runInspect({ cwd, now, adapter } = {}) {
 
   // ADR 0051: 외부 검토 프롬프트 부산물
   mkdirSync(promptsDir, { recursive: true });
-  const input = buildInspectInput({ beoreumDir, architecture });
+  const input = buildInspectInput({ byeorimDir, architecture });
   writeFileSync(promptFile, buildInspectReviewPromptMarkdown(input), 'utf8');
 
   writeFileSync(stateFile, yaml.dump(advanceState(state, STAGE), { sortKeys: false }), 'utf8');
@@ -553,13 +553,13 @@ export async function runInspect({ cwd, now, adapter } = {}) {
 // state는 안 건드리고 report만 갱신.
 export function rebuildInspectReport({ cwd, now } = {}) {
   if (!cwd) throw new Error('rebuildInspectReport({ cwd })가 필요합니다');
-  const beoreumDir = join(cwd, '.beoreum');
-  const findingsFile = join(beoreumDir, 'project', 'inspect-findings.yml');
-  const reportFile = join(beoreumDir, 'project', 'inspect-report.md');
+  const byeorimDir = join(cwd, '.byeorim');
+  const findingsFile = join(byeorimDir, 'project', 'inspect-findings.yml');
+  const reportFile = join(byeorimDir, 'project', 'inspect-report.md');
   const doc = loadInspectFindingsFile(findingsFile);
   if (!doc || !doc.findings) {
     throw new Error(
-      'inspect-findings.yml이 없거나 비어있습니다. 먼저 beoreum inspect를 실행해주세요',
+      'inspect-findings.yml이 없거나 비어있습니다. 먼저 byeorim inspect를 실행해주세요',
     );
   }
   const staticF = annotateSource(doc.findings.static, 'static');

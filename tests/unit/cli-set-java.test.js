@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-set-java-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-set-java-'));
 }
 
 async function withTempCwd(fn) {
@@ -56,7 +56,7 @@ async function setupReadyForSet(cwd, blockIds) {
 }
 
 function backendPath(cwd, ...rest) {
-  return join(cwd, '.beoreum', 'project', 'generated', 'backend', ...rest);
+  return join(cwd, '.byeorim', 'project', 'generated', 'backend', ...rest);
 }
 
 test('language=java일 때 backend/ Gradle 멀티모듈 트리가 만들어진다', async () => {
@@ -95,7 +95,7 @@ test('각 feature(internal 제외)에 헥사고날 4영역 5개 Java 파일이 �
         'java',
         'com',
         'example',
-        'beoreum',
+        'byeorim',
         javaPackage,
       );
     for (const [blockId, pkg, className] of [
@@ -158,14 +158,14 @@ test('하이픈 ID(cancel-return)는 Java 패키지로 lowercase + 구분자 없
       'java',
       'com',
       'example',
-      'beoreum',
+      'byeorim',
       'cancelreturn',
     );
     assert.equal(existsSync(javaBase), true);
     // 클래스 이름은 PascalCase: CancelReturn
     const controller = readFileSync(join(javaBase, 'web', 'CancelReturnController.java'), 'utf8');
     assert.match(controller, /class CancelReturnController/);
-    assert.match(controller, /package com\.example\.beoreum\.cancelreturn\.web/);
+    assert.match(controller, /package com\.example\.byeorim\.cancelreturn\.web/);
   });
 });
 
@@ -183,7 +183,7 @@ test('Controller가 Spring 어노테이션과 record DTO를 가진다', async ()
         'java',
         'com',
         'example',
-        'beoreum',
+        'byeorim',
         'order',
         'web',
         'OrderController.java',
@@ -218,13 +218,13 @@ test('Application.java가 @SpringBootApplication을 가진다', async () => {
         'java',
         'com',
         'example',
-        'beoreum',
+        'byeorim',
         'Application.java',
       ),
       'utf8',
     );
     assert.match(app, /@SpringBootApplication/);
-    assert.match(app, /package com\.example\.beoreum/);
+    assert.match(app, /package com\.example\.byeorim/);
     assert.match(app, /public static void main/);
   });
 });
@@ -261,7 +261,7 @@ test('Service 클래스가 생성자 주입을 사용한다(@Autowired 필드 �
         'java',
         'com',
         'example',
-        'beoreum',
+        'byeorim',
         'order',
         'application',
         'OrderService.java',
@@ -288,7 +288,7 @@ test('Repository 인터페이스가 domain 영역에 있고 구현체가 infrast
       'java',
       'com',
       'example',
-      'beoreum',
+      'byeorim',
       'order',
     );
     const iface = readFileSync(join(orderJavaBase, 'domain', 'OrderRepository.java'), 'utf8');
@@ -316,7 +316,7 @@ async function setupSingletonForSet(cwd) {
     askArchitecture: async () => JAVA_CHOICES,
     confirmArchitecture: async () => 'proceed',
   });
-  const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+  const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
   const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
   const order = catalog.blocks.find((b) => b.id === 'order');
   order.api_style = 'singleton';
@@ -340,7 +340,7 @@ test('singleton 블럭의 update는 @PatchMapping으로 emit된다(ADR 0044)', a
         'java',
         'com',
         'example',
-        'beoreum',
+        'byeorim',
         'order',
         'web',
         'OrderController.java',
@@ -360,7 +360,7 @@ test('singleton 블럭의 update는 @PatchMapping으로 emit된다(ADR 0044)', a
 // ADR 0046: 생성 코드의 로컬 실행 가능성 (healthcheck + env 분리 + prod 가드)
 
 function appJavaPath(cwd, ...rest) {
-  return backendPath(cwd, 'app', 'src', 'main', 'java', 'com', 'example', 'beoreum', ...rest);
+  return backendPath(cwd, 'app', 'src', 'main', 'java', 'com', 'example', 'byeorim', ...rest);
 }
 
 function appResourcePath(cwd, ...rest) {
@@ -393,10 +393,10 @@ test('application.yml과 application-production.yml이 둘 다 자동 생성된�
     // dev는 H2 in-memory(ADR 0046 결정 3)
     assert.match(devText, /jdbc:h2:mem/);
     // 둘 다 jwt.secret이 dev placeholder
-    assert.match(devText, /secret: BEOREUM_DEV_PLACEHOLDER_/);
-    assert.match(prodText, /secret: BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(devText, /secret: BYEORIM_DEV_PLACEHOLDER_/);
+    assert.match(prodText, /secret: BYEORIM_DEV_PLACEHOLDER_/);
     // prod 템플릿은 database.url도 placeholder
-    assert.match(prodText, /url: BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(prodText, /url: BYEORIM_DEV_PLACEHOLDER_/);
   });
 });
 
@@ -409,7 +409,7 @@ test('EnvSecretsValidator.java가 production profile에서만 동작한다(ADR 0
     const code = readFileSync(file, 'utf8');
     assert.match(code, /@Component/);
     assert.match(code, /@Profile\("production"\)/);
-    assert.match(code, /BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(code, /BYEORIM_DEV_PLACEHOLDER_/);
     assert.match(code, /@PostConstruct/);
     // 한국어 안내(사용자가 보는 결)
     assert.match(code, /dev placeholder입니다/);
@@ -435,7 +435,7 @@ test('application.yml이 이미 있으면 set 재실행 시 덮어쓰지 않는�
     const userValue = '# 사용자가 customization한 자리\nserver:\n  port: 9090\n';
     writeFileSync(ymlFile, userValue, 'utf8');
     // current_stage를 set으로 되돌려 다시 실행
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'set';
     state.completed_stages = state.completed_stages.filter((s) => s !== 'set');

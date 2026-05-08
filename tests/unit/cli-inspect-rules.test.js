@@ -10,7 +10,7 @@ import yaml from 'js-yaml';
 import { runAllRules } from '../../packages/cli/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-inspect-rules-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-inspect-rules-'));
 }
 
 async function withTempCwd(fn) {
@@ -22,14 +22,14 @@ async function withTempCwd(fn) {
   }
 }
 
-// 한 cwd에 .beoreum/ 트리를 최소한으로 박는다(state.yml + architecture.yml + generated/).
-function setupBeoreum(cwd, { language = 'node' } = {}) {
-  const beoreumDir = join(cwd, '.beoreum');
-  const projectDir = join(beoreumDir, 'project');
+// 한 cwd에 .byeorim/ 트리를 최소한으로 박는다(state.yml + architecture.yml + generated/).
+function setupByeorim(cwd, { language = 'node' } = {}) {
+  const byeorimDir = join(cwd, '.byeorim');
+  const projectDir = join(byeorimDir, 'project');
   const generatedDir = join(projectDir, 'generated');
   mkdirSync(generatedDir, { recursive: true });
   writeFileSync(
-    join(beoreumDir, 'state.yml'),
+    join(byeorimDir, 'state.yml'),
     yaml.dump({ schema_version: 1, current_stage: 'inspect' }),
     'utf8',
   );
@@ -38,7 +38,7 @@ function setupBeoreum(cwd, { language = 'node' } = {}) {
     yaml.dump({ language, database: 'postgresql', api_style: 'rest' }),
     'utf8',
   );
-  return { beoreumDir, generatedDir };
+  return { byeorimDir, generatedDir };
 }
 
 // Node backend 트리 minimal 박기. ADR 0046 baseline 패턴 흉내.
@@ -54,7 +54,7 @@ import jwt from '@fastify/jwt';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 const ENV_FILE = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
-const DEV_PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_';
+const DEV_PLACEHOLDER_PREFIX = 'BYEORIM_DEV_PLACEHOLDER_';
 function ensureProdSecrets() {
   if (process.env.NODE_ENV !== 'production') return;
   if (process.env.JWT_SECRET?.startsWith(DEV_PLACEHOLDER_PREFIX)) {
@@ -75,10 +75,10 @@ const app = Fastify();
 app.listen({ port: 3000 });
 `;
   writeFileSync(join(srcDir, 'server.js'), serverContent, 'utf8');
-  writeFileSync(join(backendDir, '.env'), 'JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_jwt\n', 'utf8');
+  writeFileSync(join(backendDir, '.env'), 'JWT_SECRET=BYEORIM_DEV_PLACEHOLDER_jwt\n', 'utf8');
   writeFileSync(
     join(backendDir, '.env.production'),
-    'JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_jwt\n',
+    'JWT_SECRET=BYEORIM_DEV_PLACEHOLDER_jwt\n',
     'utf8',
   );
   writeFileSync(join(backendDir, '.gitignore'), 'node_modules/\n.env\n.env.production\n', 'utf8');
@@ -103,7 +103,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
   if (mode === 'production') {
     for (const [name, value] of Object.entries(env)) {
-      if (typeof value === 'string' && value.startsWith('BEOREUM_DEV_PLACEHOLDER_')) {
+      if (typeof value === 'string' && value.startsWith('BYEORIM_DEV_PLACEHOLDER_')) {
         throw new Error('PROD 빌드 거부');
       }
     }
@@ -119,7 +119,7 @@ export default defineConfig({ plugins: [] });
   writeFileSync(join(frontendDir, '.env'), 'VITE_API_BASE=http://localhost:3000\n', 'utf8');
   writeFileSync(
     join(frontendDir, '.env.production'),
-    'VITE_API_BASE=BEOREUM_DEV_PLACEHOLDER_vite_api_base\n',
+    'VITE_API_BASE=BYEORIM_DEV_PLACEHOLDER_vite_api_base\n',
     'utf8',
   );
   writeFileSync(join(frontendDir, '.gitignore'), 'node_modules/\n.env\n.env.production\n', 'utf8');
@@ -138,7 +138,7 @@ function findFinding(findings, title) {
 
 test('state.yml이 있으면 운영 영역 pass', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd);
+    setupByeorim(cwd);
     const findings = runAllRules({ cwd, architecture: { language: 'node' } });
     const f = findFinding(findings, 'state.yml이 존재합니다');
     assert.ok(f);
@@ -149,7 +149,7 @@ test('state.yml이 있으면 운영 영역 pass', async () => {
 
 test('architecture.language가 비어있으면 운영 warning', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd);
+    setupByeorim(cwd);
     const findings = runAllRules({ cwd, architecture: {} });
     const f = findFinding(findings, 'architecture.yml의 language가 비어있습니다');
     assert.ok(f);
@@ -161,7 +161,7 @@ test('architecture.language가 비어있으면 운영 warning', async () => {
 
 test('Node baseline이 박히면 보안 영역에 pass finding 여러 개', async () => {
   await withTempCwd(async (cwd) => {
-    const { generatedDir } = setupBeoreum(cwd, { language: 'node' });
+    const { generatedDir } = setupByeorim(cwd, { language: 'node' });
     setupNodeBackend(generatedDir, { withGuards: true });
     const findings = runAllRules({ cwd, architecture: { language: 'node' } });
     assert.ok(findFinding(findings, '/health endpoint가 인증 없이 공개됩니다'));
@@ -181,7 +181,7 @@ test('Node baseline이 박히면 보안 영역에 pass finding 여러 개', asyn
 
 test('Node baseline이 망가지면 보안 영역에 concern finding', async () => {
   await withTempCwd(async (cwd) => {
-    const { generatedDir } = setupBeoreum(cwd, { language: 'node' });
+    const { generatedDir } = setupByeorim(cwd, { language: 'node' });
     setupNodeBackend(generatedDir, { withGuards: false });
     const findings = runAllRules({ cwd, architecture: { language: 'node' } });
     const concerns = findings.filter((f) => f.severity === 'concern');
@@ -193,7 +193,7 @@ test('Node baseline이 망가지면 보안 영역에 concern finding', async () 
 
 test('Node backend 디렉토리가 없으면 검사 자체를 안 함', async () => {
   await withTempCwd(async (cwd) => {
-    setupBeoreum(cwd, { language: 'node' });
+    setupByeorim(cwd, { language: 'node' });
     // backend 안 만듦
     const findings = runAllRules({ cwd, architecture: { language: 'node' } });
     // server.js 관련 finding이 없어야 한다
@@ -205,7 +205,7 @@ test('Node backend 디렉토리가 없으면 검사 자체를 안 함', async ()
 
 test('Frontend baseline이 박히면 CSP meta와 prod 가드가 pass', async () => {
   await withTempCwd(async (cwd) => {
-    const { generatedDir } = setupBeoreum(cwd, { language: 'node' });
+    const { generatedDir } = setupByeorim(cwd, { language: 'node' });
     setupNodeBackend(generatedDir, { withGuards: true });
     setupFrontend(generatedDir, { withGuards: true });
     const findings = runAllRules({ cwd, architecture: { language: 'node' } });
@@ -219,7 +219,7 @@ test('Frontend baseline이 박히면 CSP meta와 prod 가드가 pass', async () 
 
 test('Frontend baseline이 빠지면 CSP meta warning과 vite 가드 concern', async () => {
   await withTempCwd(async (cwd) => {
-    const { generatedDir } = setupBeoreum(cwd, { language: 'node' });
+    const { generatedDir } = setupByeorim(cwd, { language: 'node' });
     setupNodeBackend(generatedDir, { withGuards: true });
     setupFrontend(generatedDir, { withGuards: false });
     const findings = runAllRules({ cwd, architecture: { language: 'node' } });
@@ -235,9 +235,9 @@ test('Frontend baseline이 빠지면 CSP meta warning과 vite 가드 concern', a
 
 test('language=java면 HealthController 검사가 동작', async () => {
   await withTempCwd(async (cwd) => {
-    const { generatedDir } = setupBeoreum(cwd, { language: 'java' });
+    const { generatedDir } = setupByeorim(cwd, { language: 'java' });
     const backendDir = join(generatedDir, 'backend');
-    const javaDir = join(backendDir, 'app', 'src', 'main', 'java', 'com', 'example', 'beoreum');
+    const javaDir = join(backendDir, 'app', 'src', 'main', 'java', 'com', 'example', 'byeorim');
     const configDir = join(javaDir, 'config');
     const resourcesDir = join(backendDir, 'app', 'src', 'main', 'resources');
     mkdirSync(configDir, { recursive: true });
@@ -265,9 +265,9 @@ test('language=java면 HealthController 검사가 동작', async () => {
 
 test('language=python이면 main.py와 config.py 검사', async () => {
   await withTempCwd(async (cwd) => {
-    const { generatedDir } = setupBeoreum(cwd, { language: 'python' });
+    const { generatedDir } = setupByeorim(cwd, { language: 'python' });
     const backendDir = join(generatedDir, 'backend');
-    const pkgDir = join(backendDir, 'src', 'mybeoreum');
+    const pkgDir = join(backendDir, 'src', 'mybyeorim');
     mkdirSync(pkgDir, { recursive: true });
     writeFileSync(
       join(pkgDir, 'main.py'),
@@ -276,7 +276,7 @@ test('language=python이면 main.py와 config.py 검사', async () => {
     );
     writeFileSync(
       join(pkgDir, 'config.py'),
-      `import os\nDEV_PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_'\n_env_file = '.env.production' if os.environ.get('PYTHON_ENV') == 'production' else '.env'\nclass Settings: pass\n`,
+      `import os\nDEV_PLACEHOLDER_PREFIX = 'BYEORIM_DEV_PLACEHOLDER_'\n_env_file = '.env.production' if os.environ.get('PYTHON_ENV') == 'production' else '.env'\nclass Settings: pass\n`,
       'utf8',
     );
     writeFileSync(join(backendDir, '.env'), 'JWT=x\n', 'utf8');
@@ -294,7 +294,7 @@ test('language=python이면 main.py와 config.py 검사', async () => {
 
 test('finding 객체의 결이 표준 (area/severity/title/detail/file)', async () => {
   await withTempCwd(async (cwd) => {
-    const { generatedDir } = setupBeoreum(cwd, { language: 'node' });
+    const { generatedDir } = setupByeorim(cwd, { language: 'node' });
     setupNodeBackend(generatedDir, { withGuards: true });
     const findings = runAllRules({ cwd, architecture: { language: 'node' } });
     for (const f of findings) {

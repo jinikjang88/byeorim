@@ -30,7 +30,7 @@ ADR 0012가 shape의 4개 결정(language, database, api_style, architecture_pat
 - 장점: smelt 단계 LLM 호출이 한 번이면 끝. shape는 LLM 호출 없이 진행
 - 단점: 추천이 smelt 시점에 박혀있어 사용자가 architecture를 다시 보거나 cascade 답안을 채운 뒤 다시 묻고 싶을 때 옛 추천이 남음. 시점 불일치. 한 메서드 책임이 두 단계로 갈라져 짝이 안 맞음
 
-#### 옵션 C. 별도 명령 beoreum shape recommend
+#### 옵션 C. 별도 명령 byeorim shape recommend
 - 장점: 책임 분리 명확
 - 단점: 사용자가 새 명령을 알아야 함. 비기술 창업자에게 학습 비용. 자연스러운 흐름 깨짐. smelt에서 옵션 C를 거절한 결과 같은 결
 

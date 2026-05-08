@@ -1,4 +1,4 @@
-// beoreum inspect import-review. ADR 0051의 외부 검토 응답 import 자리.
+// byeorim inspect import-review. ADR 0051의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 검수 결과" 섹션의 ```yaml findings를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
 // state는 안 건드리고 inspect-findings.yml의 external 섹션과 inspect-report.md만 다듬는다.
@@ -72,13 +72,13 @@ export async function applyInspectReview({
     );
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const findingsFile = join(beoreumDir, 'project', 'inspect-findings.yml');
-  const reportFile = join(beoreumDir, 'project', 'inspect-report.md');
+  const byeorimDir = join(cwd, '.byeorim');
+  const findingsFile = join(byeorimDir, 'project', 'inspect-findings.yml');
+  const reportFile = join(byeorimDir, 'project', 'inspect-report.md');
 
   if (!existsSync(findingsFile)) {
     throw new Error(
-      'inspect-findings.yml이 없습니다. 먼저 beoreum inspect를 실행해 단일 진실 소스를 만들어주세요',
+      'inspect-findings.yml이 없습니다. 먼저 byeorim inspect를 실행해 단일 진실 소스를 만들어주세요',
     );
   }
 

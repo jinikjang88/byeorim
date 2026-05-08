@@ -10,7 +10,7 @@ import { runInit, runProspect, runSmelt, interactiveSmelt } from '../../packages
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-smelt-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-smelt-'));
 }
 
 // 비동기 fn이 끝난 뒤 임시 디렉토리를 청소한다. await로 finally가 fn 완료 후에 도는 것을 보장.
@@ -51,7 +51,7 @@ test('selected-blocks.yml 형식이 ADR 0010 결정 1을 따른다(다섯 필드
     // When: smelt
     await runSmelt({ cwd, blockIds: ['order'], now: fixedNow });
     // Then: selected-blocks.yml의 다섯 필드가 ADR 형식을 따른다
-    const file = join(cwd, '.beoreum', 'project', 'selected-blocks.yml');
+    const file = join(cwd, '.byeorim', 'project', 'selected-blocks.yml');
     const doc = yaml.load(readFileSync(file, 'utf8'));
     assert.equal(doc.schema_version, 1);
     assert.equal(doc.created_at, '2026-04-28T12:00:00.000Z');
@@ -70,7 +70,7 @@ test('decisions.yml은 각 질문에 빈 answer와 null answered_at을 미리 �
     //       이 단언은 commerce 카탈로그 데이터(coupon에 두 cascade 질문)에 의존한다(CLAUDE.md 섹션 8 데이터 무관성 노트).
     await runSmelt({ cwd, blockIds: ['coupon'] });
     // Then: decisions.yml에 답 자리가 비어있는 항목이 들어있다
-    const file = join(cwd, '.beoreum', 'project', 'decisions.yml');
+    const file = join(cwd, '.byeorim', 'project', 'decisions.yml');
     const doc = yaml.load(readFileSync(file, 'utf8'));
     assert.ok(doc.decisions.length >= 1, 'cascade 결정이 한 개 이상 수집되어야 한다');
     for (const d of doc.decisions) {
@@ -91,7 +91,7 @@ test('requires 의존성으로 끌려온 블럭이 auto_added에 들어간다', 
     await runSmelt({ cwd, blockIds: ['refund'] });
     // Then: auto_added에 끌려온 블럭이 보인다
     const doc = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'selected-blocks.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8'),
     );
     assert.equal(doc.auto_added.includes('payment'), true);
     assert.equal(doc.auto_added.includes('cancel-return'), true);
@@ -107,7 +107,7 @@ test('prerequisites가 객체 전체로 직렬화된다(ADR 0010 결정 4)', asy
     await runSmelt({ cwd, blockIds: ['payment'] });
     // Then: prerequisites 항목이 ID뿐 아니라 name과 enables 등을 가진다
     const doc = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'selected-blocks.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8'),
     );
     assert.ok(doc.prerequisites.length >= 1);
     for (const p of doc.prerequisites) {
@@ -125,7 +125,7 @@ test('state.yml이 smelt 완료를 반영한다', async () => {
     // When: smelt
     await runSmelt({ cwd, blockIds: ['order'] });
     // Then: current_stage가 shape로, completed_stages에 prospect와 smelt가 모두 들어간다
-    const state = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const state = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(state.current_stage, 'shape');
     assert.deepEqual(state.completed_stages, ['prospect', 'smelt']);
   });
@@ -156,9 +156,9 @@ test('intent.yml이 누락되면 prospect 안내 메시지로 거부한다', asy
   await withTempCwd(async (cwd) => {
     // Given: prospect까지 완료한 뒤 intent.yml만 삭제
     await setupReadyForSmelt(cwd);
-    unlinkSync(join(cwd, '.beoreum', 'project', 'intent.yml'));
+    unlinkSync(join(cwd, '.byeorim', 'project', 'intent.yml'));
     // When/Then: 누락 메시지 + prospect 안내
-    await assert.rejects(runSmelt({ cwd, blockIds: ['order'] }), /beoreum prospect를 실행해주세요/);
+    await assert.rejects(runSmelt({ cwd, blockIds: ['order'] }), /byeorim prospect를 실행해주세요/);
   });
 });
 
@@ -373,7 +373,7 @@ test('interactiveSmelt: intent.yml schema_version 1 폴백(user_answers 없음)�
   await withTempCwd(async (cwd) => {
     await setupReadyForSmelt(cwd);
     // intent.yml을 schema_version 1 결로 덮어쓴다(user_answers 없음)
-    const intentFile = join(cwd, '.beoreum', 'project', 'intent.yml');
+    const intentFile = join(cwd, '.byeorim', 'project', 'intent.yml');
     const oldIntent = {
       schema_version: 1,
       created_at: '2025-12-01T00:00:00.000Z',

@@ -1,4 +1,4 @@
-// beoreum status. 현재 프로젝트의 단계와 산출물 상태를 보여준다.
+// byeorim status. 현재 프로젝트의 단계와 산출물 상태를 보여준다.
 // 단계 독립 명령어(answer와 같은 결). 부작용 없음: 파일을 만들지도 state를 바꾸지도 않는다.
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -68,15 +68,15 @@ function buildArtifacts(projectDir) {
   };
 }
 
-// runStatus는 .beoreum/state.yml과 산출물을 읽어 status 객체를 돌려준다.
-// bin/beoreum.js가 이 객체를 한국어 출력으로 풀어낸다.
+// runStatus는 .byeorim/state.yml과 산출물을 읽어 status 객체를 돌려준다.
+// bin/byeorim.js가 이 객체를 한국어 출력으로 풀어낸다.
 //
 // 입력:
 //   cwd  - 프로젝트 루트 절대 경로
 //
 // 반환: {
 //   initialized,         init 여부
-//   beoreumDir,          .beoreum 절대 경로
+//   byeorimDir,          .byeorim 절대 경로
 //   schema_version,      state.yml의 schema_version (init 후)
 //   created_at,          init 시각
 //   current_stage,       'prospect'~'inspect' 또는 'done'
@@ -90,13 +90,13 @@ function buildArtifacts(projectDir) {
 export function runStatus({ cwd } = {}) {
   if (!cwd) throw new Error('runStatus({ cwd })가 필요합니다');
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
 
   if (!existsSync(stateFile)) {
     return {
       initialized: false,
-      beoreumDir,
+      byeorimDir,
     };
   }
 
@@ -105,11 +105,11 @@ export function runStatus({ cwd } = {}) {
   const currentStage = state.current_stage || null;
   const isDone = currentStage === DONE_MARKER;
 
-  const projectDir = join(beoreumDir, 'project');
+  const projectDir = join(byeorimDir, 'project');
 
   return {
     initialized: true,
-    beoreumDir,
+    byeorimDir,
     schema_version: state.schema_version || null,
     created_at: state.created_at || null,
     current_stage: currentStage,

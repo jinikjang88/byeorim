@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-temper-i-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-temper-i-'));
 }
 
 async function withTempCwd(fn) {
@@ -55,7 +55,7 @@ async function setupReadyForTemper(cwd, blockIds = ['order']) {
 }
 
 function readScenarios(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'));
 }
 
 test('proceed를 누르면 test-scenarios.yml을 쓰고 다음 단계로 advance한다', async () => {
@@ -74,7 +74,7 @@ test('proceed를 누르면 test-scenarios.yml을 쓰고 다음 단계로 advance
     assert.equal(doc.schema_version, 1);
     assert.equal(doc.architecture_api_style, 'rest');
     assert.equal(result.nextStage, 'set');
-    const stateDoc = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const stateDoc = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(stateDoc.current_stage, 'set');
   });
 });
@@ -255,7 +255,7 @@ test('proceed 시 test-scenarios-review-prompt.md 부산물이 생성된다(ADR 
     assert.ok(result.scenariosReviewPromptFile);
     assert.equal(
       result.scenariosReviewPromptFile,
-      join(cwd, '.beoreum', 'project', 'prompts', 'test-scenarios-review-prompt.md'),
+      join(cwd, '.byeorim', 'project', 'prompts', 'test-scenarios-review-prompt.md'),
     );
     assert.equal(existsSync(result.scenariosReviewPromptFile), true);
     const md = readFileSync(result.scenariosReviewPromptFile, 'utf8');

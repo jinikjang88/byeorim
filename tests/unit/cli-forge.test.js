@@ -16,7 +16,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-forge-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-forge-'));
 }
 
 async function withTempCwd(fn) {
@@ -53,7 +53,7 @@ async function setupReadyForForge(cwd, blockIds = ['order'], apiStyle = 'rest') 
 }
 
 function readContracts(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'contracts.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'));
 }
 
 test('정상 흐름: forge가 contracts.yml을 만들고 단계가 temper로 넘어간다', async () => {
@@ -199,13 +199,13 @@ test('architecture.yml이 없으면 shape 안내 메시지로 거부한다', asy
       log: () => {},
     });
     await runSmelt({ cwd, blockIds: ['order'] });
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'forge';
     state.completed_stages = ['prospect', 'smelt', 'shape'];
     writeFileSync(stateFile, yaml.dump(state, { sortKeys: false }), 'utf8');
     // When/Then
-    await assert.rejects(runForge({ cwd }), /beoreum shape를 실행해주세요/);
+    await assert.rejects(runForge({ cwd }), /byeorim shape를 실행해주세요/);
   });
 });
 
@@ -283,7 +283,7 @@ test('block.path가 있으면 자동 복수화 대신 그 path를 쓴다', async
   await withTempCwd(async (cwd) => {
     // Given: order 블럭(resource). 카탈로그에 path: /custom-orders 박음
     await setupReadyForForge(cwd, ['order']);
-    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
     const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
     const orderBlock = catalog.blocks.find((b) => b.id === 'order');
     orderBlock.path = '/custom-orders';
@@ -304,7 +304,7 @@ test('block.path가 query 블럭에도 적용된다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: product-search(query)에 path: /products/search 박음
     await setupReadyForForge(cwd, ['product-search']);
-    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
     const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
     const psBlock = catalog.blocks.find((b) => b.id === 'product-search');
     psBlock.path = '/products/search';
@@ -323,7 +323,7 @@ test('singleton 블럭은 GET/PATCH/DELETE 3개 endpoint로 풀린다', async ()
   await withTempCwd(async (cwd) => {
     // Given: order 블럭의 api_style을 singleton으로 강제 + path: /me 박음
     await setupReadyForForge(cwd, ['order']);
-    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
     const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
     const orderBlock = catalog.blocks.find((b) => b.id === 'order');
     orderBlock.api_style = 'singleton';
@@ -348,7 +348,7 @@ test('singleton 블럭은 GET/PATCH/DELETE 3개 endpoint로 풀린다', async ()
 test('singleton 블럭에 block.path 없으면 단수형(/account)으로 박힌다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForForge(cwd, ['order']);
-    const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+    const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
     const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
     const orderBlock = catalog.blocks.find((b) => b.id === 'order');
     orderBlock.api_style = 'singleton';

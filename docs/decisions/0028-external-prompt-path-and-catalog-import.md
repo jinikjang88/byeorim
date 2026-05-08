@@ -29,7 +29,7 @@ ADR 0008 결정 3은 source 형식의 미래 자리로 `custom`을 예약해뒀�
 - 장점: 흐름 안 끊김. 모든 사용자가 prompt 자리를 받아 나중에 쓸 수 있음
 - 단점: 모든 사용자에게 한 자리 더 만들어둠(쓰지 않을 사용자에게는 노이즈)
 
-#### 옵션 C. 별도 명령 `beoreum prospect prompt-catalog`
+#### 옵션 C. 별도 명령 `byeorim prospect prompt-catalog`
 - 장점: 책임 분리 명확. 원하는 사용자만 호출
 - 단점: 사용자가 명령을 알아야 함. 비기술 창업자에게 학습 비용
 
@@ -61,7 +61,7 @@ ADR 0008 결정 3은 source 형식의 미래 자리로 `custom`을 예약해뒀�
 
 ### 결정 1: 부산물 자동 생성 (옵션 B)
 
-prospect 끝부분에 항상 `.beoreum/project/prompts/catalog-prompt.md`를 만든다. 사용자가 어떤 source를 골랐든(빌트인/AI/외부) 부산물이 자리잡는다. 사용자에게 한 줄 안내: "더 자세한 카탈로그를 원하시면 prompts/catalog-prompt.md를 외부 AI에 붙여넣고 응답을 `beoreum prospect import-catalog <file>` 명령으로 가져오세요".
+prospect 끝부분에 항상 `.byeorim/project/prompts/catalog-prompt.md`를 만든다. 사용자가 어떤 source를 골랐든(빌트인/AI/외부) 부산물이 자리잡는다. 사용자에게 한 줄 안내: "더 자세한 카탈로그를 원하시면 prompts/catalog-prompt.md를 외부 AI에 붙여넣고 응답을 `byeorim prospect import-catalog <file>` 명령으로 가져오세요".
 
 쓰지 않는 사용자에게 약간의 노이즈가 되지만 prompts/는 한 디렉토리 안에 모여있어 시각적 부담이 작다. 그리고 사용자가 카탈로그 품질에 만족하지 못할 때 즉시 쓸 수 있는 결.
 
@@ -75,7 +75,7 @@ reality-check.md는 이전 카탈로그 기준입니다. 새 카탈로그로 다
 LLM 어댑터로 prospect를 다시 돌리거나, 후속 단계(smelt 이후)에서 자연스럽게 검토됩니다.
 ```
 
-import 책임이 좁아 단위 테스트가 쉽고 한 결로 흐른다. 자동 갱신은 후속 명령(`beoreum prospect refresh-rc` 같은) 자리.
+import 책임이 좁아 단위 테스트가 쉽고 한 결로 흐른다. 자동 갱신은 후속 명령(`byeorim prospect refresh-rc` 같은) 자리.
 
 ### 결정 3: source는 `custom` (옵션 A)
 
@@ -84,7 +84,7 @@ ADR 0008 결정 3의 예약 자리를 그대로 채운다. import한 카탈로�
 ### prospect import-catalog 명령
 
 ```bash
-beoreum prospect import-catalog <file>
+byeorim prospect import-catalog <file>
 ```
 
 - `<file>`은 사용자가 외부 AI에서 받은 yml 또는 yaml 파일 경로
@@ -102,7 +102,7 @@ beoreum prospect import-catalog <file>
 이 프롬프트를 Claude.ai, ChatGPT, Gemini 같은 AI에 붙여넣어 더 자세한 카탈로그를 받으세요.
 응답을 yml 파일로 저장한 뒤 다음 명령으로 가져옵니다.
 
-    beoreum prospect import-catalog <받은-파일.yml>
+    byeorim prospect import-catalog <받은-파일.yml>
 
 ---
 
@@ -143,7 +143,7 @@ beoreum prospect import-catalog <file>
 ### 미래 묶임
 - catalog-prompt.md 형식은 표준. 변경하려면 ADR 또는 명세 갱신
 - import-catalog 명령 시그니처(`<file>`)와 source 표시(`custom`)는 표준
-- import 후 RC 자동 갱신은 후속 명령(`beoreum prospect refresh-rc` 같은) 자리. 별도 ADR
+- import 후 RC 자동 갱신은 후속 명령(`byeorim prospect refresh-rc` 같은) 자리. 별도 ADR
 - 외부 AI 응답을 임시 파일로 받지 않고 stdin으로 받는 자리(파이프 결)는 후속 자리
 
 ## 링크

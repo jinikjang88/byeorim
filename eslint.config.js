@@ -1,4 +1,4 @@
-// 벼름 ESLint 설정. CLAUDE.md 섹션 3의 의존성 방향을 import 경로 차단으로 강제한다.
+// 벼림 ESLint 설정. CLAUDE.md 섹션 3의 의존성 방향을 import 경로 차단으로 강제한다.
 // 의존성 방향:
 //   templates → 데이터, 의존성 없음
 //   core      → 내부 의존성 없음
@@ -78,6 +78,6 @@ export default [
   },
   {
     // ESLint 자체와 빌드 산출물은 검사 대상에서 제외
-    ignores: ['node_modules/**', '.beoreum/**', 'coverage/**'],
+    ignores: ['node_modules/**', '.byeorim/**', 'coverage/**'],
   },
 ];

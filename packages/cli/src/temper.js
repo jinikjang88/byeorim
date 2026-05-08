@@ -1,4 +1,4 @@
-// beoreum temper. contracts.yml의 endpoint별로 happy_path Given-When-Then 시나리오를 만든다.
+// byeorim temper. contracts.yml의 endpoint별로 happy_path Given-When-Then 시나리오를 만든다.
 // ADR 0007의 자리, ADR 0014의 형식과 operation별 한국어 템플릿 표를 따른다.
 // ADR 0036의 옵셔널 어댑터로 test_code를 채운다(어댑터가 없으면 TODO 그대로).
 // ADR 0037의 인터랙티브 검토 흐름을 interactiveTemper로 박는다.
@@ -65,7 +65,7 @@ function ensureFile(path, hint) {
 }
 
 function loadState(stateFile) {
-  ensureFile(stateFile, '먼저 beoreum init을 실행해주세요');
+  ensureFile(stateFile, '먼저 byeorim init을 실행해주세요');
   return yaml.load(readFileSync(stateFile, 'utf8'));
 }
 
@@ -164,21 +164,21 @@ async function fillTestCodesWithAdapter(scenarios, blockMap, architecture, adapt
 // intent/selected는 contracts.yml에서 시나리오 만드는 데는 안 쓰이지만 외부 검토 프롬프트(ADR 0038)에 함께 담는다.
 // 반환: { state, contractsDoc, contracts, architecture, catalog, blockMap, answers, selectedBlocks, paths }
 function loadTemperInputs(cwd) {
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const selectedFile = join(beoreumDir, 'project', 'selected-blocks.yml');
-  const contractsFile = join(beoreumDir, 'project', 'contracts.yml');
-  const archFile = join(beoreumDir, 'project', 'architecture.yml');
-  const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
-  const scenariosFile = join(beoreumDir, 'project', 'test-scenarios.yml');
-  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
+  const archFile = join(byeorimDir, 'project', 'architecture.yml');
+  const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
+  const scenariosFile = join(byeorimDir, 'project', 'test-scenarios.yml');
+  const promptsDir = join(byeorimDir, 'project', 'prompts');
   const scenariosReviewPromptFile = join(promptsDir, 'test-scenarios-review-prompt.md');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
-  ensureFile(contractsFile, '먼저 beoreum forge를 실행해주세요');
+  ensureFile(contractsFile, '먼저 byeorim forge를 실행해주세요');
 
   const contractsDoc = yaml.load(readFileSync(contractsFile, 'utf8')) || {};
   const contracts = Array.isArray(contractsDoc.contracts) ? contractsDoc.contracts : [];

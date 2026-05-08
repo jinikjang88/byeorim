@@ -36,7 +36,7 @@ CLAUDE.md 절대 금지선 6번이 한 자리에서 다시 작동한다. Claude�
 - 장점: SDK가 기본으로 읽음. 12-factor 표준. 사용자가 쉘 프로필에 한 번만 두면 됨. 키가 코드/저장소에 들어갈 위험이 작음
 - 단점: 사용자가 환경 변수 설정을 직접 해야 함
 
-#### 옵션 B. 설정 파일 (.beoreum/config.yml에 평문)
+#### 옵션 B. 설정 파일 (.byeorim/config.yml에 평문)
 - 장점: 명시적
 - 단점: 키가 디스크에 평문. .gitignore 깜박하면 유출. 절대 금지선 6번의 정신과는 별개로 보안 위험
 
@@ -46,8 +46,8 @@ CLAUDE.md 절대 금지선 6번이 한 자리에서 다시 작동한다. Claude�
 
 ### 결정 3. 어댑터 선택 메커니즘
 
-#### 옵션 A. 환경 변수 BEOREUM_AI_ADAPTER (기본값 mock)
-- 장점: 사용자가 `BEOREUM_AI_ADAPTER=claude` 한 줄로 활성화. 기본은 mock이라 비용/네트워크 의존이 없는 출발선. 단위 테스트는 환경 변수 무시하고 직접 mock 주입(ADR 0009 결정 4 의존성 주입 보존)
+#### 옵션 A. 환경 변수 BYEORIM_AI_ADAPTER (기본값 mock)
+- 장점: 사용자가 `BYEORIM_AI_ADAPTER=claude` 한 줄로 활성화. 기본은 mock이라 비용/네트워크 의존이 없는 출발선. 단위 테스트는 환경 변수 무시하고 직접 mock 주입(ADR 0009 결정 4 의존성 주입 보존)
 - 단점: 환경 변수 두 개(키 + 선택)를 설정해야 함
 
 #### 옵션 B. 명령어 플래그 (--ai claude)
@@ -60,7 +60,7 @@ CLAUDE.md 절대 금지선 6번이 한 자리에서 다시 작동한다. Claude�
 
 ### 결정 4. 모델 선택
 
-#### 옵션 A. claude-opus-4-7 기본, BEOREUM_AI_MODEL로 override
+#### 옵션 A. claude-opus-4-7 기본, BYEORIM_AI_MODEL로 override
 - 장점: claude-api 스킬의 강력한 권고와 정합. 최고 품질이 첫 출시 기준선. 사용자가 비용을 줄이고 싶으면 sonnet이나 haiku로 바꿀 수 있음
 - 단점: 기본 비용이 가장 높음
 
@@ -120,11 +120,11 @@ CLAUDE.md 절대 금지선 6번이 한 자리에서 다시 작동한다. Claude�
 
 API 키는 ANTHROPIC_API_KEY 환경 변수로 받는다. SDK 기본 동작과 정합. 사용자에게는 README와 CLI 메시지로 한 번만 안내한다.
 
-키가 없는 상태에서 BEOREUM_AI_ADAPTER=claude로 실행하면 한국어 메시지로 "ANTHROPIC_API_KEY가 설정되어 있지 않습니다. https://console.anthropic.com에서 키를 발급받아 환경 변수에 두세요" 같이 안내한다.
+키가 없는 상태에서 BYEORIM_AI_ADAPTER=claude로 실행하면 한국어 메시지로 "ANTHROPIC_API_KEY가 설정되어 있지 않습니다. https://console.anthropic.com에서 키를 발급받아 환경 변수에 두세요" 같이 안내한다.
 
-### 결정 3: BEOREUM_AI_ADAPTER 환경 변수, 기본 mock (옵션 A)
+### 결정 3: BYEORIM_AI_ADAPTER 환경 변수, 기본 mock (옵션 A)
 
-어댑터 선택은 BEOREUM_AI_ADAPTER 환경 변수.
+어댑터 선택은 BYEORIM_AI_ADAPTER 환경 변수.
 
 | 값 | 동작 |
 | --- | --- |
@@ -133,13 +133,13 @@ API 키는 ANTHROPIC_API_KEY 환경 변수로 받는다. SDK 기본 동작과 �
 
 기본을 mock으로 둔 이유는 두 가지. 첫째, 사용자가 의도치 않게 비용을 쓰지 않게. 둘째, 이번 출시의 mock이 이미 흐름 검증에 충분하다. 사용자가 "이제 진짜 AI를 써보고 싶다"라고 결정할 때 환경 변수 한 줄을 켠다.
 
-엔트리 포인트(bin/beoreum.js)에서 어댑터를 선택해 runProspect/runForge에 주입한다. 단위 테스트는 환경 변수를 무시하고 직접 mock을 주입(ADR 0009 결정 4의 의존성 주입 보존).
+엔트리 포인트(bin/byeorim.js)에서 어댑터를 선택해 runProspect/runForge에 주입한다. 단위 테스트는 환경 변수를 무시하고 직접 mock을 주입(ADR 0009 결정 4의 의존성 주입 보존).
 
 선택 로직은 packages/ai/src/select.js 한 자리에 산다. 미래에 GPT나 Gemini가 추가되면 이 표만 갱신.
 
-### 결정 4: claude-opus-4-7 기본, BEOREUM_AI_MODEL로 override (옵션 A)
+### 결정 4: claude-opus-4-7 기본, BYEORIM_AI_MODEL로 override (옵션 A)
 
-기본 모델은 claude-opus-4-7. claude-api 스킬이 강하게 권고하는 자리(2026-04 기준 최신/최고 품질). 사용자가 비용을 줄이고 싶으면 BEOREUM_AI_MODEL=claude-sonnet-4-6 또는 claude-haiku-4-5로 바꾼다.
+기본 모델은 claude-opus-4-7. claude-api 스킬이 강하게 권고하는 자리(2026-04 기준 최신/최고 품질). 사용자가 비용을 줄이고 싶으면 BYEORIM_AI_MODEL=claude-sonnet-4-6 또는 claude-haiku-4-5로 바꾼다.
 
 모델 ID는 표 그대로 쓴다. 날짜 suffix(`-20250514` 같은)는 절대 만들지 않는다(claude-api 스킬 지침).
 
@@ -202,7 +202,7 @@ extractIntent는 한 세션에 한 번이라 캐시 효과가 적지만 같은 �
 ## 결과
 
 ### 긍정적
-- 사용자가 BEOREUM_AI_ADAPTER=claude 한 줄로 실제 LLM 활용 가능. 비용 우려가 있으면 기본 mock 그대로
+- 사용자가 BYEORIM_AI_ADAPTER=claude 한 줄로 실제 LLM 활용 가능. 비용 우려가 있으면 기본 mock 그대로
 - ADR 0009의 인터페이스가 첫 실제 구현으로 검증된다. 미래의 GPT/Gemini 어댑터가 같은 자리만 채우면 prospect/forge는 한 줄도 안 바뀐다
 - structured output으로 응답 파싱 실패가 거의 사라진다
 - 한국어 에러 메시지로 비기술 창업자(섹션 0의 1순위 사용자)에게 영문 stack trace를 던지지 않는다
@@ -211,13 +211,13 @@ extractIntent는 한 세션에 한 번이라 캐시 효과가 적지만 같은 �
 
 ### 부정적 / 트레이드오프
 - @anthropic-ai/sdk 외부 의존성 추가. 모노레포 의존성 트리가 커진다
-- 환경 변수 두 개(ANTHROPIC_API_KEY, BEOREUM_AI_ADAPTER)를 사용자가 알아야 함. README와 CLI 안내로 보완
-- claude-opus-4-7이 첫 출시 기준이라 호출 비용이 가장 큰 모델이 기본. 사용자가 BEOREUM_AI_MODEL로 줄일 수 있도록 안내
+- 환경 변수 두 개(ANTHROPIC_API_KEY, BYEORIM_AI_ADAPTER)를 사용자가 알아야 함. README와 CLI 안내로 보완
+- claude-opus-4-7이 첫 출시 기준이라 호출 비용이 가장 큰 모델이 기본. 사용자가 BYEORIM_AI_MODEL로 줄일 수 있도록 안내
 - structured output은 SDK 베타 표면. 향후 SDK 업데이트로 시그니처가 바뀔 가능성. 어댑터 한 파일만 갱신하면 되므로 영향은 국소적
 - mock과 claude의 출력이 다를 수 있다. mock은 generic placeholder, claude는 도메인 추론. 사용자가 두 모드를 오갈 때 결과 차이를 인식해야 함
 
 ### 미래 묶임
-- BEOREUM_AI_ADAPTER, BEOREUM_AI_MODEL 환경 변수 이름은 표준이다. 변경하려면 ADR
+- BYEORIM_AI_ADAPTER, BYEORIM_AI_MODEL 환경 변수 이름은 표준이다. 변경하려면 ADR
 - ANTHROPIC_API_KEY는 SDK 표준. 변경 불가
 - 어댑터 선택 표(packages/ai/src/select.js)는 표준. 새 벤더 추가는 amendment
 - 한국어 에러 메시지 표는 표준. 추가 에러 종류는 amendment

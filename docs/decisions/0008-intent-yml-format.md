@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0007이 `.beoreum/project/intent.yml`을 Prospect 단계의 산출물 자리로 박았다. 그러나 그 파일 안이 어떻게 생겼는지는 정하지 않았다. 이 ADR이 그 자리를 채운다.
+ADR 0007이 `.byeorim/project/intent.yml`을 Prospect 단계의 산출물 자리로 박았다. 그러나 그 파일 안이 어떻게 생겼는지는 정하지 않았다. 이 ADR이 그 자리를 채운다.
 
 CLAUDE.md 섹션 2의 절대 금지선 1번이 "intent.yml, selected-blocks.yml, contracts.yml 중 하나라도 없으면 애플리케이션 코드를 생성하지 않는다"고 박았다. 즉 intent.yml의 존재가 다음 단계(Smelt)의 진입 조건이다. 무엇이 intent.yml에 들어있어야 다음 단계가 그 위에 올라설 수 있는지 정해야 한다.
 
@@ -138,7 +138,7 @@ reality_check_status: pending
 - AI 어댑터의 extractIntent 출력은 이 형식의 extracted 부분과 같은 모양이어야 한다. ADR 0009가 그 약속을 박는다
 
 ## 링크
-- 이전 결정: ADR 0007 (.beoreum/ 디렉토리 레이아웃)
+- 이전 결정: ADR 0007 (.byeorim/ 디렉토리 레이아웃)
 - 짝 결정: ADR 0009 (AI 어댑터 인터페이스)
 - 후속 출시: Reality Check 6영역 리포트 (별도 ADR 또는 명세 문서)
 - 관련 정책: CLAUDE.md 섹션 2(절대 금지선 1번 intent.yml 필수), 섹션 5(역사 요구사항)

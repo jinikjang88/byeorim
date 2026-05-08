@@ -22,13 +22,13 @@ function pathToFastify(path) {
 // 한국어 what이 들어와도 안전한 fallback.
 function buildPackageName(intent) {
   const what = getIntentWhat(intent);
-  if (!what) return 'beoreum-project';
+  if (!what) return 'byeorim-project';
   const ascii = what
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return ascii || 'beoreum-project';
+  return ascii || 'byeorim-project';
 }
 
 // ── 파일 빌더들 ─────────────────────────────────────────────
@@ -88,7 +88,7 @@ CORS_ORIGIN=http://localhost:5173
 // 모든 시크릿이 dev placeholder로 박혀있어 사용자가 직접 채우지 않으면 prod 가드가 막는다.
 function buildEnvProduction() {
   return `# 자동 생성된 prod 환경 변수 템플릿. ADR 0046을 따른다.
-# 이 파일을 prod에 배포하기 전에 모든 BEOREUM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
+# 이 파일을 prod에 배포하기 전에 모든 BYEORIM_DEV_PLACEHOLDER_ 값을 실제 값으로 채운다.
 # 채우지 않은 채로 NODE_ENV=production으로 기동하면 시작이 거부된다.
 
 NODE_ENV=production
@@ -147,7 +147,7 @@ const ENV_FILE = process.env.NODE_ENV === 'production' ? '.env.production' : '.e
 loadDotenv({ path: ENV_FILE });
 
 // dev placeholder 표준 마커(ADR 0046 결정 5). prod 모드에서 시크릿이 이 prefix로 시작하면 거부.
-const DEV_PLACEHOLDER_PREFIX = 'BEOREUM_DEV_PLACEHOLDER_';
+const DEV_PLACEHOLDER_PREFIX = 'BYEORIM_DEV_PLACEHOLDER_';
 const REQUIRED_SECRETS = ['JWT_SECRET', 'DATABASE_URL', 'CORS_ORIGIN'];
 
 function ensureProdSecrets() {
@@ -199,7 +199,7 @@ app.log.info({ port, env: process.env.NODE_ENV || 'development' }, '서버가 �
 function buildBackendReadme(packageName, featureCount) {
   return `# ${packageName}
 
-벼름이 자동 생성한 Fastify 백엔드 스켈레톤입니다. ADR 0018과 ADR 0046을 따릅니다.
+벼림이 자동 생성한 Fastify 백엔드 스켈레톤입니다. ADR 0018과 ADR 0046을 따릅니다.
 
 ## 시작하기 (dev)
 
@@ -212,7 +212,7 @@ function buildBackendReadme(packageName, featureCount) {
 
 ## prod로 옮기기
 
-\`.env.production\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BEOREUM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 다음으로 띄웁니다.
+\`.env.production\`이 템플릿으로 같이 만들어져 있습니다. 모든 \`BYEORIM_DEV_PLACEHOLDER_\` 값을 실제 prod 값으로 교체한 뒤 다음으로 띄웁니다.
 
 \`\`\`
 npm run start:prod
@@ -382,11 +382,11 @@ ${handlers}
 // ── 본체 ─────────────────────────────────────────────────────
 
 // generateNodeBackend는 architecture.language='node'일 때 set이 호출하는 함수.
-// generatedDir(.beoreum/project/generated) 안에 backend/ 트리를 만든다.
+// generatedDir(.byeorim/project/generated) 안에 backend/ 트리를 만든다.
 //
 // 입력:
 //   inputs        - set.js의 loadInputs 결과. intent, contracts, scenarios 사용
-//   generatedDir  - .beoreum/project/generated 절대 경로
+//   generatedDir  - .byeorim/project/generated 절대 경로
 //   now           - 테스트용 결정적 시각(현재는 사용하지 않음. 미래 자리)
 //
 // 반환: { backendDir, featureCount, fileCount }

@@ -11,7 +11,7 @@ import { createMockAdapter } from '../../packages/ai/index.js';
 import { loadCatalog } from '../../packages/catalog/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-prospect-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-prospect-'));
 }
 
 async function withTempCwd(fn) {
@@ -74,7 +74,7 @@ test('intent.yml 형식이 ADR 0026 7항목 결정을 따른다', async () => {
       log: silentLog,
     });
     // When: intent.yml을 읽어 파싱한다
-    const intent = yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'intent.yml'), 'utf8'));
+    const intent = yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'intent.yml'), 'utf8'));
     // Then: schema_version 2, 7항목, unanswered, source, reality_check_status가 모두 자리한다
     assert.equal(intent.schema_version, 2);
     assert.equal(intent.created_at, '2026-05-03T12:00:00.000Z');
@@ -109,7 +109,7 @@ test('빈 항목은 unanswered 배열에 들어가고 다이어리에 prospect �
     });
     // Then: unanswered가 두 키, diary.md에 두 질문이 prospect 의도 머리 아래 추가됨
     assert.deepEqual(result.unanswered, ['when', 'how_manage']);
-    const diary = readFileSync(join(cwd, '.beoreum', 'project', 'diary.md'), 'utf8');
+    const diary = readFileSync(join(cwd, '.byeorim', 'project', 'diary.md'), 'utf8');
     assert.match(diary, /## 2026-05-03 prospect 의도에서 미뤄둔 질문/);
     assert.match(diary, /- when:/);
     assert.match(diary, /- how_manage:/);
@@ -135,7 +135,7 @@ test('기존 다이어리 메모는 보존되고 새 단락은 끝에 append된�
   await withTempCwd(async (cwd) => {
     // Given: init 후 사용자가 미리 적어둔 메모가 있는 다이어리
     runInit({ cwd });
-    const diaryFile = join(cwd, '.beoreum', 'project', 'diary.md');
+    const diaryFile = join(cwd, '.byeorim', 'project', 'diary.md');
     const before = readFileSync(diaryFile, 'utf8');
     const userMemo = '\n## 내 메모\n\n나만의 노트입니다.\n';
     writeFileSync(diaryFile, before + userMemo, 'utf8');
@@ -164,7 +164,7 @@ test('복사된 카탈로그가 검증을 통과한다', async () => {
       adapter: createMockAdapter(),
       log: silentLog,
     });
-    const catalog = loadCatalog(join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml'));
+    const catalog = loadCatalog(join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml'));
     assert.ok(Array.isArray(catalog.worlds));
     assert.ok(Array.isArray(catalog.blocks));
   });
@@ -179,7 +179,7 @@ test('state.yml이 prospect 완료를 반영한다', async () => {
       adapter: createMockAdapter(),
       log: silentLog,
     });
-    const state = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const state = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(state.current_stage, 'smelt');
     assert.deepEqual(state.completed_stages, ['prospect']);
   });
@@ -209,7 +209,7 @@ test('init 없이 prospect를 돌리면 한국어 에러로 init 실행을 안�
         adapter: createMockAdapter(),
         log: silentLog,
       }),
-      /beoreum init을 실행해주세요/,
+      /byeorim init을 실행해주세요/,
     );
   });
 });
@@ -296,7 +296,7 @@ test('interactiveProspect: 단계 검증이 askAnswers 호출 전에 일어난�
         askAnswers,
         log: silentLog,
       }),
-      /beoreum init을 실행해주세요/,
+      /byeorim init을 실행해주세요/,
     );
     assert.equal(askCalled, false, 'askAnswers는 단계 검증 통과 후에만 호출되어야 한다');
   });
@@ -492,7 +492,7 @@ test('Reality Check 질문이 다이어리에 RC 머리로 분리되어 추가�
       now: new Date('2026-05-04T09:00:00.000Z'),
       log: silentLog,
     });
-    const diary = readFileSync(join(cwd, '.beoreum', 'project', 'diary.md'), 'utf8');
+    const diary = readFileSync(join(cwd, '.byeorim', 'project', 'diary.md'), 'utf8');
     // 두 머리가 모두 자리한다(prospect 의도 + Reality Check)
     assert.match(diary, /## 2026-05-04 prospect 의도에서 미뤄둔 질문/);
     assert.match(diary, /## 2026-05-04 Reality Check에서 미뤄둔 질문/);

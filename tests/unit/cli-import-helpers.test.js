@@ -17,7 +17,7 @@ import {
 // ── readResponseFile ──────────────────────────────────────
 
 test('readResponseFile: 파일이 있으면 본문 반환', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'beoreum-import-helpers-'));
+  const dir = mkdtempSync(join(tmpdir(), 'byeorim-import-helpers-'));
   try {
     const path = join(dir, 'r.md');
     writeFileSync(path, '본문', 'utf8');

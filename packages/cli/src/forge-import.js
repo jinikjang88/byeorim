@@ -1,4 +1,4 @@
-// beoreum forge import-review. ADR 0039의 외부 검토 응답 import 자리.
+// byeorim forge import-review. ADR 0039의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 제안된 변경 사항" 섹션의 ```yaml changes를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
 // state는 안 건드리고 contracts.yml만 다듬는다(ADR 0039 결정 7).
@@ -201,11 +201,11 @@ export async function applyForgeReview({
     );
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const contractsFile = join(beoreumDir, 'project', 'contracts.yml');
-  const scenariosFile = join(beoreumDir, 'project', 'test-scenarios.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
+  const scenariosFile = join(byeorimDir, 'project', 'test-scenarios.yml');
 
-  ensureFile(contractsFile, '먼저 beoreum forge를 실행해주세요');
+  ensureFile(contractsFile, '먼저 byeorim forge를 실행해주세요');
 
   // 응답 파일 읽기 (ADR 0054 helpers).
   const responseText = readResponseFile(responsePath);
@@ -294,7 +294,7 @@ export async function applyForgeReview({
   // test-scenarios.yml이 있으면 안내(ADR 0039 결정 7).
   if (appliedCount > 0 && existsSync(scenariosFile)) {
     const msg =
-      'test-scenarios.yml이 이미 있어요. contracts가 바뀌었으니 beoreum temper를 다시 돌리는 결을 검토해주세요.';
+      'test-scenarios.yml이 이미 있어요. contracts가 바뀌었으니 byeorim temper를 다시 돌리는 결을 검토해주세요.';
     warnings.push(msg);
     log('');
     log(msg);

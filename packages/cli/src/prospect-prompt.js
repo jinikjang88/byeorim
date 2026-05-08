@@ -1,6 +1,6 @@
 // catalog-prompt.md 합성. ADR 0028의 외부 프롬프트 경로 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 더 자세한 카탈로그를 받을 수 있는 프롬프트.
-// 받은 응답은 `beoreum prospect import-catalog <file>` 명령으로 가져온다.
+// 받은 응답은 `byeorim prospect import-catalog <file>` 명령으로 가져온다.
 //
 // API 어댑터(claude.js)의 CATALOG_SYSTEM_PROMPT와 별도다. API는 structured output schema가 강제하지만
 // 외부 AI는 YAML 형식을 자연어로 안내해야 한다. 두 자리는 같은 결을 따르되 텍스트는 다르다.
@@ -12,7 +12,7 @@ const HEADER = `# 카탈로그 생성 프롬프트
 이 프롬프트를 외부 AI(Claude.ai, ChatGPT, Gemini 등)에 붙여넣어 더 자세한 도메인 카탈로그를 받을 수 있어요.
 응답으로 YAML 파일을 받으면 다음 명령으로 가져옵니다.
 
-    beoreum prospect import-catalog <받은-파일.yml>
+    byeorim prospect import-catalog <받은-파일.yml>
 
 가져오기 전에 받은 파일이 catalog.schema.json 형식을 따르는지 자동 검증됩니다.
 형식이 어긋나면 한국어 안내를 받으니 외부 AI에 다시 형식을 맞춰달라고 부탁하면 됩니다.

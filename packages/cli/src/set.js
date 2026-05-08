@@ -1,4 +1,4 @@
-// beoreum set. 7단계의 산출물을 한 README 문서로 합성하고, 언어가 지원되면 백엔드 코드도 생성.
+// byeorim set. 7단계의 산출물을 한 README 문서로 합성하고, 언어가 지원되면 백엔드 코드도 생성.
 // ADR 0007의 자리, ADR 0015(README 합성), ADR 0017(7원칙)과 ADR 0018(Node 구조)을 따른다.
 // 사용자 입력 없는 변환 단계라 picker 없음.
 
@@ -31,7 +31,7 @@ function ensureFile(path, hint) {
 }
 
 function loadState(stateFile) {
-  ensureFile(stateFile, '먼저 beoreum init을 실행해주세요');
+  ensureFile(stateFile, '먼저 byeorim init을 실행해주세요');
   return yaml.load(readFileSync(stateFile, 'utf8'));
 }
 
@@ -43,20 +43,20 @@ function ensureStage(state, expected) {
   }
 }
 
-function loadInputs(beoreumDir) {
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const selectedFile = join(beoreumDir, 'project', 'selected-blocks.yml');
-  const decisionsFile = join(beoreumDir, 'project', 'decisions.yml');
-  const archFile = join(beoreumDir, 'project', 'architecture.yml');
-  const contractsFile = join(beoreumDir, 'project', 'contracts.yml');
-  const scenariosFile = join(beoreumDir, 'project', 'test-scenarios.yml');
+function loadInputs(byeorimDir) {
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
+  const archFile = join(byeorimDir, 'project', 'architecture.yml');
+  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
+  const scenariosFile = join(byeorimDir, 'project', 'test-scenarios.yml');
 
-  ensureFile(intentFile, '먼저 beoreum prospect를 실행해주세요');
-  ensureFile(selectedFile, '먼저 beoreum smelt를 실행해주세요');
-  ensureFile(decisionsFile, '먼저 beoreum smelt를 실행해주세요');
-  ensureFile(archFile, '먼저 beoreum shape를 실행해주세요');
-  ensureFile(contractsFile, '먼저 beoreum forge를 실행해주세요');
-  ensureFile(scenariosFile, '먼저 beoreum temper를 실행해주세요');
+  ensureFile(intentFile, '먼저 byeorim prospect를 실행해주세요');
+  ensureFile(selectedFile, '먼저 byeorim smelt를 실행해주세요');
+  ensureFile(decisionsFile, '먼저 byeorim smelt를 실행해주세요');
+  ensureFile(archFile, '먼저 byeorim shape를 실행해주세요');
+  ensureFile(contractsFile, '먼저 byeorim forge를 실행해주세요');
+  ensureFile(scenariosFile, '먼저 byeorim temper를 실행해주세요');
 
   return {
     intent: yaml.load(readFileSync(intentFile, 'utf8')) || {},
@@ -267,18 +267,18 @@ function buildNextSteps() {
 
 이 문서를 다른 개발자나 AI 도우미에게 보여주세요. 위 정보가 코드 작업의 출발점이 됩니다.
 
-답하지 못한 cascade 결정은 다이어리(\`.beoreum/project/diary.md\`)에 같이 남겨두면 좋습니다. 만들면서, 출시 전에, 첫 사용자를 만났을 때, 그 질문이 다시 찾아옵니다.
+답하지 못한 cascade 결정은 다이어리(\`.byeorim/project/diary.md\`)에 같이 남겨두면 좋습니다. 만들면서, 출시 전에, 첫 사용자를 만났을 때, 그 질문이 다시 찾아옵니다.
 
-미래 출시에서 벼름이 직접 코드 스켈레톤을 만들고 검증까지 도울 예정입니다. 지금은 이 문서가 가장 큰 자리입니다.
+미래 출시에서 벼림이 직접 코드 스켈레톤을 만들고 검증까지 도울 예정입니다. 지금은 이 문서가 가장 큰 자리입니다.
 `;
 }
 
 function buildReadme(inputs, now) {
   const createdAt = (now || new Date()).toISOString();
-  const what = (inputs.intent.extracted && inputs.intent.extracted.what) || '벼름 프로젝트';
+  const what = (inputs.intent.extracted && inputs.intent.extracted.what) || '벼림 프로젝트';
   const header = `# ${what}
 
-이 문서는 벼름의 7단계 중 6단계까지의 의도와 결정을 한 자리에 모은 합성본입니다.
+이 문서는 벼림의 7단계 중 6단계까지의 의도와 결정을 한 자리에 모은 합성본입니다.
 
 생성 시각: ${createdAt}
 `;
@@ -329,18 +329,18 @@ function advanceState(state, stage) {
 export async function runSet({ cwd, now } = {}) {
   if (!cwd) throw new Error('runSet({ cwd })가 필요합니다');
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
-  const inputs = loadInputs(beoreumDir);
+  const inputs = loadInputs(byeorimDir);
 
-  const generatedDir = join(beoreumDir, 'project', 'generated');
+  const generatedDir = join(byeorimDir, 'project', 'generated');
   mkdirSync(generatedDir, { recursive: true });
   const readmeFile = join(generatedDir, 'README.md');
-  const verifyFile = join(beoreumDir, 'project', 'verify-report.md');
+  const verifyFile = join(byeorimDir, 'project', 'verify-report.md');
 
   writeFileSync(readmeFile, buildReadme(inputs, now), 'utf8');
   writeFileSync(verifyFile, buildVerifyReport(now), 'utf8');

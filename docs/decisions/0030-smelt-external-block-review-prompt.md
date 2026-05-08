@@ -49,7 +49,7 @@ ADR 0028로 prospect는 catalog-prompt.md를 부산물로 만들어 사용자가
 
 ### 결정 3. 외부 AI 블럭 검토 프롬프트 자리
 
-#### 옵션 A. 별도 명령 `beoreum smelt review-prompt`
+#### 옵션 A. 별도 명령 `byeorim smelt review-prompt`
 - 장점: 책임 분리
 - 단점: 사용자가 새 명령을 알아야 함
 
@@ -97,7 +97,7 @@ picker 라벨: `[추천] order — 주문 (이유: 단골 손님이 빵을 고�
 
 ### 결정 3: smelt 끝에 부산물 자동 생성 (옵션 B)
 
-ADR 0028이 prospect에 깐 결을 그대로 따른다. smelt가 끝날 때 항상 `.beoreum/project/prompts/block-review-prompt.md`를 만든다. 사용자가 외부 AI에 붙여넣어 검토받는 자리.
+ADR 0028이 prospect에 깐 결을 그대로 따른다. smelt가 끝날 때 항상 `.byeorim/project/prompts/block-review-prompt.md`를 만든다. 사용자가 외부 AI에 붙여넣어 검토받는 자리.
 
 쓰지 않는 사용자에게는 약간의 노이즈(prompt 한 파일)지만 prompts/ 디렉토리 안에 catalog-prompt.md와 같이 모여있어 시각 부담 작음.
 
@@ -142,7 +142,7 @@ ADR 0028이 prospect에 깐 결을 그대로 따른다. smelt가 끝날 때 항�
 
 ### 미래 묶임
 - BlockRecommendation.reasons의 두 시점({user, dev})은 표준. 시점 추가(예: 디자이너, 운영자)는 새 ADR
-- block-review-prompt.md 형식과 자리(.beoreum/project/prompts/)는 표준. ADR 0028과 같은 자리에 모임
+- block-review-prompt.md 형식과 자리(.byeorim/project/prompts/)는 표준. ADR 0028과 같은 자리에 모임
 - claude 어댑터의 단축어 풀어쓰기 가이드는 표준. 다른 AI 어댑터(GPT, Gemini)도 같은 가이드 따름
 - 외부 AI 응답을 smelt로 import하는 자리(예: import-blocks)는 후속 ADR. 이번은 검토 프롬프트만
 

@@ -19,7 +19,7 @@ ADR 0039(forge import-review)가 외부 AI 응답을 picker로 yml에 반영하�
 #### 옵션 A. block_add + block_remove 둘만 (이번 출시)
 
 - 장점: 단순. 외부 AI가 가장 자주 줄 결("이 블럭을 추가하세요" / "이 블럭은 빼도 돼요")이 다 들어감
-- 단점: prerequisite_modify(World 0 준비물)나 cascade 결정 직접 변경은 못 함. 다만 cascade는 `beoreum answer` 명령이 풀고, prerequisite은 미래 ADR
+- 단점: prerequisite_modify(World 0 준비물)나 cascade 결정 직접 변경은 못 함. 다만 cascade는 `byeorim answer` 명령이 풀고, prerequisite은 미래 ADR
 
 #### 옵션 B. 더 많은 종류(prerequisite_modify, decision_answer, priority_modify 등)
 
@@ -70,7 +70,7 @@ decisions.yml은 cascade 결정(answer가 채울 자리). 사용자가 이미 �
 #### 옵션 B. decisions.yml 안 건드림
 
 - 장점: 단순
-- 단점: 새 selected에 추가된 블럭이 새 cascade 결정을 만드는데 decisions.yml에 안 박힘. 사용자가 `beoreum answer`로 채울 자리를 못 봄
+- 단점: 새 selected에 추가된 블럭이 새 cascade 결정을 만드는데 decisions.yml에 안 박힘. 사용자가 `byeorim answer`로 채울 자리를 못 봄
 
 ### 결정 5. 검증 결
 
@@ -149,7 +149,7 @@ ADR 0045 결과 같은 결. 적용/건너뛰기/모두 적용/모두 건너뛰�
 
 - smelt가 forge/temper/inspect와 같은 외부 검토 결을 갖춤. 7단계 흐름의 외부 AI 검토가 모두 같은 패턴
 - 의존성 재해결로 selected 변경의 영향이 yml에 정확히 반영
-- decisions.yml의 사용자 답변이 보존되어 `beoreum answer`로 채운 자리가 안 사라짐
+- decisions.yml의 사용자 답변이 보존되어 `byeorim answer`로 채운 자리가 안 사라짐
 - review-response-parser.js의 parseReviewResponse를 그대로 재사용. 새 파서 안 만듦
 - forge/temper/inspect의 batch picker 결을 그대로 따라가니 사용자 학습 비용 0
 

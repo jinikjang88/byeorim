@@ -17,15 +17,15 @@ import { join } from 'node:path';
 
 // state.yml이 inspect 단계까지 왔는지 검사. 운영 영역.
 function checkStageReady({ cwd }) {
-  const stateFile = join(cwd, '.beoreum', 'state.yml');
+  const stateFile = join(cwd, '.byeorim', 'state.yml');
   if (!existsSync(stateFile)) {
     return [
       {
         area: '운영',
         severity: 'concern',
-        title: '.beoreum/state.yml이 없습니다',
-        detail: '먼저 beoreum init을 실행해주세요.',
-        file: '.beoreum/state.yml',
+        title: '.byeorim/state.yml이 없습니다',
+        detail: '먼저 byeorim init을 실행해주세요.',
+        file: '.byeorim/state.yml',
       },
     ];
   }
@@ -35,7 +35,7 @@ function checkStageReady({ cwd }) {
       severity: 'pass',
       title: 'state.yml이 존재합니다',
       detail: '7단계 흐름 상태가 추적되고 있습니다.',
-      file: '.beoreum/state.yml',
+      file: '.byeorim/state.yml',
     },
   ];
 }
@@ -50,7 +50,7 @@ function checkArchitectureSet({ architecture }) {
         title: 'architecture.yml의 language가 비어있습니다',
         detail:
           'shape 단계에서 backend 언어를 정해야 set이 코드를 생성할 수 있습니다. 비춤이 의지할 결을 잃습니다.',
-        file: '.beoreum/project/architecture.yml',
+        file: '.byeorim/project/architecture.yml',
       },
     ];
   }
@@ -59,7 +59,7 @@ function checkArchitectureSet({ architecture }) {
 
 // generated/ 디렉토리가 있는지. 운영 영역.
 function checkGeneratedExists({ cwd }) {
-  const generatedDir = join(cwd, '.beoreum', 'project', 'generated');
+  const generatedDir = join(cwd, '.byeorim', 'project', 'generated');
   if (!existsSync(generatedDir)) {
     return [
       {
@@ -67,7 +67,7 @@ function checkGeneratedExists({ cwd }) {
         severity: 'concern',
         title: 'generated 디렉토리가 없습니다',
         detail: 'set이 아직 실행되지 않았거나 generated/ 트리가 지워진 상태입니다.',
-        file: '.beoreum/project/generated/',
+        file: '.byeorim/project/generated/',
       },
     ];
   }
@@ -93,7 +93,7 @@ function readSafe(path) {
 // ── Backend (Node) ────────────────────────────────────────
 
 function checkNodeBackend({ cwd }) {
-  const backendDir = join(cwd, '.beoreum', 'project', 'generated', 'backend');
+  const backendDir = join(cwd, '.byeorim', 'project', 'generated', 'backend');
   if (!existsSync(backendDir)) return [];
   const findings = [];
   const serverFile = join(backendDir, 'src', 'server.js');
@@ -123,7 +123,7 @@ function checkNodeBackend({ cwd }) {
       area: '운영',
       severity: 'pass',
       title: '/health endpoint가 박혀 있습니다',
-      detail: 'beoreum run의 readiness 폴링과 verify --smoke가 의지하는 endpoint입니다.',
+      detail: 'byeorim run의 readiness 폴링과 verify --smoke가 의지하는 endpoint입니다.',
       file: 'src/server.js',
     });
   } else {
@@ -157,7 +157,7 @@ function checkNodeBackend({ cwd }) {
   }
 
   // prod placeholder 가드 (ADR 0046)
-  if (server.includes('BEOREUM_DEV_PLACEHOLDER_') && /NODE_ENV.*production/.test(server)) {
+  if (server.includes('BYEORIM_DEV_PLACEHOLDER_') && /NODE_ENV.*production/.test(server)) {
     findings.push({
       area: '보안',
       severity: 'pass',
@@ -216,7 +216,7 @@ function checkNodeBackend({ cwd }) {
       area: '운영',
       severity: 'pass',
       title: '.env.production 템플릿이 존재합니다',
-      detail: 'prod 배포 전에 BEOREUM_DEV_PLACEHOLDER_ 값을 채워야 합니다(ADR 0046 결정 2).',
+      detail: 'prod 배포 전에 BYEORIM_DEV_PLACEHOLDER_ 값을 채워야 합니다(ADR 0046 결정 2).',
       file: '.env.production',
     });
   } else {
@@ -288,7 +288,7 @@ function checkNodeBackend({ cwd }) {
 // ── Backend (Java) ────────────────────────────────────────
 
 function checkJavaBackend({ cwd }) {
-  const backendDir = join(cwd, '.beoreum', 'project', 'generated', 'backend');
+  const backendDir = join(cwd, '.byeorim', 'project', 'generated', 'backend');
   if (!existsSync(backendDir)) return [];
   const findings = [];
 
@@ -323,7 +323,7 @@ function checkJavaBackend({ cwd }) {
         area: '운영',
         severity: 'pass',
         title: '/health endpoint가 운영 신호로 박혀 있습니다',
-        detail: 'beoreum run과 verify --smoke가 이 endpoint에 의지합니다.',
+        detail: 'byeorim run과 verify --smoke가 이 endpoint에 의지합니다.',
         file: 'app/.../HealthController.java',
       });
     } else {
@@ -412,7 +412,7 @@ function checkJavaBackend({ cwd }) {
 // ── Backend (Python) ──────────────────────────────────────
 
 function checkPythonBackend({ cwd }) {
-  const backendDir = join(cwd, '.beoreum', 'project', 'generated', 'backend');
+  const backendDir = join(cwd, '.byeorim', 'project', 'generated', 'backend');
   if (!existsSync(backendDir)) return [];
   const findings = [];
 
@@ -444,7 +444,7 @@ function checkPythonBackend({ cwd }) {
         area: '운영',
         severity: 'pass',
         title: '/health endpoint가 운영 신호로 박혀 있습니다',
-        detail: 'beoreum run과 verify --smoke가 이 endpoint에 의지합니다.',
+        detail: 'byeorim run과 verify --smoke가 이 endpoint에 의지합니다.',
         file: 'src/{pkg}/main.py',
       });
     } else {
@@ -461,7 +461,7 @@ function checkPythonBackend({ cwd }) {
     const config = readSafe(join(pkgDir, 'config.py'));
     if (
       config &&
-      config.includes('BEOREUM_DEV_PLACEHOLDER_') &&
+      config.includes('BYEORIM_DEV_PLACEHOLDER_') &&
       /PYTHON_ENV.*production/.test(config)
     ) {
       findings.push({
@@ -531,7 +531,7 @@ function checkPythonBackend({ cwd }) {
 // ── Frontend (Vite + React) ──────────────────────────────
 
 function checkFrontend({ cwd }) {
-  const frontendDir = join(cwd, '.beoreum', 'project', 'generated', 'frontend');
+  const frontendDir = join(cwd, '.byeorim', 'project', 'generated', 'frontend');
   if (!existsSync(frontendDir)) return [];
   const findings = [];
 
@@ -560,7 +560,7 @@ function checkFrontend({ cwd }) {
   const viteConfig = readSafe(join(frontendDir, 'vite.config.ts'));
   if (
     viteConfig &&
-    viteConfig.includes('BEOREUM_DEV_PLACEHOLDER_') &&
+    viteConfig.includes('BYEORIM_DEV_PLACEHOLDER_') &&
     /mode === 'production'/.test(viteConfig)
   ) {
     findings.push({
@@ -610,7 +610,7 @@ function checkFrontend({ cwd }) {
       area: '운영',
       severity: 'pass',
       title: 'package.json에 dev 스크립트가 있습니다',
-      detail: 'beoreum run이 npm run dev로 frontend를 띄울 수 있습니다.',
+      detail: 'byeorim run이 npm run dev로 frontend를 띄울 수 있습니다.',
       file: 'package.json',
     });
   }

@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0007이 `.beoreum/project/contracts.yml`을 Forge 단계 산출물 자리로 박았다. ADR 0012가 architecture.yml에 4개 핵심 결정(언어, 저장소, API 형식, 구조 패턴)을 박았다. 이제 그 두 입력으로 contracts.yml을 만드는 단계의 책임과 형식을 정한다.
+ADR 0007이 `.byeorim/project/contracts.yml`을 Forge 단계 산출물 자리로 박았다. ADR 0012가 architecture.yml에 4개 핵심 결정(언어, 저장소, API 형식, 구조 패턴)을 박았다. 이제 그 두 입력으로 contracts.yml을 만드는 단계의 책임과 형식을 정한다.
 
 Forge는 "두드려 단련하는 일"이다(MANIFESTO III장). 계약 우선이라는 원칙이 여기서 살아난다. contracts.yml이 다음 단계(Set)의 코드 생성 입력이 되고, Temper의 테스트 의도가 이 계약 위에 올라간다.
 
@@ -50,7 +50,7 @@ Forge는 "두드려 단련하는 일"이다(MANIFESTO III장). 계약 우선이�
 
 #### 옵션 C. OpenAPI 직접 생성
 - 장점: 표준 형식
-- 단점: 우리는 *벼름의* 계약 자리지 OpenAPI 자리가 아니다. 사용자 의도를 우리 형식으로 보존한 뒤 미래 단계(Set)에서 OpenAPI로 변환하는 게 단계 분리에 맞다
+- 단점: 우리는 *벼림의* 계약 자리지 OpenAPI 자리가 아니다. 사용자 의도를 우리 형식으로 보존한 뒤 미래 단계(Set)에서 OpenAPI로 변환하는 게 단계 분리에 맞다
 
 ### 결정 3. block.api_style 매핑
 
@@ -158,7 +158,7 @@ block.api_style이 catalog에 적혀있지 않으면 `resource`로 본다. ADR 0
 
 `{path}`는 block.id에서 언더스코어를 하이픈으로 바꾼 값이다(`order-history` 그대로, `pg_integration`은 `pg-integration`). REST 관례를 따른다.
 
-미래에 사용자가 endpoint를 가감하는 자리(예: `beoreum forge --add-endpoint`)는 별도 ADR로 도입한다.
+미래에 사용자가 endpoint를 가감하는 자리(예: `byeorim forge --add-endpoint`)는 별도 ADR로 도입한다.
 
 ### 결정 4: skeleton 깊이, request/response는 TODO (옵션 A)
 
@@ -204,6 +204,6 @@ contracts에 들어가는 블럭은 selected-blocks.yml의 `selected`와 `auto_a
 - selected + auto_added 경계는 빌드 정의의 일부. 변경하려면 빌드 정의 자체를 다시 보는 ADR이 필요하다
 
 ## 링크
-- 이전 결정: ADR 0007 (.beoreum/ 자리), ADR 0010 (selected-blocks.yml 형식), ADR 0012 (architecture.yml 형식)
+- 이전 결정: ADR 0007 (.byeorim/ 자리), ADR 0010 (selected-blocks.yml 형식), ADR 0012 (architecture.yml 형식)
 - 후속 작업 후보: GraphQL/RPC contracts 형식 ADR, request/response 스키마 채우기 ADR, AI 기반 스키마 생성 ADR, endpoint 가감 명령어 ADR
 - 관련 정책: CLAUDE.md 섹션 0(사용자 우선순위), 섹션 6(아키텍처 결정 ADR), 섹션 8(파일당 책임, 한국어 메시지)

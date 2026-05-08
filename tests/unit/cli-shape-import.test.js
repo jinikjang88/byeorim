@@ -16,7 +16,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-shape-import-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-shape-import-'));
 }
 
 async function withTempCwd(fn) {
@@ -130,7 +130,7 @@ test('decision_modify 적용: architecture.yml의 4개 필드가 갱신된다', 
 test('모두 건너뛰면 architecture.yml 안 건드림', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
-    const archFile = join(cwd, '.beoreum', 'project', 'architecture.yml');
+    const archFile = join(cwd, '.byeorim', 'project', 'architecture.yml');
     const before = readFileSync(archFile, 'utf8');
     const responsePath = writeResponse(cwd, VALID_RESPONSE);
     const result = await applyShapeReview({

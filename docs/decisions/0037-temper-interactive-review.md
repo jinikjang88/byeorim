@@ -134,7 +134,7 @@ mock 어댑터에서 redo가 헛흐름임을 사용자에게 알리는 안내 �
   (어댑터가 test_code 채움을 지원하지 않아 모두 TODO로 남아있어요)
 ```
 
-기존 `runTemper`의 비대화 시그니처는 후행 호환을 위해 그대로 유지(ADR 0036 결정 5와 같은 결). `bin/beoreum.js`의 temper 핸들러만 `interactiveTemper`로 바꾼다.
+기존 `runTemper`의 비대화 시그니처는 후행 호환을 위해 그대로 유지(ADR 0036 결정 5와 같은 결). `bin/byeorim.js`의 temper 핸들러만 `interactiveTemper`로 바꾼다.
 
 ## 결과
 

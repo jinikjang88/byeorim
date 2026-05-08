@@ -174,13 +174,13 @@ test('springAnnotation: 알 수 없는 method는 GetMapping 폴백', () => {
 
 // ── devPlaceholder (ADR 0046 결정 5) ──────────────────
 
-test('DEV_PLACEHOLDER_PREFIX는 표준 마커 BEOREUM_DEV_PLACEHOLDER_', () => {
-  assert.equal(DEV_PLACEHOLDER_PREFIX, 'BEOREUM_DEV_PLACEHOLDER_');
+test('DEV_PLACEHOLDER_PREFIX는 표준 마커 BYEORIM_DEV_PLACEHOLDER_', () => {
+  assert.equal(DEV_PLACEHOLDER_PREFIX, 'BYEORIM_DEV_PLACEHOLDER_');
 });
 
 test('devPlaceholder: 키 이름을 받아 prefix + 키 + suffix로 만든다', () => {
   const v = devPlaceholder('jwt_secret');
-  assert.ok(v.startsWith('BEOREUM_DEV_PLACEHOLDER_'));
+  assert.ok(v.startsWith('BYEORIM_DEV_PLACEHOLDER_'));
   assert.ok(v.includes('jwt_secret'));
   assert.ok(v.endsWith('_change_before_production'));
 });
@@ -188,7 +188,7 @@ test('devPlaceholder: 키 이름을 받아 prefix + 키 + suffix로 만든다', 
 test('devPlaceholder: 안전하지 않은 문자는 underscore로 정리된다', () => {
   const v = devPlaceholder('Database-URL!');
   assert.match(v, /database_url/);
-  assert.ok(v.startsWith('BEOREUM_DEV_PLACEHOLDER_'));
+  assert.ok(v.startsWith('BYEORIM_DEV_PLACEHOLDER_'));
 });
 
 test('devPlaceholder: 빈 키 이름은 value 폴백', () => {

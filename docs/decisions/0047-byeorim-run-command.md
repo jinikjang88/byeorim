@@ -1,4 +1,4 @@
-# ADR 0047. `beoreum run` 명령 (backend + frontend 동시 기동)
+# ADR 0047. `byeorim run` 명령 (backend + frontend 동시 기동)
 
 - 상태: 채택
 - 날짜: 2026-05-07
@@ -18,17 +18,17 @@ ADR 0048(verify 스모크 테스트)이 이 ADR의 readiness 결을 그대로 �
 
 ### 결정 1. 명령 이름
 
-#### 옵션 A. `beoreum run` (이번 출시)
+#### 옵션 A. `byeorim run` (이번 출시)
 
 - 장점: 가장 직관적. 모든 사용자가 "내 서비스를 돌린다"는 의미로 받아들임. 메타포(prospect/smelt/shape/forge/temper/set/inspect) 외 보조 명령(answer/status/verify/init)과 결이 같음
 - 단점: 다른 도구(예: `npm run`)와 단어 충돌 가능. 다만 맥락이 분명해 혼란 없음
 
-#### 옵션 B. `beoreum dev`
+#### 옵션 B. `byeorim dev`
 
 - 장점: 개발 모드 명시
 - 단점: prod 모드도 지원할지 묻는 결로 풀려 헷갈림. ADR 0046이 prod 가드를 박았는데 명령 이름이 dev면 prod 실행 자리가 없는 것처럼 보임
 
-#### 옵션 C. `beoreum start`
+#### 옵션 C. `byeorim start`
 
 - 장점: npm 관례
 - 단점: 메타포에서 멀어짐. set/forge 같은 야금술 결이 있는데 start만 갑자기 일반 단어
@@ -62,7 +62,7 @@ ADR 0048(verify 스모크 테스트)이 이 ADR의 readiness 결을 그대로 �
 #### 옵션 A. 다른 쪽도 정리하고 종료 (fail-fast, 이번 출시)
 
 - 장점: 두 서버가 한 쌍이라는 결이 살아남음. 한쪽 에러를 사용자가 분명히 본다. 좀비 프로세스 위험 0
-- 단점: 한쪽 일시적 에러로 다른 쪽도 죽음. 다만 사용자가 다시 `beoreum run`으로 살리는 결이 자연스러움
+- 단점: 한쪽 일시적 에러로 다른 쪽도 죽음. 다만 사용자가 다시 `byeorim run`으로 살리는 결이 자연스러움
 
 #### 옵션 B. 다른 쪽은 그대로
 
@@ -107,9 +107,9 @@ ADR 0048(verify 스모크 테스트)이 이 ADR의 readiness 결을 그대로 �
 
 ## 결정
 
-### 결정 1: `beoreum run` (옵션 A)
+### 결정 1: `byeorim run` (옵션 A)
 
-명령 이름은 `beoreum run`. 약어 alias도 추가하지 않음(다른 명령이 3글자 약어를 쓰는 결과 다른데, run은 이미 3글자라 약어가 의미 없음).
+명령 이름은 `byeorim run`. 약어 alias도 추가하지 않음(다른 명령이 3글자 약어를 쓰는 결과 다른데, run은 이미 3글자라 약어가 의미 없음).
 
 ### 결정 2: child_process.spawn + prefix 결합 (옵션 A)
 
@@ -149,16 +149,16 @@ handle.exited Promise를 Promise.race로 감시. 어느 한쪽이 먼저 종료�
 
 ### 결정 5: SIGINT → SIGTERM graceful shutdown (옵션 A)
 
-bin/beoreum.js의 run 핸들러가 process.on('SIGINT')을 잡아 AbortController.abort() 호출. runRun이 signal.aborted를 감지하면 두 child에 SIGTERM 보내고 양쪽 종료까지 기다린 후 반환.
+bin/byeorim.js의 run 핸들러가 process.on('SIGINT')을 잡아 AbortController.abort() 호출. runRun이 signal.aborted를 감지하면 두 child에 SIGTERM 보내고 양쪽 종료까지 기다린 후 반환.
 
 cleanup timeout 5초. 그 안에 끝나지 않으면 SIGKILL. 다만 표준 dev 서버(fastify/spring-boot/vite)는 1초 안에 정리되는 결이라 거의 도달 안 함.
 
 ### 결정 6: `--backend-only` / `--frontend-only` 플래그 (옵션 A)
 
 ```
-beoreum run                    # backend + frontend 둘 다 (default)
-beoreum run --backend-only     # backend만
-beoreum run --frontend-only    # frontend만
+byeorim run                    # backend + frontend 둘 다 (default)
+byeorim run --backend-only     # backend만
+byeorim run --frontend-only    # frontend만
 ```
 
 두 플래그를 동시에 주면 에러로 안내(둘이 상호 배타).

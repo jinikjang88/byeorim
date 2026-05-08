@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-set-frontend-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-set-frontend-'));
 }
 
 async function withTempCwd(fn) {
@@ -56,7 +56,7 @@ async function setupReadyForSet(cwd, blockIds) {
 }
 
 function frontendPath(cwd, ...rest) {
-  return join(cwd, '.beoreum', 'project', 'generated', 'frontend', ...rest);
+  return join(cwd, '.byeorim', 'project', 'generated', 'frontend', ...rest);
 }
 
 test('frontend/ 트리가 8개 루트 파일과 함께 만들어진다', async () => {
@@ -263,7 +263,7 @@ async function setupSingletonForSet(cwd) {
     askArchitecture: async () => NODE_CHOICES,
     confirmArchitecture: async () => 'proceed',
   });
-  const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+  const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
   const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
   const order = catalog.blocks.find((b) => b.id === 'order');
   order.api_style = 'singleton';
@@ -298,7 +298,7 @@ test('frontend의 .env와 .env.production이 둘 다 자동 생성된다(ADR 004
     // dev는 backend dev 서버를 가리킨다
     assert.match(env, /VITE_API_BASE=http:\/\/localhost:3000/);
     // prod 템플릿은 placeholder
-    assert.match(envProd, /VITE_API_BASE=BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(envProd, /VITE_API_BASE=BYEORIM_DEV_PLACEHOLDER_/);
   });
 });
 
@@ -308,7 +308,7 @@ test('vite.config.ts가 prod build에서 placeholder를 검출해 빌드를 거�
     await runSet({ cwd });
     const vite = readFileSync(frontendPath(cwd, 'vite.config.ts'), 'utf8');
     assert.match(vite, /loadEnv/);
-    assert.match(vite, /BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(vite, /BYEORIM_DEV_PLACEHOLDER_/);
     assert.match(vite, /mode === 'production'/);
     // 한국어 안내
     assert.match(vite, /dev placeholder입니다/);
@@ -333,7 +333,7 @@ test('frontend의 .env가 이미 있으면 set 재실행 시 덮어쓰지 않는
     const envFile = frontendPath(cwd, '.env');
     const userValue = '# 사용자가 customization한 자리\nVITE_API_BASE=http://my-dev-api\n';
     writeFileSync(envFile, userValue, 'utf8');
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'set';
     state.completed_stages = state.completed_stages.filter((s) => s !== 'set');

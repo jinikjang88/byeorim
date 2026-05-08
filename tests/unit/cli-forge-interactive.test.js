@@ -17,7 +17,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-forge-i-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-forge-i-'));
 }
 
 async function withTempCwd(fn) {
@@ -53,7 +53,7 @@ async function setupReadyForForge(cwd, blockIds = ['order']) {
 }
 
 function readContracts(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'contracts.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'));
 }
 
 test('proceed를 누르면 contracts.yml을 쓰고 다음 단계로 advance한다', async () => {
@@ -72,7 +72,7 @@ test('proceed를 누르면 contracts.yml을 쓰고 다음 단계로 advance한�
     assert.equal(doc.schema_version, 1);
     assert.equal(doc.architecture_api_style, 'rest');
     assert.equal(result.nextStage, 'temper');
-    const stateDoc = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const stateDoc = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(stateDoc.current_stage, 'temper');
   });
 });
@@ -245,7 +245,7 @@ test('proceed 시 contracts-review-prompt.md 부산물이 생성된다(ADR 0035)
     assert.ok(result.contractsReviewPromptFile);
     assert.equal(
       result.contractsReviewPromptFile,
-      join(cwd, '.beoreum', 'project', 'prompts', 'contracts-review-prompt.md'),
+      join(cwd, '.byeorim', 'project', 'prompts', 'contracts-review-prompt.md'),
     );
     assert.equal(existsSync(result.contractsReviewPromptFile), true);
     const md = readFileSync(result.contractsReviewPromptFile, 'utf8');

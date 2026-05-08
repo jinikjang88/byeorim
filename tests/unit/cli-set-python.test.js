@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-set-python-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-set-python-'));
 }
 
 async function withTempCwd(fn) {
@@ -56,11 +56,11 @@ async function setupReadyForSet(cwd, blockIds) {
 }
 
 function backendPath(cwd, ...rest) {
-  return join(cwd, '.beoreum', 'project', 'generated', 'backend', ...rest);
+  return join(cwd, '.byeorim', 'project', 'generated', 'backend', ...rest);
 }
 
-// 한국어 입력은 ASCII 변환 후 빈 문자열이라 fallback 'beoreum'이 패키지 이름.
-const PROJECT_PACKAGE = 'beoreum';
+// 한국어 입력은 ASCII 변환 후 빈 문자열이라 fallback 'byeorim'이 패키지 이름.
+const PROJECT_PACKAGE = 'byeorim';
 
 test('language=python일 때 backend/ Poetry + src layout 트리가 만들어진다', async () => {
   await withTempCwd(async (cwd) => {
@@ -257,7 +257,7 @@ async function setupSingletonForSet(cwd) {
     askArchitecture: async () => PYTHON_CHOICES,
     confirmArchitecture: async () => 'proceed',
   });
-  const catalogFile = join(cwd, '.beoreum', 'project', 'catalog', 'catalog.yml');
+  const catalogFile = join(cwd, '.byeorim', 'project', 'catalog', 'catalog.yml');
   const catalog = yaml.load(readFileSync(catalogFile, 'utf8'));
   const order = catalog.blocks.find((b) => b.id === 'order');
   order.api_style = 'singleton';
@@ -306,11 +306,11 @@ test('.env와 .env.production이 둘 다 자동 생성된다(ADR 0046 결정 2)'
     const envProd = readFileSync(backendPath(cwd, '.env.production'), 'utf8');
     assert.match(env, /PYTHON_ENV=development/);
     assert.match(envProd, /PYTHON_ENV=production/);
-    assert.match(env, /JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_/);
-    assert.match(envProd, /JWT_SECRET=BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(env, /JWT_SECRET=BYEORIM_DEV_PLACEHOLDER_/);
+    assert.match(envProd, /JWT_SECRET=BYEORIM_DEV_PLACEHOLDER_/);
     // dev DB는 SQLite 파일(ADR 0046 결정 3)
     assert.match(env, /DATABASE_URL=sqlite:/);
-    assert.match(envProd, /DATABASE_URL=BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(envProd, /DATABASE_URL=BYEORIM_DEV_PLACEHOLDER_/);
   });
 });
 
@@ -323,7 +323,7 @@ test('config.py에 PYTHON_ENV 분기 로드와 prod 가드가 박힌다(ADR 0046
     assert.match(config, /PYTHON_ENV.*production/);
     assert.match(config, /\.env\.production/);
     // placeholder 표준 마커
-    assert.match(config, /BEOREUM_DEV_PLACEHOLDER_/);
+    assert.match(config, /BYEORIM_DEV_PLACEHOLDER_/);
     // prod 가드 함수
     assert.match(config, /_check_prod_secrets/);
     assert.match(config, /model_validator/);
@@ -350,7 +350,7 @@ test('.env가 이미 있으면 set 재실행 시 덮어쓰지 않는다', async 
     const envFile = backendPath(cwd, '.env');
     const userValue = '# 사용자가 채운 dev 값\nJWT_SECRET=user-real-secret\n';
     writeFileSync(envFile, userValue, 'utf8');
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'set';
     state.completed_stages = state.completed_stages.filter((s) => s !== 'set');

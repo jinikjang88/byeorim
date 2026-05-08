@@ -3,7 +3,7 @@
 - 상태: 채택
 - 날짜: 2026-05-06
 - 결정자: DevSmith
-- 관계: ADR 0030(smelt 외부 검토), ADR 0033(shape 외부 검토), ADR 0035(forge 외부 검토)의 결을 temper에 옮긴다. ADR 0037의 인터랙티브 검토 흐름은 그대로. ADR 0028의 외부 프롬프트 경로(.beoreum/project/prompts/) 결을 따름
+- 관계: ADR 0030(smelt 외부 검토), ADR 0033(shape 외부 검토), ADR 0035(forge 외부 검토)의 결을 temper에 옮긴다. ADR 0037의 인터랙티브 검토 흐름은 그대로. ADR 0028의 외부 프롬프트 경로(.byeorim/project/prompts/) 결을 따름
 
 ## 맥락
 
@@ -29,7 +29,7 @@ temper의 산출물(test-scenarios.yml)은 비기술 창업자(1순위 사용자
 - 장점: 사용자가 부산물 존재를 잊지 않음. smelt(ADR 0030)/shape(ADR 0033)/forge(ADR 0035)와 같은 결. CLI 출력에 안내 한 줄로 흐름 자연스러움
 - 단점: 사용자가 안 쓰면 디스크 자리만 차지. 다만 마크다운 한 파일이라 무게 작음
 
-#### 옵션 B. 별도 명령 `beoreum temper review-prompt`
+#### 옵션 B. 별도 명령 `byeorim temper review-prompt`
 - 장점: 사용자가 원할 때만 생성
 - 단점: 사용자가 새 명령을 알아야 함. smelt/shape/forge와 다른 결이면 일관성 깨짐
 
@@ -83,7 +83,7 @@ temper의 산출물(test-scenarios.yml)은 비기술 창업자(1순위 사용자
 
 ### 결정 1: 자동 생성 (옵션 A)
 
-temper의 인터랙티브 검토(ADR 0037)가 'proceed'로 끝나는 자리에서 항상 부산물을 생성한다. 위치는 `.beoreum/project/prompts/test-scenarios-review-prompt.md`. smelt의 `block-review-prompt.md`(ADR 0030), shape의 `architecture-review-prompt.md`(ADR 0033), forge의 `contracts-review-prompt.md`(ADR 0035)와 같은 디렉토리, 같은 결.
+temper의 인터랙티브 검토(ADR 0037)가 'proceed'로 끝나는 자리에서 항상 부산물을 생성한다. 위치는 `.byeorim/project/prompts/test-scenarios-review-prompt.md`. smelt의 `block-review-prompt.md`(ADR 0030), shape의 `architecture-review-prompt.md`(ADR 0033), forge의 `contracts-review-prompt.md`(ADR 0035)와 같은 디렉토리, 같은 결.
 
 ### 결정 2: 7항목 + 카탈로그 + 선택 + 아키텍처 + contracts + 시나리오 (옵션 A)
 
@@ -137,11 +137,11 @@ GWT 텍스트(given/when/then)는 코드 블록 위에 일상어로 풀어쓴다
 - 검토 항목 셋이 forge와 단어 한 자리만 달라 사용자가 두 단계 사이에서 헷갈릴 수 있음. 다만 같은 결의 평행 자리
 
 ### 미래 묶임
-- `test-scenarios-review-prompt.md` 위치(.beoreum/project/prompts/)와 마크다운 형식은 표준
+- `test-scenarios-review-prompt.md` 위치(.byeorim/project/prompts/)와 마크다운 형식은 표준
 - 부산물에 담는 정보 범위(7항목 + 카탈로그 + 선택 + 아키텍처 + contracts + 시나리오)는 표준. 변경하려면 새 ADR
 - 검토 항목 셋(시나리오 종류 누락, test_code 도메인 적합성, 시작 무게)은 표준. 항목 추가/제거는 새 ADR
 - test_code 표시 결(코드 블록 + language 힌트 + TODO 안내)은 표준
-- 부산물 응답을 다시 import하는 자리(예: `beoreum temper import-review`)는 미래 ADR. 이번 출시는 사용자가 응답 읽고 수동으로 test-scenarios.yml 다듬거나 temper를 다시 돌리는 결
+- 부산물 응답을 다시 import하는 자리(예: `byeorim temper import-review`)는 미래 ADR. 이번 출시는 사용자가 응답 읽고 수동으로 test-scenarios.yml 다듬거나 temper를 다시 돌리는 결
 - 시나리오 종류가 늘어나면(에러/엣지) 외부 검토 항목 1번이 자연스럽게 다른 결로 옮겨갈 자리(별도 ADR)
 
 ## 링크

@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-verify-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-verify-'));
 }
 
 async function withTempCwd(fn) {
@@ -197,7 +197,7 @@ test('set이 안 된 자리는 한국어 메시지로 거부한다', async () =>
     runInit({ cwd });
     // set 안 함
     const { runCommand } = makeSuccessRunCommand();
-    await assert.rejects(runVerify({ cwd, runCommand }), /beoreum set을 실행해주세요/);
+    await assert.rejects(runVerify({ cwd, runCommand }), /byeorim set을 실행해주세요/);
   });
 });
 
@@ -205,7 +205,7 @@ test('init도 안 된 자리는 한국어 메시지로 거부한다', async () =
   const cwd = makeTempCwd();
   try {
     const { runCommand } = makeSuccessRunCommand();
-    await assert.rejects(runVerify({ cwd, runCommand }), /beoreum init을 실행해주세요/);
+    await assert.rejects(runVerify({ cwd, runCommand }), /byeorim init을 실행해주세요/);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
@@ -347,15 +347,15 @@ test('smoke 섹션이 verify-report.md에 install/test 섹션과 같은 결로 �
   });
 });
 
-test('BEOREUM_VERIFY_SMOKE_TIMEOUT_MS 환경 변수가 default를 override', async () => {
+test('BYEORIM_VERIFY_SMOKE_TIMEOUT_MS 환경 변수가 default를 override', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForVerify(cwd);
     const { runCommand } = makeSuccessRunCommand();
     const spawnProcess = createMockSpawn();
     const fetchHealth = async () => false; // timeout 시나리오
 
-    const prev = process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS;
-    process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS = '50';
+    const prev = process.env.BYEORIM_VERIFY_SMOKE_TIMEOUT_MS;
+    process.env.BYEORIM_VERIFY_SMOKE_TIMEOUT_MS = '50';
     try {
       const start = Date.now();
       const result = await runVerify({
@@ -373,8 +373,8 @@ test('BEOREUM_VERIFY_SMOKE_TIMEOUT_MS 환경 변수가 default를 override', asy
       assert.ok(smoke);
       assert.equal(smoke.passed, false);
     } finally {
-      if (prev === undefined) delete process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS;
-      else process.env.BEOREUM_VERIFY_SMOKE_TIMEOUT_MS = prev;
+      if (prev === undefined) delete process.env.BYEORIM_VERIFY_SMOKE_TIMEOUT_MS;
+      else process.env.BYEORIM_VERIFY_SMOKE_TIMEOUT_MS = prev;
     }
   });
 });
@@ -410,7 +410,7 @@ test('smoke=true이고 backend가 없으면 smoke 섹션이 추가되지 않는�
     // architecture를 frontend-only 결로 가정. 다만 set은 backend도 만들어야 하므로
     // 직접 generated/backend를 지운 결로 시뮬레이션
     await setupReadyForVerify(cwd);
-    rmSync(join(cwd, '.beoreum', 'project', 'generated', 'backend'), {
+    rmSync(join(cwd, '.byeorim', 'project', 'generated', 'backend'), {
       recursive: true,
       force: true,
     });

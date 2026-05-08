@@ -1,4 +1,4 @@
-// beoreum shape import-review. ADR 0053의 외부 검토 응답 import 자리.
+// byeorim shape import-review. ADR 0053의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 제안된 변경 사항" 섹션의 ```yaml changes를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
 // state는 안 건드리고 architecture.yml만 다듬는다.
@@ -97,10 +97,10 @@ export async function applyShapeReview({
     );
   }
 
-  const beoreumDir = join(cwd, '.beoreum');
-  const architectureFile = join(beoreumDir, 'project', 'architecture.yml');
+  const byeorimDir = join(cwd, '.byeorim');
+  const architectureFile = join(byeorimDir, 'project', 'architecture.yml');
 
-  ensureFile(architectureFile, '먼저 beoreum shape를 실행해주세요');
+  ensureFile(architectureFile, '먼저 byeorim shape를 실행해주세요');
 
   // 응답 파일 읽기 (ADR 0054 helpers).
   const responseText = readResponseFile(responsePath);

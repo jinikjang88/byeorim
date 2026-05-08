@@ -1,4 +1,4 @@
-// beoreum forge. architecture.yml + selected-blocks.yml + catalog.yml을 입력으로
+// byeorim forge. architecture.yml + selected-blocks.yml + catalog.yml을 입력으로
 // contracts.yml(API 계약)을 만든다. ADR 0007의 자리, ADR 0013의 형식과 매핑 정책을 따른다.
 // ADR 0023의 옵셔널 어댑터로 schema를 채운다.
 // ADR 0034의 인터랙티브 검토 흐름을 interactiveForge로 박는다.
@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import yaml from 'js-yaml';
 import pluralize from 'pluralize';
 import { select } from '@inquirer/prompts';
-import { loadCatalog } from '@beoreum/catalog';
+import { loadCatalog } from '@byeorim/catalog';
 import { formatContractsSummary } from './forge-picker-helpers.js';
 import { buildContractsReviewPromptMarkdown } from './forge-prompt.js';
 
@@ -40,7 +40,7 @@ function ensureFile(path, hint) {
 }
 
 function loadState(stateFile) {
-  ensureFile(stateFile, '먼저 beoreum init을 실행해주세요');
+  ensureFile(stateFile, '먼저 byeorim init을 실행해주세요');
   return yaml.load(readFileSync(stateFile, 'utf8'));
 }
 
@@ -235,22 +235,22 @@ async function fillSchemasWithAdapter(contracts, blockMap, adapter) {
 // intent.yml과 architecture.yml은 contracts.yml 작성에는 직접 안 쓰이지만 외부 검토 프롬프트(ADR 0035)에 함께 담는다.
 // 반환: { architecture, archApiStyle, answers, selectedBlocks, builtIds, catalog, blockMap, state, paths }
 function loadForgeInputs(cwd) {
-  const beoreumDir = join(cwd, '.beoreum');
-  const stateFile = join(beoreumDir, 'state.yml');
-  const intentFile = join(beoreumDir, 'project', 'intent.yml');
-  const archFile = join(beoreumDir, 'project', 'architecture.yml');
-  const selectedFile = join(beoreumDir, 'project', 'selected-blocks.yml');
-  const catalogFile = join(beoreumDir, 'project', 'catalog', 'catalog.yml');
-  const contractsFile = join(beoreumDir, 'project', 'contracts.yml');
-  const promptsDir = join(beoreumDir, 'project', 'prompts');
+  const byeorimDir = join(cwd, '.byeorim');
+  const stateFile = join(byeorimDir, 'state.yml');
+  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const archFile = join(byeorimDir, 'project', 'architecture.yml');
+  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
+  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
+  const promptsDir = join(byeorimDir, 'project', 'prompts');
   const contractsReviewPromptFile = join(promptsDir, 'contracts-review-prompt.md');
 
   const state = loadState(stateFile);
   ensureStage(state, STAGE);
 
-  ensureFile(archFile, '먼저 beoreum shape를 실행해주세요');
-  ensureFile(selectedFile, '먼저 beoreum smelt를 실행해주세요');
-  ensureFile(catalogFile, '먼저 beoreum prospect를 실행해주세요');
+  ensureFile(archFile, '먼저 byeorim shape를 실행해주세요');
+  ensureFile(selectedFile, '먼저 byeorim smelt를 실행해주세요');
+  ensureFile(catalogFile, '먼저 byeorim prospect를 실행해주세요');
 
   const architecture = yaml.load(readFileSync(archFile, 'utf8')) || {};
   const archApiStyle = architecture.api_style;

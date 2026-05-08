@@ -22,7 +22,7 @@ verify는 외부 프로세스를 띄워야 한다(npm install, gradle test, poet
 - 장점: ADR 0006의 set 정의("코드를 짓고 자기 발로 서는지 확인")에 가장 충실. 한 단계가 한 번에 끝난다
 - 단점: install + test가 시간이 걸림(분 단위). 사용자가 commit 전에 코드 변경하고 싶을 때 막힌다. 네트워크가 없으면 실패. 보안적으로 자동 install이 의외의 자리로 사용자를 끌어가는 위험
 
-#### 옵션 B. 별도 `beoreum verify` 명령어 (이번 출시)
+#### 옵션 B. 별도 `byeorim verify` 명령어 (이번 출시)
 - 장점: 명시적 opt-in. 사용자가 명령어를 친 뒤 install/test가 일어난다는 흐름이 분명. 도구 명령어(answer/status와 같은 결)
 - 단점: set이 두 책임을 다하지 않는 자리가 됨. 다만 ADR 0015가 이미 그 결을 박았으니 일관성
 
@@ -100,9 +100,9 @@ verify는 외부 프로세스를 띄워야 한다(npm install, gradle test, poet
 
 ## 결정
 
-### 결정 1: 별도 `beoreum verify` 명령어 (옵션 B)
+### 결정 1: 별도 `byeorim verify` 명령어 (옵션 B)
 
-`beoreum verify`는 별도 명령어. 단계 독립(answer/status와 같은 결). set이 자동 호출하지 않는다.
+`byeorim verify`는 별도 명령어. 단계 독립(answer/status와 같은 결). set이 자동 호출하지 않는다.
 
 이유: set의 코드 생성은 빠르고 결정적이지만 verify는 분 단위 + 네트워크 + 외부 프로세스라 결이 다르다. 사용자가 "지금 verify할 시점인지" 명시적으로 결정하는 자리.
 
@@ -149,7 +149,7 @@ verify가 실행하는 명령 표.
 - 상태: 성공
 - 명령: `npm install && npm test`
 - 종료 코드: 0
-- cwd: `.beoreum/project/generated/backend`
+- cwd: `.byeorim/project/generated/backend`
 
 ### 마지막 출력 (40줄)
 
@@ -162,7 +162,7 @@ verify가 실행하는 명령 표.
 - 상태: 실패
 - 명령: `npm install && npm run build && npm test`
 - 종료 코드: 1
-- cwd: `.beoreum/project/generated/frontend`
+- cwd: `.byeorim/project/generated/frontend`
 
 ### 마지막 출력 (40줄)
 
@@ -178,13 +178,13 @@ verify가 실행하는 명령 표.
 
 verify 실패는 다음 단계(inspect)를 막지 않는다. ADR 0003 동행 톤("답하지 못한 질문은 다음 단계를 막지 않는다")과 정합.
 
-`beoreum verify` 명령어 자체는 모든 대상이 성공하면 exit 0, 하나라도 실패하면 exit 1. CI에서 verify 실패를 감지할 수 있는 신호.
+`byeorim verify` 명령어 자체는 모든 대상이 성공하면 exit 0, 하나라도 실패하면 exit 1. CI에서 verify 실패를 감지할 수 있는 신호.
 
 사용자에게 보이는 콘솔 메시지에서도 실패 자리는 명시적으로 빨간색이 아니라(이모지 정책상) "실패" 한국어 단어로 강조.
 
 ### 결정 6: 기본은 전체, 대상별 플래그는 미래 ADR (옵션 A)
 
-`beoreum verify`(인자 없음)는 backend(있는 경우)와 frontend 둘 다 실행.
+`byeorim verify`(인자 없음)는 backend(있는 경우)와 frontend 둘 다 실행.
 
 미래 ADR로 `--backend` / `--frontend` 또는 `--target node-backend` 같은 플래그 추가 가능. MVP는 한 동작 모드.
 

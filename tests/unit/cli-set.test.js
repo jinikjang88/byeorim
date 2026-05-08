@@ -19,7 +19,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-set-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-set-'));
 }
 
 async function withTempCwd(fn) {
@@ -58,7 +58,7 @@ async function setupReadyForSet(cwd, blockIds = ['order']) {
 }
 
 function readReadme(cwd) {
-  return readFileSync(join(cwd, '.beoreum', 'project', 'generated', 'README.md'), 'utf8');
+  return readFileSync(join(cwd, '.byeorim', 'project', 'generated', 'README.md'), 'utf8');
 }
 
 test('정상 흐름: 7단계 끝까지 가서 README와 verify-report가 만들어진다', async () => {
@@ -71,8 +71,8 @@ test('정상 흐름: 7단계 끝까지 가서 README와 verify-report가 만들�
     // Then
     assert.equal(result.nextStage, 'inspect');
     const readme = readReadme(cwd);
-    const verifyReport = readFileSync(join(cwd, '.beoreum', 'project', 'verify-report.md'), 'utf8');
-    assert.match(readme, /벼름의 7단계/);
+    const verifyReport = readFileSync(join(cwd, '.byeorim', 'project', 'verify-report.md'), 'utf8');
+    assert.match(readme, /벼림의 7단계/);
     assert.match(readme, /2026-04-28T12:00:00\.000Z/);
     assert.match(verifyReport, /이 자리는 다음 출시에서 채워집니다/);
   });
@@ -217,7 +217,7 @@ test('state.yml이 inspect로 전환된다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForSet(cwd);
     await runSet({ cwd });
-    const state = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const state = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(state.current_stage, 'inspect');
     assert.deepEqual(state.completed_stages, [
       'prospect',
@@ -256,12 +256,12 @@ test('test-scenarios.yml이 없으면 temper 안내 메시지로 거부한다', 
     });
     await runForge({ cwd });
     // temper 건너뜀: 강제로 stage를 set로 옮긴다
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'set';
     state.completed_stages = ['prospect', 'smelt', 'shape', 'forge', 'temper'];
     writeFileSync(stateFile, yaml.dump(state, { sortKeys: false }), 'utf8');
-    await assert.rejects(runSet({ cwd }), /beoreum temper를 실행해주세요/);
+    await assert.rejects(runSet({ cwd }), /byeorim temper를 실행해주세요/);
   });
 });
 

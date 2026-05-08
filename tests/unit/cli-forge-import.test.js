@@ -18,7 +18,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-forge-import-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-forge-import-'));
 }
 
 async function withTempCwd(fn) {
@@ -60,7 +60,7 @@ async function setupReadyForImport(cwd, blockIds = ['order']) {
 }
 
 function readContracts(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'contracts.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'));
 }
 
 function writeResponse(cwd, body) {
@@ -88,7 +88,7 @@ test('contracts.yml이 없으면 한국어 메시지로 거부한다', async () 
     const responsePath = writeResponse(cwd, buildResponse([]));
     await assert.rejects(
       applyForgeReview({ cwd, responsePath, log: () => {} }),
-      /beoreum forge를 실행해주세요/,
+      /byeorim forge를 실행해주세요/,
     );
   });
 });
@@ -454,7 +454,7 @@ test('test-scenarios.yml이 있으면 안내 한 줄이 warnings에 들어간다
   await withTempCwd(async (cwd) => {
     // Given: forge까지 끝낸 자리 + test-scenarios.yml을 가짜로 박음
     await setupReadyForImport(cwd);
-    const scenariosFile = join(cwd, '.beoreum', 'project', 'test-scenarios.yml');
+    const scenariosFile = join(cwd, '.byeorim', 'project', 'test-scenarios.yml');
     writeFileSync(scenariosFile, 'schema_version: 1\nscenarios: []\n', 'utf8');
     const responsePath = writeResponse(
       cwd,
@@ -478,7 +478,7 @@ test('test-scenarios.yml이 있으면 안내 한 줄이 warnings에 들어간다
     // Then
     assert.equal(result.appliedCount, 1);
     assert.ok(result.warnings.some((w) => /test-scenarios.yml/.test(w)));
-    assert.ok(result.warnings.some((w) => /beoreum temper/.test(w)));
+    assert.ok(result.warnings.some((w) => /byeorim temper/.test(w)));
   });
 });
 
@@ -517,7 +517,7 @@ test('state는 안 건드린다(import 후에도 current_stage가 그대로)', a
   await withTempCwd(async (cwd) => {
     // Given: forge까지 끝나서 current_stage = temper
     await setupReadyForImport(cwd);
-    const stateBefore = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const stateBefore = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(stateBefore.current_stage, 'temper');
     const responsePath = writeResponse(
       cwd,
@@ -539,7 +539,7 @@ test('state는 안 건드린다(import 후에도 current_stage가 그대로)', a
       log: () => {},
     });
     // Then
-    const stateAfter = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const stateAfter = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(stateAfter.current_stage, 'temper', 'state.current_stage가 그대로여야 한다');
   });
 });
@@ -728,7 +728,7 @@ test('contracts-review-prompt.md가 있는 흐름에서도 import는 그 경로 
   await withTempCwd(async (cwd) => {
     // Given
     await setupReadyForImport(cwd);
-    const promptFile = join(cwd, '.beoreum', 'project', 'prompts', 'contracts-review-prompt.md');
+    const promptFile = join(cwd, '.byeorim', 'project', 'prompts', 'contracts-review-prompt.md');
     assert.equal(existsSync(promptFile), true, '부산물 프롬프트가 있어야 한다');
     const promptBefore = readFileSync(promptFile, 'utf8');
     const responsePath = writeResponse(

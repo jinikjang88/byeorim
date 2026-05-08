@@ -2,7 +2,7 @@
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 시나리오 종류 누락,
 // test_code 도메인 적합성, 시작 무게를 자세히 검토받는 결.
 // smelt(ADR 0030), shape(ADR 0033), forge(ADR 0035)의 같은 결을 따른다.
-// ADR 0040으로 응답 형식 안내 섹션을 박음(beoreum temper import-review가 읽을 자리).
+// ADR 0040으로 응답 형식 안내 섹션을 박음(byeorim temper import-review가 읽을 자리).
 
 import yaml from 'js-yaml';
 
@@ -11,7 +11,7 @@ const HEADER = `# 테스트 시나리오 검토 프롬프트
 이 프롬프트를 외부 AI(Claude.ai, ChatGPT, Gemini 등)에 붙여넣어 지금 만든 테스트 시나리오와
 test_code가 도메인에 어울리는지, 누락된 시나리오 종류가 있는지, 시작 무게가 맞는지를
 자세히 검토받을 수 있어요. 응답은 자유 형식이라 사용자가 읽고 test-scenarios.yml을 수동으로
-다듬으시거나 beoreum temper를 다시 돌릴 수 있어요.
+다듬으시거나 byeorim temper를 다시 돌릴 수 있어요.
 
 ---
 
@@ -314,7 +314,7 @@ export function buildScenariosReviewPromptMarkdown({
     '## 응답 형식 안내 (코드가 읽을 자리)',
     '',
     '자유 형식으로 검토하신 뒤, 응답 끝에 아래 형식의 "## 제안된 변경 사항" 섹션을 한 번 더 추가해주세요.',
-    '이 섹션은 사용자가 받은 응답을 다시 beoreum에 붙여넣을 때 코드가 자동으로 읽어 test-scenarios.yml에 반영하는 자리예요.',
+    '이 섹션은 사용자가 받은 응답을 다시 byeorim에 붙여넣을 때 코드가 자동으로 읽어 test-scenarios.yml에 반영하는 자리예요.',
     '자유 형식으로만 답하셔도 괜찮아요. 그때는 사용자가 응답을 직접 읽고 test-scenarios.yml을 손으로 다듬어요.',
     '',
     '형식.',

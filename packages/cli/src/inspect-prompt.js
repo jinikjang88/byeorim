@@ -2,13 +2,13 @@
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에 붙여넣어 set이 만든 코드와 메타데이터를
 // 6영역(보안/성능/운영/확장성/법적 리스크/시장 재검) 자리에서 자세히 검수받는 결.
 // smelt(ADR 0030), shape(ADR 0033), forge(ADR 0035), temper(ADR 0038)의 같은 결을 따른다.
-// ADR 0051로 응답 형식 안내 섹션 박음(beoreum inspect import-review가 읽을 자리).
+// ADR 0051로 응답 형식 안내 섹션 박음(byeorim inspect import-review가 읽을 자리).
 
 const HEADER = `# 검수 자리 프롬프트
 
 이 프롬프트를 외부 AI(Claude.ai, ChatGPT, Gemini 등)에 붙여넣어 만든 서비스의 코드를 6영역
 (보안, 성능, 운영, 확장성, 법적 리스크, 시장 재검) 자리에서 자세히 검수받을 수 있어요.
-응답은 자유 형식이지만, 끝에 ## 검수 결과 섹션을 박으면 beoreum이 응답을 받아
+응답은 자유 형식이지만, 끝에 ## 검수 결과 섹션을 박으면 byeorim이 응답을 받아
 inspect-report.md에 자동 반영합니다.
 
 ---
@@ -119,7 +119,7 @@ export function buildInspectReviewPromptMarkdown({
     '## 응답 형식 안내 (코드가 읽을 자리)',
     '',
     '자유 형식으로 검수하신 뒤, 응답 끝에 아래 형식의 "## 검수 결과" 섹션을 한 번 더 추가해주세요.',
-    '이 섹션은 사용자가 받은 응답을 다시 beoreum에 붙여넣을 때 코드가 자동으로 읽어 inspect-report.md에 반영하는 자리예요.',
+    '이 섹션은 사용자가 받은 응답을 다시 byeorim에 붙여넣을 때 코드가 자동으로 읽어 inspect-report.md에 반영하는 자리예요.',
     '자유 형식으로만 답하셔도 괜찮아요. 그때는 사용자가 응답을 직접 읽고 inspect-report.md를 손으로 다듬어요.',
     '',
     '형식.',

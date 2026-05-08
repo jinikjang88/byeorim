@@ -19,7 +19,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-temper-import-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-temper-import-'));
 }
 
 async function withTempCwd(fn) {
@@ -67,7 +67,7 @@ async function setupReadyForImport(cwd, blockIds = ['order']) {
 }
 
 function readScenariosDoc(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.beoreum', 'project', 'test-scenarios.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'));
 }
 
 function writeResponse(cwd, body) {
@@ -95,7 +95,7 @@ test('test-scenarios.yml이 없으면 한국어 메시지로 거부한다', asyn
     const responsePath = writeResponse(cwd, buildResponse([]));
     await assert.rejects(
       applyTemperReview({ cwd, responsePath, log: () => {} }),
-      /beoreum temper를 실행해주세요/,
+      /byeorim temper를 실행해주세요/,
     );
   });
 });
@@ -443,7 +443,7 @@ test('appliedCount=0이면 test-scenarios.yml은 안 쓴다', async () => {
 test('state는 안 건드린다(import 후에도 current_stage 그대로)', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
-    const stateBefore = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const stateBefore = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     const responsePath = writeResponse(
       cwd,
       buildResponse([
@@ -463,7 +463,7 @@ test('state는 안 건드린다(import 후에도 current_stage 그대로)', asyn
       confirmChange: async () => 'apply',
       log: () => {},
     });
-    const stateAfter = yaml.load(readFileSync(join(cwd, '.beoreum', 'state.yml'), 'utf8'));
+    const stateAfter = yaml.load(readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8'));
     assert.equal(stateAfter.current_stage, stateBefore.current_stage);
   });
 });
@@ -568,7 +568,7 @@ test('test-scenarios-review-prompt.md가 import에서 안 건드려진다', asyn
     await setupReadyForImport(cwd);
     const promptFile = join(
       cwd,
-      '.beoreum',
+      '.byeorim',
       'project',
       'prompts',
       'test-scenarios-review-prompt.md',

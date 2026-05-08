@@ -2,7 +2,7 @@
 // 단위 테스트가 LLM 호출 없이 prospect 흐름을 끝까지 돌릴 수 있게 하는 자리.
 // 실제 의도 정리는 미래의 LLM 어댑터가 한다(ADR 0009 + 0026).
 
-import { REALITY_CHECK_AREAS, REALITY_CHECK_SEED_QUESTIONS } from '@beoreum/core';
+import { REALITY_CHECK_AREAS, REALITY_CHECK_SEED_QUESTIONS } from '@byeorim/core';
 
 // 도메인별 키워드 표. commerce가 아닌 다른 도메인이 추가될 때 이 표만 갱신한다.
 // 카탈로그 데이터(commerce/job-aggregator의 블럭 ID)에는 매몰되지 않는다.
@@ -297,7 +297,7 @@ export function createMockAdapter() {
       scenarios: _scenarios,
     } = {}) {
       const placeholderDetail =
-        'mock 어댑터는 가짜 finding을 반환합니다. 실제 검수는 claude 어댑터(BEOREUM_AI_ADAPTER=claude)로 실행하세요. Claude Code 사용자는 ANTHROPIC_BASE_URL로 브릿지할 수 있습니다(ADR 0025).';
+        'mock 어댑터는 가짜 finding을 반환합니다. 실제 검수는 claude 어댑터(BYEORIM_AI_ADAPTER=claude)로 실행하세요. Claude Code 사용자는 ANTHROPIC_BASE_URL로 브릿지할 수 있습니다(ADR 0025).';
       const areas = ['보안', '성능', '운영', '확장성', '법적 리스크', '시장 재검'];
       return areas.map((area) => ({
         area,

@@ -21,7 +21,7 @@ import {
 import { createMockAdapter } from '../../packages/ai/index.js';
 
 function makeTempCwd() {
-  return mkdtempSync(join(tmpdir(), 'beoreum-inspect-import-'));
+  return mkdtempSync(join(tmpdir(), 'byeorim-inspect-import-'));
 }
 
 async function withTempCwd(fn) {
@@ -206,7 +206,7 @@ test('재import 결: external 섹션이 통째로 교체된다(ADR 0051 결정 6
       log: () => {},
     });
     const docAfterFirst = yaml.load(
-      readFileSync(join(cwd, '.beoreum', 'project', 'inspect-findings.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'inspect-findings.yml'), 'utf8'),
     );
     assert.equal(docAfterFirst.findings.external.length, 2);
 
@@ -320,7 +320,7 @@ test('inspect 재실행 시 import한 external이 보존된다', async () => {
     });
 
     // current_stage를 inspect로 되돌려 재실행
-    const stateFile = join(cwd, '.beoreum', 'state.yml');
+    const stateFile = join(cwd, '.byeorim', 'state.yml');
     const state = yaml.load(readFileSync(stateFile, 'utf8'));
     state.current_stage = 'inspect';
     state.completed_stages = state.completed_stages.filter((s) => s !== 'inspect');

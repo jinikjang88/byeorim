@@ -6,7 +6,7 @@
 
 ## 맥락
 
-ADR 0001에서 프로젝트 이름을 Forge Protocol에서 Beoreum으로 변경했다. ADR 0002에서 5단계를 6단계로 확장하고 작업 어휘 체계를 새로 잡았다. ADR 0003에서 Reality Check 6영역과 동행 톤을 결정했다.
+ADR 0001에서 프로젝트 이름을 Forge Protocol에서 Byeorim으로 변경했다. ADR 0002에서 5단계를 6단계로 확장하고 작업 어휘 체계를 새로 잡았다. ADR 0003에서 Reality Check 6영역과 동행 톤을 결정했다.
 
 이 세 결정을 기존 코드베이스(Forge Protocol v0.1.0)에 적용할 수 있는지 검토했다. v0.1.0의 현재 상태는 다음과 같다.
 
@@ -19,13 +19,13 @@ ADR 0001에서 프로젝트 이름을 Forge Protocol에서 Beoreum으로 변경�
 
 변경이 필요한 항목을 전부 나열하면 다음과 같다.
 
-파일명 변경: bin/forge.js, lib/meta-smelt.js, 생성되는 .forge/ 디렉토리 전체, forge-report.md. 디렉토리 구조 변경: 단일 lib/에서 packages/core, packages/catalog, packages/cli, packages/ai, packages/templates 5개 패키지로 분리. 명령어 변경: forge에서 beoreum으로, prospect 명령어 신설, 별칭 시스템 신설. 데이터 흐름 변경: meta-smelt가 독립 단계(prospect)로 승격되면서 입출력 흐름 재설계. 사용자 출력: 모든 메시지를 동행 톤으로 재작성. 신규 기능: Reality Check, 다이어리, 6단계 전체.
+파일명 변경: bin/forge.js, lib/meta-smelt.js, 생성되는 .forge/ 디렉토리 전체, forge-report.md. 디렉토리 구조 변경: 단일 lib/에서 packages/core, packages/catalog, packages/cli, packages/ai, packages/templates 5개 패키지로 분리. 명령어 변경: forge에서 byeorim으로, prospect 명령어 신설, 별칭 시스템 신설. 데이터 흐름 변경: meta-smelt가 독립 단계(prospect)로 승격되면서 입출력 흐름 재설계. 사용자 출력: 모든 메시지를 동행 톤으로 재작성. 신규 기능: Reality Check, 다이어리, 6단계 전체.
 
 변경 비율을 추정하면 코드 70 ~ 80%, 구조 100%, 문서 100%이다. 마이그레이션 후 원래 코드로 남는 부분은 dependency.js의 순수 로직 일부와 catalog.yml 데이터 정도로, 전체의 20 ~ 30%에 불과하다.
 
 ## 검토한 옵션
 
-#### 옵션 A. 마이그레이션 (v0.1.0을 고쳐서 벼름으로)
+#### 옵션 A. 마이그레이션 (v0.1.0을 고쳐서 벼림으로)
 
 70% 이상을 뜯어고치면서 30%를 살리는 접근이다.
 
@@ -54,9 +54,9 @@ v0.1.0에서 가져오는 것은 세 가지이다.
 
 첫째, dependency.js의 의존성 해결 알고리즘(resolveRequired, resolveAll, collectDecisions). 파일을 복사하는 게 아니라 알고리즘을 이해한 뒤 packages/core에 맞게 처음부터 짠다. 순수 함수로 분리하고 단위 테스트를 90% 이상 붙인다.
 
-둘째, templates/commerce/catalog.yml의 22개 블럭, 19개 의존성 데이터. 데이터이므로 구조만 .beoreum/ 형식에 맞춰 재배치한다. 코드 변경 없음.
+둘째, templates/commerce/catalog.yml의 22개 블럭, 19개 의존성 데이터. 데이터이므로 구조만 .byeorim/ 형식에 맞춰 재배치한다. 코드 변경 없음.
 
-셋째, docs/spec.md의 상세 명세 내용. 용어를 벼름 정체성에 맞게 갱신한 뒤 가져온다.
+셋째, docs/spec.md의 상세 명세 내용. 용어를 벼림 정체성에 맞게 갱신한 뒤 가져온다.
 
 v0.1.0의 아카이브는 legacy/forge-protocol-v0.1 브랜치로 보존한다. 삭제하지 않는다. 새 구현에서 알고리즘 참고가 필요할 때 줄 단위로 대조할 수 있어야 한다.
 
@@ -67,7 +67,7 @@ v0.1.0의 아카이브는 legacy/forge-protocol-v0.1 브랜치로 보존한다. 
 ### 긍정적
 - 기술 부채 0에서 출발한다
 - CLAUDE.md 섹션 2(절대 금지선), 섹션 3(멀티 모듈), 섹션 4(테스트)가 첫날부터 적용된다
-- ADR-0001부터 코드가 자라는 과정이 벼름의 역사 요구사항(섹션 5)을 실천하는 여정이 된다
+- ADR-0001부터 코드가 자라는 과정이 벼림의 역사 요구사항(섹션 5)을 실천하는 여정이 된다
 - 커밋 히스토리가 깨끗해 포트폴리오 가치가 높다
 - dependency.js를 다시 짜는 과정에서 알고리즘에 대한 이해가 더 깊어진다
 
@@ -82,6 +82,6 @@ v0.1.0의 아카이브는 legacy/forge-protocol-v0.1 브랜치로 보존한다. 
 - legacy/forge-protocol-v0.1 브랜치는 삭제하지 않는다. 최소 1년간 보존한다
 
 ## 링크
-- 이전 결정: ADR 0001 (왜 벼름인가), ADR 0002 (6단계 메타포), ADR 0003 (Reality Check)
+- 이전 결정: ADR 0001 (왜 벼림인가), ADR 0002 (6단계 메타포), ADR 0003 (Reality Check)
 - 후속 작업: 새 레포 골격 생성, packages/ 구조 셋업, 첫 커밋 준비
 - 참고: v0.1.0 아카이브 (legacy/forge-protocol-v0.1 브랜치)

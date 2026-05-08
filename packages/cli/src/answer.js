@@ -1,4 +1,4 @@
-// beoreum answer. decisions.yml의 빈 answer 항목을 하나씩 사용자에게 물어 채운다.
+// byeorim answer. decisions.yml의 빈 answer 항목을 하나씩 사용자에게 물어 채운다.
 // ADR 0010(decisions.yml 형식)과 ADR 0011(인터랙티브 prompt 정책)을 따른다.
 // ADR 0003의 동행 톤: "나중에 답하기"로 건너뛸 수 있다. 건너뛴 항목은 빈 answer로 남는다.
 
@@ -44,8 +44,8 @@ function isUnanswered(decision) {
 export async function interactiveAnswer({ cwd, askAnswer = defaultAskAnswer, now } = {}) {
   if (!cwd) throw new Error('interactiveAnswer({ cwd })가 필요합니다');
 
-  const decisionsFile = join(cwd, '.beoreum', 'project', 'decisions.yml');
-  ensureFile(decisionsFile, '먼저 beoreum smelt를 실행해주세요');
+  const decisionsFile = join(cwd, '.byeorim', 'project', 'decisions.yml');
+  ensureFile(decisionsFile, '먼저 byeorim smelt를 실행해주세요');
 
   const doc = yaml.load(readFileSync(decisionsFile, 'utf8')) || {};
   const decisions = Array.isArray(doc.decisions) ? doc.decisions : [];
