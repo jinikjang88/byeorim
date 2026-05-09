@@ -103,3 +103,10 @@ test('인자 없이 호출해도 throw하지 않고 안전한 결로 박힌다',
   const md = buildInspectReviewPromptMarkdown();
   assert.match(md, /# 검수 자리 프롬프트/);
 });
+
+test('형식 안내 뒤에 예시 응답이 한 덩이 박혀 외부 AI가 결을 따라가게 한다', () => {
+  const md = buildInspectReviewPromptMarkdown(SAMPLE_INPUT);
+  assert.match(md, /예시 응답/);
+  // 자유 형식 섹션과 검수 결과가 한 결로 들어있다
+  assert.match(md, /## 보안[\s\S]*## 검수 결과[\s\S]*findings:/);
+});

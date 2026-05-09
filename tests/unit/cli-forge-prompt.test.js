@@ -225,3 +225,9 @@ test('응답 형식 안내 섹션과 4종 변경 형식이 들어있다(ADR 0039
   // 코드 펜스가 ```yaml로 안내됨
   assert.match(md, /```yaml/);
 });
+
+test('형식 안내 뒤에 예시 응답이 한 덩이 박혀 외부 AI가 결을 따라가게 한다', () => {
+  const md = buildContractsReviewPromptMarkdown({});
+  assert.match(md, /예시 응답/);
+  assert.match(md, /## 도메인 적합성[\s\S]*## 제안된 변경 사항[\s\S]*kind: endpoint_add/);
+});
