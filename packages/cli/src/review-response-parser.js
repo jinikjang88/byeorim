@@ -52,7 +52,7 @@ function findLastFindingsSectionStart(markdown) {
 //     parseError: string | null,       // 파싱 단계 에러 메시지(graceful 신호)
 //   }
 //
-// 검증(block_id 존재 등)은 호출자가 한다(applyForgeReview에서 contracts.yml과 비교).
+// 검증(block_id 존재 등)은 호출자가 한다(applyForgeReview에서 forge-contracts.yml과 비교).
 // 이 함수는 형식 파싱만 책임진다.
 export function parseReviewResponse(markdown) {
   if (typeof markdown !== 'string' || markdown.trim() === '') {
@@ -347,7 +347,7 @@ export function validateForgeChange(change) {
 }
 
 // 한 변경 객체가 temper import에 쓸 수 있는 모양인지 본다(ADR 0040).
-// applyTemperReview가 호출. 위치 검증(test-scenarios.yml 대비)은 호출자에서.
+// applyTemperReview가 호출. 위치 검증(temper-scenarios.yml 대비)은 호출자에서.
 // 반환: { valid: true } 또는 { valid: false, reason: string }
 export function validateTemperChange(change) {
   if (!change || typeof change !== 'object') {

@@ -1,7 +1,7 @@
 // byeorim shape import-review. ADR 0053의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 제안된 변경 사항" 섹션의 ```yaml changes를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
-// state는 안 건드리고 architecture.yml만 다듬는다.
+// state는 안 건드리고 shape-architecture.yml만 다듬는다.
 // forge-import.js의 결을 따라간다(같은 picker 패턴, ADR 0045).
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -28,7 +28,7 @@ function loadYaml(path) {
   return yaml.load(readFileSync(path, 'utf8')) || {};
 }
 
-// 변경 객체와 architecture.yml을 받아 적용 가능한지 본다.
+// 변경 객체와 shape-architecture.yml을 받아 적용 가능한지 본다.
 // 반환: { ok: true, oldValue } 또는 { ok: false, reason }
 function locateChange(change, architecture) {
   const validValues = getValidArchitectureValues(change.target_key);
@@ -48,7 +48,7 @@ function locateChange(change, architecture) {
   return { ok: true, oldValue };
 }
 
-// 한 변경을 architecture.yml에 적용(in-place mutation).
+// 한 변경을 shape-architecture.yml에 적용(in-place mutation).
 function applyChange(change, architecture) {
   architecture[change.target_key] = change.new_value;
 }
@@ -70,7 +70,7 @@ async function defaultConfirmChange({ change, located, index, total, log = conso
 }
 
 // applyShapeReview는 shape import-review의 본체.
-// 외부 AI 응답 파일을 읽고 architecture.yml에 인터랙티브 picker로 변경을 반영한다.
+// 외부 AI 응답 파일을 읽고 shape-architecture.yml에 인터랙티브 picker로 변경을 반영한다.
 //
 // 입력:
 //   cwd            - 프로젝트 루트 절대 경로
@@ -98,7 +98,7 @@ export async function applyShapeReview({
   }
 
   const byeorimDir = join(cwd, '.byeorim');
-  const architectureFile = join(byeorimDir, 'project', 'architecture.yml');
+  const architectureFile = join(byeorimDir, 'project', 'shape-architecture.yml');
 
   ensureFile(architectureFile, '먼저 byeorim shape를 실행해주세요');
 
@@ -109,7 +109,7 @@ export async function applyShapeReview({
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    logGracefulDegrade({ log, parseResult, ymlName: 'architecture.yml' });
+    logGracefulDegrade({ log, parseResult, ymlName: 'shape-architecture.yml' });
     return {
       architectureFile,
       responseFile: responsePath,
@@ -124,7 +124,7 @@ export async function applyShapeReview({
     };
   }
 
-  // architecture.yml 로드(in-memory copy).
+  // shape-architecture.yml 로드(in-memory copy).
   const architecture = loadYaml(architectureFile);
 
   // 형식 + 위치 검증 (ADR 0054 helpers).
@@ -147,7 +147,7 @@ export async function applyShapeReview({
     }
   }
   if (validItems.length === 0) {
-    log('적용할 변경이 없어요. architecture.yml은 그대로 둡니다.');
+    log('적용할 변경이 없어요. shape-architecture.yml은 그대로 둡니다.');
     return {
       architectureFile,
       responseFile: responsePath,
@@ -171,14 +171,14 @@ export async function applyShapeReview({
     log,
   });
 
-  // 변경이 한 번이라도 적용됐으면 architecture.yml 갱신.
+  // 변경이 한 번이라도 적용됐으면 shape-architecture.yml 갱신.
   if (appliedCount > 0) {
     writeFileSync(architectureFile, yaml.dump(architecture, { sortKeys: false }), 'utf8');
   }
 
   logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
-    log(`architecture.yml이 갱신되었습니다: ${architectureFile}`);
+    log(`shape-architecture.yml이 갱신되었습니다: ${architectureFile}`);
   }
 
   return {

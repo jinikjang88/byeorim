@@ -116,12 +116,12 @@ test('법적 리스크 영역에 강한 신호 blockquote가 있다(ADR 0003 결
   });
 });
 
-test('시장 재검 영역에 reality-check.md 경로 안내가 있다(ADR 0016 결정 4)', async () => {
+test('시장 재검 영역에 prospect-reality-check.md 경로 안내가 있다(ADR 0016 결정 4)', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForInspect(cwd);
     await runInspect({ cwd });
     const report = readReport(cwd);
-    assert.match(report, /\.byeorim\/project\/reality-check\.md/);
+    assert.match(report, /\.byeorim\/project\/prospect-reality-check\.md/);
     assert.match(report, /다시 읽어보세요/);
   });
 });

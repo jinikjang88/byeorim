@@ -53,10 +53,10 @@ async function setupReadyForForge(cwd, blockIds = ['order']) {
 }
 
 function readContracts(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'forge-contracts.yml'), 'utf8'));
 }
 
-test('proceed를 누르면 contracts.yml을 쓰고 다음 단계로 advance한다', async () => {
+test('proceed를 누르면 forge-contracts.yml을 쓰고 다음 단계로 advance한다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: shape까지 끝낸 자리
     await setupReadyForForge(cwd, ['order']);

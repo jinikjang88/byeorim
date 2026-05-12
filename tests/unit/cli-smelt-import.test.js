@@ -59,13 +59,13 @@ const ALWAYS_APPLY = async () => 'apply';
 const ALWAYS_SKIP = async () => 'skip';
 const ALWAYS_STOP = async () => 'stop';
 
-test('selected-blocks.yml이 없으면 한국어 에러', async () => {
+test('smelt-selected-blocks.yml이 없으면 한국어 에러', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     const responsePath = writeResponse(cwd, VALID_RESPONSE);
     await assert.rejects(
       applySmeltReview({ cwd, responsePath, log: () => {} }),
-      /selected-blocks\.yml이\(가\) 없습니다/,
+      /smelt-selected-blocks\.yml이\(가\) 없습니다/,
     );
   });
 });
@@ -147,7 +147,10 @@ changes:
 test('모두 건너뛰면 yml 안 건드림', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
-    const before = readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8');
+    const before = readFileSync(
+      join(cwd, '.byeorim', 'project', 'smelt-selected-blocks.yml'),
+      'utf8',
+    );
     const responsePath = writeResponse(cwd, VALID_RESPONSE);
     const result = await applySmeltReview({
       cwd,
@@ -157,7 +160,10 @@ test('모두 건너뛰면 yml 안 건드림', async () => {
     });
     assert.equal(result.appliedCount, 0);
     assert.equal(result.skippedCount, 2);
-    const after = readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8');
+    const after = readFileSync(
+      join(cwd, '.byeorim', 'project', 'smelt-selected-blocks.yml'),
+      'utf8',
+    );
     assert.equal(before, after);
   });
 });

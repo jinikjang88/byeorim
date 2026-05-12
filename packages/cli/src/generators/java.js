@@ -1,5 +1,5 @@
 // Java 백엔드 코드 생성기. ADR 0019를 따른다.
-// architecture.yml의 language='java'일 때 set 단계가 호출.
+// shape-architecture.yml의 language='java'일 때 set 단계가 호출.
 // internal 블럭은 modules에 만들지 않는다(공개 API 없음).
 // ep.method가 진실(forge가 박은 자리). resource는 PUT, singleton은 PATCH(ADR 0044).
 
@@ -265,7 +265,7 @@ server:
 jwt:
   secret: ${devPlaceholder('jwt_secret')}
 
-# 데이터베이스. architecture.yml에서 고른 DB의 connection string으로 교체.
+# 데이터베이스. shape-architecture.yml에서 고른 DB의 connection string으로 교체.
 database:
   url: ${devPlaceholder('database_url')}
   username: ${devPlaceholder('database_username')}

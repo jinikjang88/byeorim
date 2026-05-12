@@ -1,5 +1,5 @@
-// byeorim forge. architecture.yml + selected-blocks.yml + catalog.yml을 입력으로
-// contracts.yml(API 계약)을 만든다. ADR 0007의 자리, ADR 0013의 형식과 매핑 정책을 따른다.
+// byeorim forge. shape-architecture.yml + smelt-selected-blocks.yml + catalog.yml을 입력으로
+// forge-contracts.yml(API 계약)을 만든다. ADR 0007의 자리, ADR 0013의 형식과 매핑 정책을 따른다.
 // ADR 0023의 옵셔널 어댑터로 schema를 채운다.
 // ADR 0034의 인터랙티브 검토 흐름을 interactiveForge로 박는다.
 // ADR 0035의 외부 검토 프롬프트 부산물(contracts-review-prompt.md)을 자동 생성한다.
@@ -232,16 +232,16 @@ async function fillSchemasWithAdapter(contracts, blockMap, adapter) {
 }
 
 // forge의 입력 자리들을 한 번에 읽고 검증한다. ADR 0013의 입력 의존성과 단계 검증을 한 자리에 모은다.
-// intent.yml과 architecture.yml은 contracts.yml 작성에는 직접 안 쓰이지만 외부 검토 프롬프트(ADR 0035)에 함께 담는다.
+// prospect-intent.yml과 shape-architecture.yml은 forge-contracts.yml 작성에는 직접 안 쓰이지만 외부 검토 프롬프트(ADR 0035)에 함께 담는다.
 // 반환: { architecture, archApiStyle, answers, selectedBlocks, builtIds, catalog, blockMap, state, paths }
 function loadForgeInputs(cwd) {
   const byeorimDir = join(cwd, '.byeorim');
   const stateFile = join(byeorimDir, 'state.yml');
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
-  const archFile = join(byeorimDir, 'project', 'architecture.yml');
-  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
+  const archFile = join(byeorimDir, 'project', 'shape-architecture.yml');
+  const selectedFile = join(byeorimDir, 'project', 'smelt-selected-blocks.yml');
   const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
-  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
+  const contractsFile = join(byeorimDir, 'project', 'forge-contracts.yml');
   const promptsDir = join(byeorimDir, 'project', 'prompts');
   const contractsReviewPromptFile = join(promptsDir, 'contracts-review-prompt.md');
 
@@ -256,7 +256,7 @@ function loadForgeInputs(cwd) {
   const archApiStyle = architecture.api_style;
   if (!SUPPORTED_ARCH_API_STYLES.has(archApiStyle)) {
     throw new Error(
-      `architecture.yml의 api_style이 "${archApiStyle}"입니다. 지금 출시의 forge는 REST만 지원합니다.\n` +
+      `shape-architecture.yml의 api_style이 "${archApiStyle}"입니다. 지금 출시의 forge는 REST만 지원합니다.\n` +
         `shape를 다시 돌려 api_style을 rest로 바꾸거나, 다음 출시를 기다려주세요`,
     );
   }
@@ -268,7 +268,7 @@ function loadForgeInputs(cwd) {
   const catalog = loadCatalog(catalogFile);
   const blockMap = new Map(catalog.blocks.map((b) => [b.id, b]));
 
-  // intent.yml은 부산물(외부 검토 프롬프트)에만 쓰인다. 없거나 user_answers가 비어있으면 빈 객체로 폴백.
+  // prospect-intent.yml은 부산물(외부 검토 프롬프트)에만 쓰인다. 없거나 user_answers가 비어있으면 빈 객체로 폴백.
   let answers = {};
   if (existsSync(intentFile)) {
     const intent = yaml.load(readFileSync(intentFile, 'utf8')) || {};
@@ -330,7 +330,7 @@ function countEndpoints(contracts) {
   );
 }
 
-// runForge는 forge 단계의 비대화 본체. 입력 파일을 읽어 contracts.yml을 만든다.
+// runForge는 forge 단계의 비대화 본체. 입력 파일을 읽어 forge-contracts.yml을 만든다.
 // 후행 호환을 위해 시그니처와 동작을 ADR 0023 시점 그대로 유지한다(ADR 0034 결정 4).
 //
 // 입력:

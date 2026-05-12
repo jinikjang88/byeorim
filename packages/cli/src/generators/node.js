@@ -1,5 +1,5 @@
 // Node.js 백엔드 코드 생성기. ADR 0018을 따른다.
-// architecture.yml의 language='node'일 때 set 단계가 호출.
+// shape-architecture.yml의 language='node'일 때 set 단계가 호출.
 // internal 블럭은 features 디렉토리에 만들지 않는다(공개 API 없음).
 // ep.method가 진실(forge가 박은 자리). resource는 PUT, singleton은 PATCH(ADR 0044).
 
@@ -97,7 +97,7 @@ PORT=3000
 # 시크릿. 반드시 안전한 random 값으로 교체.
 JWT_SECRET=${devPlaceholder('jwt_secret')}
 
-# 데이터베이스. architecture.yml에서 고른 DB의 connection string으로 교체.
+# 데이터베이스. shape-architecture.yml에서 고른 DB의 connection string으로 교체.
 DATABASE_URL=${devPlaceholder('database_url')}
 
 # CORS. 실제 배포 도메인으로 교체.
@@ -330,7 +330,7 @@ function buildSchemasJs(blockId, blockName, endpoints) {
     .join('\n\n');
 
   return `// ${blockName} JSON Schema. ADR 0018 결정 5의 입력/출력 검증.
-// schema가 contracts.yml에서 채워지면 그 형식이 여기에 그대로 들어옵니다.
+// schema가 forge-contracts.yml에서 채워지면 그 형식이 여기에 그대로 들어옵니다.
 // block_id: ${blockId}
 
 ${exports}

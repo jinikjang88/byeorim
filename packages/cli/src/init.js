@@ -14,7 +14,7 @@ const DIARY_TEMPLATE = `# 다이어리
 시간이 지나면 답이 자라 있을 겁니다.
 `;
 
-const GITIGNORE_TEMPLATE = `# 생성된 코드는 contracts.yml과 test-scenarios.yml에서 재현 가능하므로 git에 올리지 않는다
+const GITIGNORE_TEMPLATE = `# 생성된 코드는 forge-contracts.yml과 temper-scenarios.yml에서 재현 가능하므로 git에 올리지 않는다
 project/generated/
 `;
 

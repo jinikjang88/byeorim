@@ -152,11 +152,11 @@ test('logGracefulDegrade: 섹션 이름과 yml 이름이 안내에 박힌다', (
   logGracefulDegrade({
     log: (line) => logs.push(line),
     parseResult: { parseError: '섹션 못 찾음' },
-    ymlName: 'contracts.yml',
+    ymlName: 'forge-contracts.yml',
     sectionName: '## 제안된 변경 사항',
   });
   assert.ok(logs.some((l) => l.includes('## 제안된 변경 사항')));
-  assert.ok(logs.some((l) => l.includes('contracts.yml')));
+  assert.ok(logs.some((l) => l.includes('forge-contracts.yml')));
   assert.ok(logs.some((l) => l.includes('섹션 못 찾음')));
 });
 

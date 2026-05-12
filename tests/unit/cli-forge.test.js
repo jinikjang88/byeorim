@@ -1,4 +1,4 @@
-// runForge 단위 테스트. ADR 0013(forge 책임과 contracts.yml 형식).
+// runForge 단위 테스트. ADR 0013(forge 책임과 forge-contracts.yml 형식).
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
@@ -53,17 +53,17 @@ async function setupReadyForForge(cwd, blockIds = ['order'], apiStyle = 'rest') 
 }
 
 function readContracts(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'forge-contracts.yml'), 'utf8'));
 }
 
-test('정상 흐름: forge가 contracts.yml을 만들고 단계가 temper로 넘어간다', async () => {
+test('정상 흐름: forge가 forge-contracts.yml을 만들고 단계가 temper로 넘어간다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: shape까지 끝낸 자리
     await setupReadyForForge(cwd);
     const fixedNow = new Date('2026-04-28T12:00:00.000Z');
     // When
     const result = await runForge({ cwd, now: fixedNow });
-    // Then: contracts.yml 형식이 ADR 0013을 따른다
+    // Then: forge-contracts.yml 형식이 ADR 0013을 따른다
     const doc = readContracts(cwd);
     assert.equal(doc.schema_version, 1);
     assert.equal(doc.created_at, '2026-04-28T12:00:00.000Z');
@@ -188,7 +188,7 @@ test('현재 단계가 forge가 아니면 한국어 메시지로 거부한다', 
   });
 });
 
-test('architecture.yml이 없으면 shape 안내 메시지로 거부한다', async () => {
+test('shape-architecture.yml이 없으면 shape 안내 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: smelt까지 끝낸 자리에서 강제로 stage를 forge로 옮긴다
     runInit({ cwd });

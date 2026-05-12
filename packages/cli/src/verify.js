@@ -107,7 +107,7 @@ ${sections}`;
 }
 
 function loadArchitecture(byeorimDir) {
-  const archFile = join(byeorimDir, 'project', 'architecture.yml');
+  const archFile = join(byeorimDir, 'project', 'shape-architecture.yml');
   if (!existsSync(archFile)) return null;
   try {
     return yaml.load(readFileSync(archFile, 'utf8')) || null;
@@ -169,7 +169,7 @@ async function runOneTarget(target, runCommand) {
 // loadIntent는 architecture와 함께 buildRunTargets에 전달할 intent 객체를 읽는다.
 // python의 backend 명령이 intent.extracted.what에서 패키지 이름을 추출(ADR 0047 결정 7).
 function loadIntent(byeorimDir) {
-  const file = join(byeorimDir, 'project', 'intent.yml');
+  const file = join(byeorimDir, 'project', 'prospect-intent.yml');
   if (!existsSync(file)) return null;
   try {
     return yaml.load(readFileSync(file, 'utf8')) || null;

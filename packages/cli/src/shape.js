@@ -1,5 +1,5 @@
 // byeorim shape. 직전 단계의 산출물을 입력으로 받아 4개 핵심 아키텍처 결정을 만든다.
-// ADR 0007의 자리, ADR 0012의 architecture.yml 형식, ADR 0011의 인터랙티브 prompt 정책,
+// ADR 0007의 자리, ADR 0012의 shape-architecture.yml 형식, ADR 0011의 인터랙티브 prompt 정책,
 // ADR 0032(아키텍처 추천과 검토 흐름), ADR 0033(외부 검토 프롬프트 부산물)을 따른다.
 // cascade 답안은 맥락으로만 보여주고 직접 참조하지 않는다(ADR 0012 결정 3).
 
@@ -150,8 +150,8 @@ function ensureStage(state, expected) {
 // shape의 입력 자리들을 한 번에 읽는다. 모든 자리가 있어야 다음으로 간다.
 // 어댑터가 없어도 catalog는 항상 읽는다(다른 자리에서 쓰일 수 있음).
 function loadShapeInputs(byeorimDir) {
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
-  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
+  const selectedFile = join(byeorimDir, 'project', 'smelt-selected-blocks.yml');
   const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
   const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
@@ -343,7 +343,7 @@ export async function interactiveShape({
 
   const byeorimDir = join(cwd, '.byeorim');
   const stateFile = join(byeorimDir, 'state.yml');
-  const architectureFile = join(byeorimDir, 'project', 'architecture.yml');
+  const architectureFile = join(byeorimDir, 'project', 'shape-architecture.yml');
   const promptsDir = join(byeorimDir, 'project', 'prompts');
   const architectureReviewPromptFile = join(promptsDir, 'architecture-review-prompt.md');
 

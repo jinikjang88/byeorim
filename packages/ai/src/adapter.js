@@ -18,7 +18,7 @@
 
 /**
  * Prospect 단계가 7항목 답변을 받아 정리한 결과.
- * intent.yml의 extracted 필드와 같은 모양(ADR 0008 + 0026).
+ * prospect-intent.yml의 extracted 필드와 같은 모양(ADR 0008 + 0026).
  *
  * @typedef {object} ExtractedIntent
  * @property {string} what
@@ -33,7 +33,7 @@
 
 /**
  * JSON Schema 부분집합. ADR 0023 결정 2의 형식.
- * extractSchema의 출력과 contracts.yml의 request_schema/response_schema 값.
+ * extractSchema의 출력과 forge-contracts.yml의 request_schema/response_schema 값.
  *
  * @typedef {object} Schema
  * @property {'object'|'string'|'integer'|'number'|'boolean'|'array'} type
@@ -103,7 +103,7 @@
  */
 
 /**
- * Smelt 단계의 산출물(selected-blocks.yml의 모양, ADR 0010).
+ * Smelt 단계의 산출물(smelt-selected-blocks.yml의 모양, ADR 0010).
  * shape의 recommendArchitecture가 입력으로 받는다(ADR 0032).
  *
  * @typedef {object} SelectedBlocks
@@ -171,10 +171,10 @@
  * @typedef {object} InspectInput
  * @property {('node'|'java'|'python')} language
  * @property {Record<string, string>} files - { 상대경로: 파일 본문 }. backend 엔트리 + features 첫 sample + frontend 엔트리
- * @property {object} intent - intent.yml의 객체
- * @property {object} architecture - architecture.yml의 객체
- * @property {object} contracts - contracts.yml의 객체
- * @property {object} scenarios - test-scenarios.yml의 객체
+ * @property {object} intent - prospect-intent.yml의 객체
+ * @property {object} architecture - shape-architecture.yml의 객체
+ * @property {object} contracts - forge-contracts.yml의 객체
+ * @property {object} scenarios - temper-scenarios.yml의 객체
  */
 
 /**

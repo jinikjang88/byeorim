@@ -79,13 +79,13 @@ const ALWAYS_APPLY = async () => 'apply';
 const ALWAYS_SKIP = async () => 'skip';
 const ALWAYS_STOP = async () => 'stop';
 
-test('architecture.yml이 없으면 한국어 에러', async () => {
+test('shape-architecture.yml이 없으면 한국어 에러', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     const responsePath = writeResponse(cwd, VALID_RESPONSE);
     await assert.rejects(
       applyShapeReview({ cwd, responsePath, log: () => {} }),
-      /architecture\.yml이\(가\) 없습니다/,
+      /shape-architecture\.yml이\(가\) 없습니다/,
     );
   });
 });
@@ -105,7 +105,7 @@ test('cwd 또는 responsePath 누락은 한국어 에러', async () => {
   await assert.rejects(applyShapeReview({ cwd: '/tmp' }), /responsePath.*필요합니다/);
 });
 
-test('decision_modify 적용: architecture.yml의 4개 필드가 갱신된다', async () => {
+test('decision_modify 적용: shape-architecture.yml의 4개 필드가 갱신된다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
     const responsePath = writeResponse(cwd, VALID_RESPONSE);
@@ -127,10 +127,10 @@ test('decision_modify 적용: architecture.yml의 4개 필드가 갱신된다', 
   });
 });
 
-test('모두 건너뛰면 architecture.yml 안 건드림', async () => {
+test('모두 건너뛰면 shape-architecture.yml 안 건드림', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
-    const archFile = join(cwd, '.byeorim', 'project', 'architecture.yml');
+    const archFile = join(cwd, '.byeorim', 'project', 'shape-architecture.yml');
     const before = readFileSync(archFile, 'utf8');
     const responsePath = writeResponse(cwd, VALID_RESPONSE);
     const result = await applyShapeReview({
@@ -146,7 +146,7 @@ test('모두 건너뛰면 architecture.yml 안 건드림', async () => {
   });
 });
 
-test('첫 변경에서 stop하면 architecture.yml 안 건드림', async () => {
+test('첫 변경에서 stop하면 shape-architecture.yml 안 건드림', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
     const responsePath = writeResponse(cwd, VALID_RESPONSE);

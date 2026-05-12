@@ -55,10 +55,10 @@ async function setupReadyForTemper(cwd, blockIds = ['order']) {
 }
 
 function readScenarios(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'temper-scenarios.yml'), 'utf8'));
 }
 
-test('proceed를 누르면 test-scenarios.yml을 쓰고 다음 단계로 advance한다', async () => {
+test('proceed를 누르면 temper-scenarios.yml을 쓰고 다음 단계로 advance한다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: forge까지 끝낸 자리
     await setupReadyForTemper(cwd, ['order']);

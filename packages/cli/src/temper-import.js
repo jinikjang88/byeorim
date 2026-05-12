@@ -1,7 +1,7 @@
 // byeorim temper import-review. ADR 0040의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 제안된 변경 사항" 섹션의 ```yaml changes를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
-// state는 안 건드리고 test-scenarios.yml만 다듬는다(ADR 0040 결정 7).
+// state는 안 건드리고 temper-scenarios.yml만 다듬는다(ADR 0040 결정 7).
 // 응답 형식이 어긋날 때는 graceful degrade(ADR 0040 결정 6).
 // forge-import.js와 결이 평행. 4종 kind만 다르다(temper의 시나리오 자리).
 
@@ -181,7 +181,7 @@ async function defaultConfirmChange({ change, index, total, log = console.log } 
 }
 
 // applyTemperReview는 temper import-review의 본체.
-// 외부 AI 응답 파일을 읽고 test-scenarios.yml에 인터랙티브 picker로 변경을 반영한다.
+// 외부 AI 응답 파일을 읽고 temper-scenarios.yml에 인터랙티브 picker로 변경을 반영한다.
 //
 // 입력:
 //   cwd            - 프로젝트 루트 절대 경로
@@ -211,7 +211,7 @@ export async function applyTemperReview({
   }
 
   const byeorimDir = join(cwd, '.byeorim');
-  const scenariosFile = join(byeorimDir, 'project', 'test-scenarios.yml');
+  const scenariosFile = join(byeorimDir, 'project', 'temper-scenarios.yml');
 
   ensureFile(scenariosFile, '먼저 byeorim temper를 실행해주세요');
 
@@ -223,7 +223,7 @@ export async function applyTemperReview({
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    logGracefulDegrade({ log, parseResult, ymlName: 'test-scenarios.yml' });
+    logGracefulDegrade({ log, parseResult, ymlName: 'temper-scenarios.yml' });
     return {
       scenariosFile,
       responseFile: responsePath,
@@ -238,7 +238,7 @@ export async function applyTemperReview({
     };
   }
 
-  // test-scenarios.yml 로드
+  // temper-scenarios.yml 로드
   const scenariosDoc = yaml.load(readFileSync(scenariosFile, 'utf8')) || {};
   const scenarios = Array.isArray(scenariosDoc.scenarios) ? scenariosDoc.scenarios : [];
 
@@ -262,7 +262,7 @@ export async function applyTemperReview({
     }
   }
   if (validItems.length === 0) {
-    log('적용할 변경이 없어요. test-scenarios.yml은 그대로 둡니다.');
+    log('적용할 변경이 없어요. temper-scenarios.yml은 그대로 둡니다.');
     return {
       scenariosFile,
       responseFile: responsePath,
@@ -286,7 +286,7 @@ export async function applyTemperReview({
     log,
   });
 
-  // 변경이 한 번이라도 적용됐으면 test-scenarios.yml 갱신
+  // 변경이 한 번이라도 적용됐으면 temper-scenarios.yml 갱신
   if (appliedCount > 0) {
     scenariosDoc.scenarios = scenarios;
     writeFileSync(scenariosFile, yaml.dump(scenariosDoc, { sortKeys: false }), 'utf8');
@@ -294,9 +294,9 @@ export async function applyTemperReview({
 
   logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
-    log(`test-scenarios.yml을 갱신했어요: ${scenariosFile}`);
+    log(`temper-scenarios.yml을 갱신했어요: ${scenariosFile}`);
   } else {
-    log('적용된 변경이 없어 test-scenarios.yml은 그대로 둡니다.');
+    log('적용된 변경이 없어 temper-scenarios.yml은 그대로 둡니다.');
   }
 
   return {

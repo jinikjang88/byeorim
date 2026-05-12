@@ -49,7 +49,7 @@ Prospect asks seven questions in order. Skip any question you cannot answer; it 
 When prospect finishes, two artifacts appear.
 
 - A catalog: the set of domain blocks (e.g., payment, refund, shipping)
-- A reality-check report (`reality-check.md`): a six-angle market view covering saturation, entry cost, legal risk, and more
+- A reality-check report (`prospect-reality-check.md`): a six-angle market view covering saturation, entry cost, legal risk, and more
 
 For a non-interactive single-line run.
 

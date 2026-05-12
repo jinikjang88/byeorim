@@ -67,7 +67,7 @@ async function setupReadyForImport(cwd, blockIds = ['order']) {
 }
 
 function readScenariosDoc(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'temper-scenarios.yml'), 'utf8'));
 }
 
 function writeResponse(cwd, body) {
@@ -89,7 +89,7 @@ function buildResponse(changes) {
   ].join('\n');
 }
 
-test('test-scenarios.yml이 없으면 한국어 메시지로 거부한다', async () => {
+test('temper-scenarios.yml이 없으면 한국어 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     const responsePath = writeResponse(cwd, buildResponse([]));
@@ -115,7 +115,7 @@ test('cwd 또는 responsePath 누락은 한국어로 거부한다', async () => 
   await assert.rejects(applyTemperReview({ cwd: '/tmp' }), /responsePath.*필요합니다/);
 });
 
-test('형식이 어긋나면 graceful: test-scenarios.yml은 그대로', async () => {
+test('형식이 어긋나면 graceful: temper-scenarios.yml은 그대로', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
     const before = readScenariosDoc(cwd);
@@ -411,7 +411,7 @@ test('invalid: scenario_add에서 kind가 같은 endpoint에 이미 있으면 in
   });
 });
 
-test('appliedCount=0이면 test-scenarios.yml은 안 쓴다', async () => {
+test('appliedCount=0이면 temper-scenarios.yml은 안 쓴다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForImport(cwd);
     const before = readScenariosDoc(cwd);

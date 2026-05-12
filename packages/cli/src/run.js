@@ -67,8 +67,8 @@ function pythonPackageOf(intent) {
 //
 // 입력:
 //   cwd            - 프로젝트 루트
-//   intent         - intent.yml 객체 (또는 null)
-//   architecture   - architecture.yml 객체 (또는 null)
+//   intent         - prospect-intent.yml 객체 (또는 null)
+//   architecture   - shape-architecture.yml 객체 (또는 null)
 //   target         - 'both' | 'backend' | 'frontend'
 //   byeorimDirOverride - 테스트용 .byeorim 절대 경로 override(선택)
 //
@@ -168,8 +168,8 @@ export async function runRun({
     throw new Error('.byeorim/state.yml이 없습니다. 먼저 byeorim init을 실행해주세요');
   }
 
-  const intent = loadYamlSafe(join(byeorimDir, 'project', 'intent.yml'));
-  const architecture = loadYamlSafe(join(byeorimDir, 'project', 'architecture.yml'));
+  const intent = loadYamlSafe(join(byeorimDir, 'project', 'prospect-intent.yml'));
+  const architecture = loadYamlSafe(join(byeorimDir, 'project', 'shape-architecture.yml'));
 
   const targets = buildRunTargets({ cwd, intent, architecture, target });
 

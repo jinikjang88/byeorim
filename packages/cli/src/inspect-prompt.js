@@ -186,7 +186,7 @@ export function buildInspectReviewPromptMarkdown({
   return HEADER + body + '\n' + FOOTER;
 }
 
-// contracts.yml의 결을 한 결로 요약. claude 어댑터의 결과 같은 결.
+// forge-contracts.yml의 결을 한 결로 요약. claude 어댑터의 결과 같은 결.
 function summarizeContracts(contracts) {
   if (!contracts || typeof contracts !== 'object') return null;
   return {

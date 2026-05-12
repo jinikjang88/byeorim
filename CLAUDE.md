@@ -36,7 +36,7 @@ AI를 활용해 자신의 서비스를 만들고 싶은 사람을 돕는다. 막
 이 일곱 가지는 어떤 상황에서도 어기지 않는다. "조금 빨리 가려고", "이번 한 번만", "나중에 고치면 되니까" 같은 핑계가 떠오르면 그 순간이 멈춰야 할 때다.
 
 ### 1) 설계 없이 코드를 쓰지 않는다 (NO CODE BEFORE DESIGN)
-.byeorim/project/ 안에 intent.yml, selected-blocks.yml, contracts.yml 중 하나라도 없으면 애플리케이션 코드를 생성하지 않는다. 사용자가 "그냥 빨리 코드부터 보여줘"라고 해도 거절한다. 이걸 어기는 순간 Byeorim은 또 하나의 Cursor가 된다. Byeorim이 태어난 이유 자체가 무너진다.
+.byeorim/project/ 안에 prospect-intent.yml, smelt-selected-blocks.yml, forge-contracts.yml 중 하나라도 없으면 애플리케이션 코드를 생성하지 않는다(ADR 0058). 사용자가 "그냥 빨리 코드부터 보여줘"라고 해도 거절한다. 이걸 어기는 순간 Byeorim은 또 하나의 Cursor가 된다. Byeorim이 태어난 이유 자체가 무너진다.
 
 ### 2) 답을 강요하지 않는다 (NEVER FORCE AN ANSWER)
 사용자가 답할 수 없는 질문을 만났을 때 다음 단계로 못 가게 막지 않는다. 답하지 못한 질문은 다이어리(.byeorim/project/diary.md)에 남겨두고 함께 다음 단계로 간다. 강한 신호를 줘야 할 때는 출시 직전 법적 리스크 같이 진짜 멈춰야 할 때뿐이다. 평소 톤은 브레이크가 아니라 동행이다.
@@ -154,7 +154,7 @@ it('어떤 블럭 조합도 의존성 해결 후 순환이 없다', () => {
 
 **Snapshot testing (스냅샷 검증)**: AI가 생성한 출력의 구조가 시간에 따라 망가지지 않는지 본다. Prospect의 카탈로그 출력, Reality Check 리포트 형식, 생성된 .byeorim/ 디렉토리 구조에 적합하다. AI 응답 자체는 비결정적이므로 mock 응답으로 스냅샷을 잡는다.
 
-**Contract testing (계약 검증)**: Forge 단계에서 정의된 API 계약(contracts.yml)이 실제 코드의 인터페이스와 일치하는지 검증한다. OpenAPI 스키마 검증 또는 타입 레벨 단언으로 한다. 계약과 구현이 어긋나면 빌드를 실패시킨다.
+**Contract testing (계약 검증)**: Forge 단계에서 정의된 API 계약(forge-contracts.yml)이 실제 코드의 인터페이스와 일치하는지 검증한다. OpenAPI 스키마 검증 또는 타입 레벨 단언으로 한다. 계약과 구현이 어긋나면 빌드를 실패시킨다.
 
 **Golden file testing (골든 파일 검증)**: CLI 출력처럼 결과가 사람이 읽는 텍스트일 때. 기대 출력을 별도 파일로 저장하고 실제 출력과 diff한다. 출력 형식 변경 시 의도적인 갱신이 일어나도록 강제한다.
 

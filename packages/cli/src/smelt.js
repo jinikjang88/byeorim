@@ -41,7 +41,7 @@ function ensureStage(state, expected) {
   }
 }
 
-// intent.yml에서 사용자 답변(user_answers)을 읽는다(ADR 0026 schema_version 2).
+// prospect-intent.yml에서 사용자 답변(user_answers)을 읽는다(ADR 0026 schema_version 2).
 // 옛 schema_version 1 파일은 user_answers가 없으므로 빈 객체로 폴백한다.
 // recommendBlocks가 빈 객체로도 안전하게 도는 결을 따라간다(graceful degradation).
 function readIntent(intentFile) {
@@ -113,7 +113,7 @@ async function fetchRecommendation({ adapter, answers, catalog, log }) {
 }
 
 // runSmelt는 smelt 단계의 본체. 사용자가 고른 블럭 ID 배열로 의존성 해결을 돌리고
-// selected-blocks.yml과 decisions.yml을 만든다.
+// smelt-selected-blocks.yml과 decisions.yml을 만든다.
 // 끝에 항상 prompts/block-review-prompt.md 부산물을 만든다(ADR 0030).
 //
 // 입력:
@@ -135,9 +135,9 @@ export async function runSmelt({ cwd, blockIds, recommendation = EMPTY_RECOMMEND
 
   const byeorimDir = join(cwd, '.byeorim');
   const stateFile = join(byeorimDir, 'state.yml');
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
   const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
-  const selectedBlocksFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const selectedBlocksFile = join(byeorimDir, 'project', 'smelt-selected-blocks.yml');
   const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
   const promptsDir = join(byeorimDir, 'project', 'prompts');
   const blockReviewPromptFile = join(promptsDir, 'block-review-prompt.md');
@@ -160,7 +160,7 @@ export async function runSmelt({ cwd, blockIds, recommendation = EMPTY_RECOMMEND
   writeFileSync(decisionsFile, yaml.dump(decisions, { sortKeys: false }), 'utf8');
 
   // 외부 AI 검토 프롬프트 부산물(ADR 0030 결정 3). 사용자가 고른 자리와 카탈로그 전체를 묶는다.
-  // 사용자 답변(intent.yml의 user_answers)도 함께 담아 외부 AI가 도메인 맥락을 본다.
+  // 사용자 답변(prospect-intent.yml의 user_answers)도 함께 담아 외부 AI가 도메인 맥락을 본다.
   const intent = readIntent(intentFile);
   mkdirSync(promptsDir, { recursive: true });
   writeFileSync(
@@ -324,7 +324,7 @@ export async function interactiveSmelt({
 
   const byeorimDir = join(cwd, '.byeorim');
   const stateFile = join(byeorimDir, 'state.yml');
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
   const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
   // picker를 띄우기 전에 단계와 파일 자리를 먼저 검증한다. 사용자가 블럭을 고른 뒤에야

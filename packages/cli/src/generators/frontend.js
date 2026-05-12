@@ -1,5 +1,5 @@
 // Frontend 코드 생성기. ADR 0021을 따른다(React + Vite + TypeScript + feature-based).
-// architecture.yml의 frontend_framework는 아직 없음. 이번 출시는 React 표준 고정.
+// shape-architecture.yml의 frontend_framework는 아직 없음. 이번 출시는 React 표준 고정.
 // internal 블럭은 frontend features에 만들지 않는다(공개 API 없음).
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -222,7 +222,7 @@ frontend/
     ├── router.tsx
     ├── api/                # ${featureCount}개 feature의 API 클라이언트
     │   └── {feature}.ts
-    ├── types/              # contracts.yml schema에서 변환된 TS 타입
+    ├── types/              # forge-contracts.yml schema에서 변환된 TS 타입
     │   └── {feature}.ts
     └── features/           # feature별 페이지 컴포넌트
         └── {feature}/
@@ -235,7 +235,7 @@ backend의 features/와 1:1 짝(ADR 0017 결정 2). 미래 MSA 분리 시 한 fe
 
 각 feature의 자리에 TODO가 들어있습니다.
 
-1. \`types/{feature}.ts\`: contracts.yml의 request/response schema가 채워지면 여기에 옮기세요.
+1. \`types/{feature}.ts\`: forge-contracts.yml의 request/response schema가 채워지면 여기에 옮기세요.
 2. \`api/{feature}.ts\`: API 클라이언트는 자동 생성. 필요한 경우 에러 처리, 인증 헤더를 보강하세요.
 3. \`features/{feature}/{Feature}Page.tsx\`: API 클라이언트를 호출해 UI를 만드세요.
 
@@ -359,13 +359,13 @@ function buildTypesTs(blockName, blockId, endpoints) {
       // hasBody는 ep.method로 결정(POST/PUT/PATCH). singleton의 update(PATCH)도 자연스럽게 잡힘.
       const { hasBody } = methodSpec(ep);
       const requestBlock = hasBody
-        ? `// ${ep.operation} 요청 본문. contracts.yml의 ${ep.operation}.request_schema 거울.
+        ? `// ${ep.operation} 요청 본문. forge-contracts.yml의 ${ep.operation}.request_schema 거울.
 export interface ${opPascal}Request {
 ${tsInterfaceBody(ep.request_schema)}
 }
 `
         : '';
-      const responseBlock = `// ${ep.operation} 응답 본문. contracts.yml의 ${ep.operation}.response_schema 거울.
+      const responseBlock = `// ${ep.operation} 응답 본문. forge-contracts.yml의 ${ep.operation}.response_schema 거울.
 export interface ${opPascal}Response {
 ${tsInterfaceBody(ep.response_schema)}
 }
@@ -376,7 +376,7 @@ ${tsInterfaceBody(ep.response_schema)}
 
   return `// ${blockName} TypeScript 타입. ADR 0021 결정 6의 BE/FE 타입 공유.
 // block_id: ${blockId}
-// schema가 contracts.yml에서 채워지면 그 필드가 여기에 들어옵니다(ADR 0023).
+// schema가 forge-contracts.yml에서 채워지면 그 필드가 여기에 들어옵니다(ADR 0023).
 
 ${declarations}`;
 }
@@ -434,7 +434,7 @@ export async function ${opSpec}(${paramList}): Promise<${returnType}> {
     })
     .join('\n\n');
 
-  return `// ${blockName} API 클라이언트. ADR 0021 결정 6의 contracts.yml 자동 생성.
+  return `// ${blockName} API 클라이언트. ADR 0021 결정 6의 forge-contracts.yml 자동 생성.
 // 모든 fetch가 secure cookie를 자동 송수신한다(ADR 0021 결정 8).
 
 ${importStatement}

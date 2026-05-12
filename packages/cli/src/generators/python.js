@@ -1,5 +1,5 @@
 // Python 백엔드 코드 생성기. ADR 0020을 따른다.
-// architecture.yml의 language='python'일 때 set 단계가 호출.
+// shape-architecture.yml의 language='python'일 때 set 단계가 호출.
 // internal 블럭은 features에 만들지 않는다(공개 API 없음).
 // ep.method가 진실(forge가 박은 자리). resource는 PUT, singleton은 PATCH(ADR 0044).
 
@@ -309,7 +309,7 @@ PYTHON_ENV=production
 # 시크릿. 반드시 안전한 random 값으로 교체.
 JWT_SECRET=${devPlaceholder('jwt_secret')}
 
-# 데이터베이스. architecture.yml에서 고른 DB의 connection string으로 교체.
+# 데이터베이스. shape-architecture.yml에서 고른 DB의 connection string으로 교체.
 DATABASE_URL=${devPlaceholder('database_url')}
 
 # CORS. 실제 배포 도메인으로 교체.
@@ -478,13 +478,13 @@ function buildSchemasPy(blockName, endpoints) {
       const spec = methodSpec(ep);
       const requestBlock = spec.hasBody
         ? `class ${opPascal}Request(BaseModel):
-    """${ep.operation} 요청 본문. contracts.yml의 ${ep.operation}.request_schema 거울."""
+    """${ep.operation} 요청 본문. forge-contracts.yml의 ${ep.operation}.request_schema 거울."""
 
 ${pydanticBody(ep.request_schema)}
 `
         : '';
       const responseBlock = `class ${opPascal}Response(BaseModel):
-    """${ep.operation} 응답 본문. contracts.yml의 ${ep.operation}.response_schema 거울."""
+    """${ep.operation} 응답 본문. forge-contracts.yml의 ${ep.operation}.response_schema 거울."""
 
 ${pydanticBody(ep.response_schema)}
 `;
@@ -494,7 +494,7 @@ ${pydanticBody(ep.response_schema)}
 
   return `"""${blockName} Pydantic 스키마. ADR 0020 결정 5의 입력/출력 검증.
 
-contracts.yml의 schema가 채워지면 그 필드가 여기에 들어옵니다(ADR 0023).
+forge-contracts.yml의 schema가 채워지면 그 필드가 여기에 들어옵니다(ADR 0023).
 """
 
 from pydantic import BaseModel
