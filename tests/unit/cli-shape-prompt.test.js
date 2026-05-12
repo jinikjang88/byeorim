@@ -223,3 +223,10 @@ test('인자가 비어있어도(undefined) 안전하게 마크다운을 만든�
   assert.match(md, /사용자가 직접 고른 블럭: 0개/);
   assert.match(md, /이번 흐름은 추천이 비어있어요/);
 });
+
+test('형식 안내 뒤에 예시 응답이 한 덩이 박혀 외부 AI가 결을 따라가게 한다', () => {
+  const md = buildArchitectureReviewPromptMarkdown({});
+  assert.match(md, /예시 응답/);
+  // 자유 형식 헤딩과 형식 섹션이 한 결로 들어있다
+  assert.match(md, /## 도메인 적합성[\s\S]*## 제안된 변경 사항[\s\S]*kind: decision_modify/);
+});
