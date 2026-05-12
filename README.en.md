@@ -36,12 +36,39 @@ Aliases: `prs`, `sml`, `shp`, `frg`, `tmr`, `set`, `ins`.
 
 Helper commands: `byeorim init`, `byeorim status`, `byeorim answer`, `byeorim run`, `byeorim verify`, and `byeorim <step> import-review` for round-tripping reviews from external AIs.
 
-## Quick start
+## Install
+
+Clone the repo and install dependencies.
 
 ```bash
+git clone https://github.com/jinikjang88/byeorim.git
+cd byeorim
 npm install
-node bin/byeorim.js init
-node bin/byeorim.js prospect
+```
+
+You can now run `node bin/byeorim.js <command>` directly.
+
+To call `byeorim` from any directory, run a global install.
+
+```bash
+npm install -g .
+```
+
+This symlinks the cloned repo into the global path. If you move or delete the repo, `byeorim` goes with it. Publishing to the npm registry is deferred (see ADR 0059).
+
+Verify.
+
+```bash
+byeorim --help
+```
+
+## Quick start
+
+After install, run from your own project directory.
+
+```bash
+byeorim init
+byeorim prospect
 ```
 
 Prospect asks seven questions in order. Skip any question you cannot answer; it lands in `.byeorim/project/diary.md` and you can return to it later.

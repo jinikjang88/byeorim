@@ -45,12 +45,39 @@
 | `byeorim verify` | 만든 코드가 잘 컴파일되고 테스트가 통과하는지 본다. `--smoke` 옵션을 더하면 실제로 띄워서 살아있는지도 확인 |
 | `byeorim <단계> import-review <응답파일>` | 외부 AI(Claude.ai/ChatGPT/Gemini 등)에서 받은 검토 응답을 다시 가져온다. smelt/shape/forge/temper/inspect 단계에서 모두 같은 결로 동작(아래 "외부 AI에 검토받기" 참고). prospect는 `import-catalog`로 카탈로그 자체를 교체 |
 
-## 시작하기
+## 설치
+
+저장소를 클론한 뒤 의존성을 깐다.
 
 ```bash
+git clone https://github.com/jinikjang88/byeorim.git
+cd byeorim
 npm install
-node bin/byeorim.js init
-node bin/byeorim.js prospect
+```
+
+이 결로 `node bin/byeorim.js <명령>` 결로 바로 쓸 수 있다.
+
+어디서나 `byeorim` 한 단어로 부르려면 글로벌 install을 한 번 더 박는다.
+
+```bash
+npm install -g .
+```
+
+이 결은 현재 클론한 저장소를 글로벌 결로 symlink한다. 즉 저장소를 옮기거나 지우면 `byeorim`도 따라간다. npm registry 배포는 차후 결로 미뤘다(ADR 0059).
+
+확인.
+
+```bash
+byeorim --help
+```
+
+## 시작하기
+
+설치 결로 어디서나 부를 수 있다. 자기 프로젝트 디렉토리에서 다음을 돌린다.
+
+```bash
+byeorim init
+byeorim prospect
 ```
 
 prospect가 7가지 질문을 차례로 한다. 답하기 어려운 질문은 비워둬도 된다. 다이어리(`.byeorim/project/diary.md`)에 모인다. 만들면서 다시 돌아와 답할 수 있다.
