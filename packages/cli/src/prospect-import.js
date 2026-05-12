@@ -1,10 +1,10 @@
 // import-catalog 명령의 본체. ADR 0028의 사용자 카탈로그 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini 등)에서 받은 yml 파일을 검증하고 catalog.yml로 교체한다.
-// intent.yml의 source는 ADR 0008 결정 3의 예약 자리 그대로 'custom'으로 박힌다.
+// prospect-intent.yml의 source는 ADR 0008 결정 3의 예약 자리 그대로 'custom'으로 박힌다.
 // ADR 0042: ID 패턴 위반은 한국어로 풀어서 안내. ajv 에러 객체를 formatError로 풀어쓴다.
 // 후속 보강: 다른 ajv 에러(required, enum, type 등)도 한국어로 풀어쓴다.
 //
-// reality-check.md는 갱신하지 않는다(ADR 0028 결정 2). 사용자에게 한국어로 안내만 한다.
+// prospect-reality-check.md는 갱신하지 않는다(ADR 0028 결정 2). 사용자에게 한국어로 안내만 한다.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -109,12 +109,12 @@ export function importCatalog({ cwd, sourcePath, log = console.log } = {}) {
   }
 
   const byeorimDir = join(cwd, '.byeorim');
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
   const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
   if (!existsSync(intentFile)) {
     throw new Error(
-      'intent.yml이 없습니다. 먼저 byeorim init과 prospect를 한 번 끝내주세요.\n' +
+      'prospect-intent.yml이 없습니다. 먼저 byeorim init과 prospect를 한 번 끝내주세요.\n' +
         'import-catalog는 prospect를 거쳐 자리잡은 .byeorim/ 위에서만 동작합니다',
     );
   }
@@ -164,7 +164,7 @@ export function importCatalog({ cwd, sourcePath, log = console.log } = {}) {
     );
   }
 
-  // 검증 통과. catalog.yml 교체 + intent.yml의 source를 custom으로 박는다(ADR 0008 결정 3).
+  // 검증 통과. catalog.yml 교체 + prospect-intent.yml의 source를 custom으로 박는다(ADR 0008 결정 3).
   const intent = yaml.load(readFileSync(intentFile, 'utf8')) || {};
   const previousSource = intent.source || '(알 수 없음)';
   intent.source = 'custom';
@@ -176,7 +176,7 @@ export function importCatalog({ cwd, sourcePath, log = console.log } = {}) {
 
   const warnings = [];
   warnings.push(
-    'reality-check.md는 이전 카탈로그 기준이에요. 새 카탈로그로 다시 보고 싶으시면 LLM 어댑터로 prospect를 다시 돌리거나, 다음 단계(smelt 이후)에서 자연스럽게 검토됩니다.',
+    'prospect-reality-check.md는 이전 카탈로그 기준이에요. 새 카탈로그로 다시 보고 싶으시면 LLM 어댑터로 prospect를 다시 돌리거나, 다음 단계(smelt 이후)에서 자연스럽게 검토됩니다.',
   );
 
   log(`카탈로그를 새로 가져왔어요: ${catalogFile}`);

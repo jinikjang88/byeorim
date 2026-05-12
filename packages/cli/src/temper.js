@@ -1,4 +1,4 @@
-// byeorim temper. contracts.yml의 endpoint별로 happy_path Given-When-Then 시나리오를 만든다.
+// byeorim temper. forge-contracts.yml의 endpoint별로 happy_path Given-When-Then 시나리오를 만든다.
 // ADR 0007의 자리, ADR 0014의 형식과 operation별 한국어 템플릿 표를 따른다.
 // ADR 0036의 옵셔널 어댑터로 test_code를 채운다(어댑터가 없으면 TODO 그대로).
 // ADR 0037의 인터랙티브 검토 흐름을 interactiveTemper로 박는다.
@@ -130,7 +130,7 @@ function advanceState(state, stage) {
 }
 
 // adapter가 주어지면 각 시나리오의 test_code TODO를 어댑터의 fillTestCode로 채운다(ADR 0036).
-// architecture는 architecture.yml에서 읽은 객체. 어댑터에 그대로 넘긴다.
+// architecture는 shape-architecture.yml에서 읽은 객체. 어댑터에 그대로 넘긴다.
 // blockMap은 contract.block_id → 카탈로그 블럭 객체. 시나리오 호출 시 어댑터에 도메인 정보 전달.
 async function fillTestCodesWithAdapter(scenarios, blockMap, architecture, adapter) {
   for (const scenarioGroup of scenarios) {
@@ -161,17 +161,17 @@ async function fillTestCodesWithAdapter(scenarios, blockMap, architecture, adapt
 }
 
 // temper의 입력 자리들을 한 번에 읽고 검증한다. ADR 0014의 입력 의존성과 단계 검증을 한 자리에 모은다.
-// intent/selected는 contracts.yml에서 시나리오 만드는 데는 안 쓰이지만 외부 검토 프롬프트(ADR 0038)에 함께 담는다.
+// intent/selected는 forge-contracts.yml에서 시나리오 만드는 데는 안 쓰이지만 외부 검토 프롬프트(ADR 0038)에 함께 담는다.
 // 반환: { state, contractsDoc, contracts, architecture, catalog, blockMap, answers, selectedBlocks, paths }
 function loadTemperInputs(cwd) {
   const byeorimDir = join(cwd, '.byeorim');
   const stateFile = join(byeorimDir, 'state.yml');
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
-  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
-  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
-  const archFile = join(byeorimDir, 'project', 'architecture.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
+  const selectedFile = join(byeorimDir, 'project', 'smelt-selected-blocks.yml');
+  const contractsFile = join(byeorimDir, 'project', 'forge-contracts.yml');
+  const archFile = join(byeorimDir, 'project', 'shape-architecture.yml');
   const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
-  const scenariosFile = join(byeorimDir, 'project', 'test-scenarios.yml');
+  const scenariosFile = join(byeorimDir, 'project', 'temper-scenarios.yml');
   const promptsDir = join(byeorimDir, 'project', 'prompts');
   const scenariosReviewPromptFile = join(promptsDir, 'test-scenarios-review-prompt.md');
 
@@ -183,7 +183,7 @@ function loadTemperInputs(cwd) {
   const contractsDoc = yaml.load(readFileSync(contractsFile, 'utf8')) || {};
   const contracts = Array.isArray(contractsDoc.contracts) ? contractsDoc.contracts : [];
 
-  // architecture.yml과 catalog.yml은 어댑터에 도메인 정보를 전달하는 자리. 없어도 안전.
+  // shape-architecture.yml과 catalog.yml은 어댑터에 도메인 정보를 전달하는 자리. 없어도 안전.
   let architecture = null;
   if (existsSync(archFile)) {
     architecture = yaml.load(readFileSync(archFile, 'utf8')) || {};
@@ -199,7 +199,7 @@ function loadTemperInputs(cwd) {
     }
   }
 
-  // intent.yml과 selected-blocks.yml은 부산물(외부 검토 프롬프트)에만 쓰인다. 없으면 빈 객체로 폴백.
+  // prospect-intent.yml과 smelt-selected-blocks.yml은 부산물(외부 검토 프롬프트)에만 쓰인다. 없으면 빈 객체로 폴백.
   let answers = {};
   if (existsSync(intentFile)) {
     const intent = yaml.load(readFileSync(intentFile, 'utf8')) || {};
@@ -259,8 +259,8 @@ function writeScenariosAndAdvance({ paths, state, doc }) {
   );
 }
 
-// runTemper는 temper 단계의 비대화 본체. contracts.yml을 읽어 test-scenarios.yml을 만든다.
-// adapter가 주어지면 architecture.yml을 함께 읽어 각 시나리오의 test_code를 어댑터로 채운다(ADR 0036).
+// runTemper는 temper 단계의 비대화 본체. forge-contracts.yml을 읽어 temper-scenarios.yml을 만든다.
+// adapter가 주어지면 shape-architecture.yml을 함께 읽어 각 시나리오의 test_code를 어댑터로 채운다(ADR 0036).
 // 후행 호환을 위해 시그니처와 동작을 ADR 0036 시점 그대로 유지한다(ADR 0037 결정 4).
 //
 // 입력:

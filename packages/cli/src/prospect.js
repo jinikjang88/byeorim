@@ -1,6 +1,6 @@
 // byeorim prospect. 사용자에게 7항목을 차례로 묻고 답변에서 의도를 정리한다.
 // 같은 단계에서 카탈로그 출처를 고르고 Reality Check 6영역 리포트를 만든다.
-// 따르는 ADR: 0007(디렉토리), 0008(intent.yml), 0009(AI 어댑터),
+// 따르는 ADR: 0007(디렉토리), 0008(prospect-intent.yml), 0009(AI 어댑터),
 //             0026(7항목 동행 질문), 0027(카탈로그 출처와 AI 생성),
 //             0003(Reality Check 6영역과 동행 톤).
 // 명세: docs/specs/reality-check.md.
@@ -282,7 +282,7 @@ export async function runProspect({
 
   // Reality Check 6영역 리포트 생성(ADR 0003 + docs/specs/reality-check.md).
   // 어댑터가 generateRealityCheck를 구현하지 않은 경우(미래의 다른 어댑터)는 status='skipped'로 둔다.
-  const realityCheckFile = join(byeorimDir, 'project', 'reality-check.md');
+  const realityCheckFile = join(byeorimDir, 'project', 'prospect-reality-check.md');
   const diaryFile = join(byeorimDir, 'project', 'diary.md');
   let realityCheckStatus = 'skipped';
   if (typeof adapter.generateRealityCheck === 'function') {
@@ -300,7 +300,7 @@ export async function runProspect({
   }
 
   const intentDoc = buildIntent(normalized, extracted, sourceField, realityCheckStatus, now);
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
   writeFileSync(intentFile, yaml.dump(intentDoc, { sortKeys: false }), 'utf8');
 
   appendIntentDiary(diaryFile, intentDoc.unanswered, now);
@@ -328,7 +328,9 @@ export async function runProspect({
     );
   }
   if (realityCheckStatus === 'completed') {
-    log('Reality Check 6영역을 reality-check.md에 적어두었어요. 질문은 다이어리로도 옮겨졌습니다.');
+    log(
+      'Reality Check 6영역을 prospect-reality-check.md에 적어두었어요. 질문은 다이어리로도 옮겨졌습니다.',
+    );
   }
   log(`카탈로그 출처: ${sourceField}`);
   log(

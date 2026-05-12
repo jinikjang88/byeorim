@@ -53,17 +53,17 @@ function readDecisionsCounts(decisionsFile) {
 
 function buildArtifacts(projectDir) {
   return {
-    intent: existsSync(join(projectDir, 'intent.yml')),
+    intent: existsSync(join(projectDir, 'prospect-intent.yml')),
     catalog: existsSync(join(projectDir, 'catalog', 'catalog.yml')),
-    selected_blocks: existsSync(join(projectDir, 'selected-blocks.yml')),
+    selected_blocks: existsSync(join(projectDir, 'smelt-selected-blocks.yml')),
     decisions: existsSync(join(projectDir, 'decisions.yml')),
-    architecture: existsSync(join(projectDir, 'architecture.yml')),
-    contracts: existsSync(join(projectDir, 'contracts.yml')),
-    test_scenarios: existsSync(join(projectDir, 'test-scenarios.yml')),
+    architecture: existsSync(join(projectDir, 'shape-architecture.yml')),
+    contracts: existsSync(join(projectDir, 'forge-contracts.yml')),
+    test_scenarios: existsSync(join(projectDir, 'temper-scenarios.yml')),
     generated_readme: existsSync(join(projectDir, 'generated', 'README.md')),
     inspect_report: existsSync(join(projectDir, 'inspect-report.md')),
     verify_report: existsSync(join(projectDir, 'verify-report.md')),
-    reality_check: existsSync(join(projectDir, 'reality-check.md')),
+    reality_check: existsSync(join(projectDir, 'prospect-reality-check.md')),
     diary: existsSync(join(projectDir, 'diary.md')),
   };
 }

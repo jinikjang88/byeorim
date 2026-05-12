@@ -22,7 +22,7 @@ async function withTempCwd(fn) {
   }
 }
 
-// 한 cwd에 .byeorim/ 트리를 최소한으로 박는다(state.yml + architecture.yml + generated/).
+// 한 cwd에 .byeorim/ 트리를 최소한으로 박는다(state.yml + shape-architecture.yml + generated/).
 function setupByeorim(cwd, { language = 'node' } = {}) {
   const byeorimDir = join(cwd, '.byeorim');
   const projectDir = join(byeorimDir, 'project');
@@ -34,7 +34,7 @@ function setupByeorim(cwd, { language = 'node' } = {}) {
     'utf8',
   );
   writeFileSync(
-    join(projectDir, 'architecture.yml'),
+    join(projectDir, 'shape-architecture.yml'),
     yaml.dump({ language, database: 'postgresql', api_style: 'rest' }),
     'utf8',
   );
@@ -151,7 +151,7 @@ test('architecture.language가 비어있으면 운영 warning', async () => {
   await withTempCwd(async (cwd) => {
     setupByeorim(cwd);
     const findings = runAllRules({ cwd, architecture: {} });
-    const f = findFinding(findings, 'architecture.yml의 language가 비어있습니다');
+    const f = findFinding(findings, 'shape-architecture.yml의 language가 비어있습니다');
     assert.ok(f);
     assert.equal(f.severity, 'warning');
   });

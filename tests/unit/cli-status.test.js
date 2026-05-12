@@ -193,8 +193,8 @@ test('runStatus는 부작용이 없다(파일을 만들지도 state를 바꾸지
     const stateAfter = readFileSync(join(cwd, '.byeorim', 'state.yml'), 'utf8');
     assert.equal(stateAfter, stateBefore);
     // status 호출이 새 파일을 만들지 않았다
-    assert.equal(existsSync(join(cwd, '.byeorim', 'project', 'intent.yml')), false);
-    assert.equal(existsSync(join(cwd, '.byeorim', 'project', 'contracts.yml')), false);
+    assert.equal(existsSync(join(cwd, '.byeorim', 'project', 'prospect-intent.yml')), false);
+    assert.equal(existsSync(join(cwd, '.byeorim', 'project', 'forge-contracts.yml')), false);
   });
 });
 

@@ -93,7 +93,7 @@ test('README는 ADR 0015의 7개 표준 섹션을 모두 가진다', async () =>
   });
 });
 
-test('프로젝트 개요 섹션이 intent.yml에서 합성된다', async () => {
+test('프로젝트 개요 섹션이 prospect-intent.yml에서 합성된다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForSet(cwd);
     await runSet({ cwd });
@@ -165,7 +165,7 @@ test('답한 결정과 빈 결정이 별도 섹션으로 들어간다', async ()
   });
 });
 
-test('아키텍처 결정 섹션이 architecture.yml에서 합성된다', async () => {
+test('아키텍처 결정 섹션이 shape-architecture.yml에서 합성된다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForSet(cwd);
     await runSet({ cwd });
@@ -177,7 +177,7 @@ test('아키텍처 결정 섹션이 architecture.yml에서 합성된다', async 
   });
 });
 
-test('API 계약 섹션이 contracts.yml의 endpoint 정보를 표로 보여준다', async () => {
+test('API 계약 섹션이 forge-contracts.yml의 endpoint 정보를 표로 보여준다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForSet(cwd, ['order']);
     await runSet({ cwd });
@@ -239,7 +239,7 @@ test('현재 단계가 set이 아니면 한국어 메시지로 거부한다', as
   });
 });
 
-test('test-scenarios.yml이 없으면 temper 안내 메시지로 거부한다', async () => {
+test('temper-scenarios.yml이 없으면 temper 안내 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     await runProspect({

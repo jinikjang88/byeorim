@@ -67,9 +67,9 @@ const INSPECT_AREAS = [
   },
   {
     title: '시장 재검',
-    // ADR 0016 결정 4: reality-check.md 경로 명시.
+    // ADR 0016 결정 4: prospect-reality-check.md 경로 명시.
     intro:
-      'prospect 단계에서 본 시장을 다시 봅니다. 만들기 시작했을 때와 출시 직전의 시각은 다릅니다.\n\n`.byeorim/project/reality-check.md`를 다시 읽어보세요. 그때와 시장이 달라진 자리가 있나요?',
+      'prospect 단계에서 본 시장을 다시 봅니다. 만들기 시작했을 때와 출시 직전의 시각은 다릅니다.\n\n`.byeorim/project/prospect-reality-check.md`를 다시 읽어보세요. 그때와 시장이 달라진 자리가 있나요?',
     questions: [
       '첫 100명의 사용자를 어떻게 모으실 건가요?',
       '6개월 동안 운영비를 지탱할 자금이 있으신가요?',
@@ -211,7 +211,7 @@ function advanceState(state, stage) {
 }
 
 function loadArchitectureSafe(byeorimDir) {
-  const archFile = join(byeorimDir, 'project', 'architecture.yml');
+  const archFile = join(byeorimDir, 'project', 'shape-architecture.yml');
   if (!existsSync(archFile)) return null;
   try {
     return yaml.load(readFileSync(archFile, 'utf8')) || null;
@@ -390,10 +390,10 @@ function buildInspectInput({ byeorimDir, architecture }) {
   return {
     language: language || null,
     files,
-    intent: loadYamlSafe(join(projectDir, 'intent.yml')) || {},
+    intent: loadYamlSafe(join(projectDir, 'prospect-intent.yml')) || {},
     architecture: architecture || {},
-    contracts: loadYamlSafe(join(projectDir, 'contracts.yml')) || {},
-    scenarios: loadYamlSafe(join(projectDir, 'test-scenarios.yml')) || {},
+    contracts: loadYamlSafe(join(projectDir, 'forge-contracts.yml')) || {},
+    scenarios: loadYamlSafe(join(projectDir, 'temper-scenarios.yml')) || {},
   };
 }
 

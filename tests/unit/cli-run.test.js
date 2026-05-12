@@ -22,7 +22,7 @@ async function withTempCwd(fn) {
   }
 }
 
-// 한 cwd에 .byeorim/ 트리를 최소한으로 만든다(state.yml + intent.yml + architecture.yml + generated/{backend,frontend}/).
+// 한 cwd에 .byeorim/ 트리를 최소한으로 만든다(state.yml + prospect-intent.yml + shape-architecture.yml + generated/{backend,frontend}/).
 // generator를 통째로 안 돌려 테스트 속도를 빠르게 유지(ADR 0046이 박은 generator는 별도 단위 테스트가 검증).
 function setupByeorim(
   cwd,
@@ -37,9 +37,13 @@ function setupByeorim(
     yaml.dump({ schema_version: 1, current_stage: 'inspect' }),
     'utf8',
   );
-  writeFileSync(join(projectDir, 'intent.yml'), yaml.dump({ extracted: { what } }), 'utf8');
   writeFileSync(
-    join(projectDir, 'architecture.yml'),
+    join(projectDir, 'prospect-intent.yml'),
+    yaml.dump({ extracted: { what } }),
+    'utf8',
+  );
+  writeFileSync(
+    join(projectDir, 'shape-architecture.yml'),
     yaml.dump({ language, database: 'postgresql', api_style: 'rest' }),
     'utf8',
   );

@@ -9,7 +9,7 @@ const HEADER = `# 블럭 검토 프롬프트
 
 이 프롬프트를 외부 AI(Claude.ai, ChatGPT, Gemini 등)에 붙여넣어 지금 고른 블럭이 도메인에
 잘 맞는지, 빠진 자리는 없는지, 더 깔끔한 결이 있는지 자세히 검토받을 수 있어요.
-응답은 자유 형식이라 사용자가 읽고 selected-blocks.yml을 수동으로 다듬으시거나
+응답은 자유 형식이라 사용자가 읽고 smelt-selected-blocks.yml을 수동으로 다듬으시거나
 byeorim smelt를 다시 돌려 다른 블럭으로 고를 수 있어요.
 
 ---
@@ -164,8 +164,8 @@ export function buildBlockReviewPromptMarkdown({
     '## 응답 형식 안내 (코드가 읽을 자리)',
     '',
     '자유 형식으로 검토하신 뒤, 응답 끝에 아래 형식의 "## 제안된 변경 사항" 섹션을 한 번 더 추가해주세요.',
-    '이 섹션은 사용자가 받은 응답을 다시 byeorim에 붙여넣을 때 코드가 자동으로 읽어 selected-blocks.yml에 반영하는 자리예요.',
-    '자유 형식으로만 답하셔도 괜찮아요. 그때는 사용자가 응답을 직접 읽고 selected-blocks.yml을 손으로 다듬어요.',
+    '이 섹션은 사용자가 받은 응답을 다시 byeorim에 붙여넣을 때 코드가 자동으로 읽어 smelt-selected-blocks.yml에 반영하는 자리예요.',
+    '자유 형식으로만 답하셔도 괜찮아요. 그때는 사용자가 응답을 직접 읽고 smelt-selected-blocks.yml을 손으로 다듬어요.',
     '',
     '형식.',
     '',

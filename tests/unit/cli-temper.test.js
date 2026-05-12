@@ -1,4 +1,4 @@
-// runTemper 단위 테스트. ADR 0014(test-scenarios.yml 형식과 operation 템플릿 표).
+// runTemper 단위 테스트. ADR 0014(temper-scenarios.yml 형식과 operation 템플릿 표).
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
@@ -55,10 +55,10 @@ async function setupReadyForTemper(cwd, blockIds = ['order']) {
 }
 
 function readScenarios(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'temper-scenarios.yml'), 'utf8'));
 }
 
-test('정상 흐름: temper가 test-scenarios.yml을 만들고 단계가 set으로 넘어간다', async () => {
+test('정상 흐름: temper가 temper-scenarios.yml을 만들고 단계가 set으로 넘어간다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: forge까지 끝낸 자리
     await setupReadyForTemper(cwd);
@@ -160,7 +160,7 @@ test('test_code는 모든 시나리오에 TODO로 들어간다(ADR 0014 결정 4
   });
 });
 
-test('contracts.yml과 test-scenarios.yml의 endpoint가 정확히 일치한다(거울 짝)', async () => {
+test('forge-contracts.yml과 temper-scenarios.yml의 endpoint가 정확히 일치한다(거울 짝)', async () => {
   await withTempCwd(async (cwd) => {
     // Given
     await setupReadyForTemper(cwd, ['order']);
@@ -168,7 +168,7 @@ test('contracts.yml과 test-scenarios.yml의 endpoint가 정확히 일치한다(
     await runTemper({ cwd });
     // Then: 두 파일의 (block_id, operation, method, path) 튜플 집합이 같다
     const contracts = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'forge-contracts.yml'), 'utf8'),
     );
     const scenarios = readScenarios(cwd);
     const triples = (doc) =>
@@ -194,7 +194,7 @@ test('현재 단계가 temper가 아니면 한국어 메시지로 거부한다',
   });
 });
 
-test('contracts.yml이 없으면 forge 안내 메시지로 거부한다', async () => {
+test('forge-contracts.yml이 없으면 forge 안내 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: smelt까지만 한 뒤 강제로 stage를 temper로 옮긴다
     runInit({ cwd });
@@ -248,7 +248,7 @@ test('adapter가 주어지면 모든 시나리오의 test_code를 채운다', as
     // Then: testCodeFilled true, 모든 시나리오의 test_code가 TODO 아님
     assert.equal(result.testCodeFilled, true);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'temper-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {
@@ -288,7 +288,7 @@ test('adapter가 없으면 모든 test_code가 TODO 그대로(후행 호환)', a
     // Then: testCodeFilled false, 모든 test_code가 TODO
     assert.equal(result.testCodeFilled, false);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'temper-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {
@@ -328,7 +328,7 @@ test('adapter가 fillTestCode 메서드를 구현 안 하면 TODO 그대로(grac
     // Then
     assert.equal(result.testCodeFilled, false);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'temper-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {
@@ -373,7 +373,7 @@ test('어댑터의 fillTestCode가 빈 문자열을 돌려주면 test_code는 TO
     // Then: testCodeFilled true(어댑터는 호출됨)지만 test_code는 TODO 유지
     assert.equal(result.testCodeFilled, true);
     const doc = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'test-scenarios.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'temper-scenarios.yml'), 'utf8'),
     );
     for (const block of doc.scenarios) {
       for (const ep of block.endpoints || []) {

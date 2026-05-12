@@ -79,7 +79,7 @@ test('import 후 사용자에게 RC가 이전 카탈로그 기준이라는 한�
     writeFileSync(sourcePath, VALID_CATALOG_YAML, 'utf8');
     const result = importCatalog({ cwd, sourcePath, log: silentLog });
     assert.ok(result.warnings.length >= 1);
-    assert.match(result.warnings[0], /reality-check\.md.*이전 카탈로그/);
+    assert.match(result.warnings[0], /prospect-reality-check\.md.*이전 카탈로그/);
   });
 });
 
@@ -126,7 +126,7 @@ test('파일이 없으면 한국어로 거부한다', async () => {
   });
 });
 
-test('intent.yml이 없으면(prospect 안 끝낸 자리) 한국어로 안내', async () => {
+test('prospect-intent.yml이 없으면(prospect 안 끝낸 자리) 한국어로 안내', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     // prospect 안 끝냄
@@ -134,7 +134,7 @@ test('intent.yml이 없으면(prospect 안 끝낸 자리) 한국어로 안내', 
     writeFileSync(sourcePath, VALID_CATALOG_YAML, 'utf8');
     assert.throws(
       () => importCatalog({ cwd, sourcePath, log: silentLog }),
-      /intent\.yml이 없습니다/,
+      /prospect-intent\.yml이 없습니다/,
     );
   });
 });

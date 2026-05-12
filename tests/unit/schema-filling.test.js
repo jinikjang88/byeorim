@@ -1,5 +1,5 @@
 // AI 어댑터를 통한 schema 채움의 end-to-end 검증. ADR 0023.
-// forge → set 흐름에서 contracts.yml schema가 4개 generator(node/java/python/frontend)의
+// forge → set 흐름에서 forge-contracts.yml schema가 4개 generator(node/java/python/frontend)의
 // 실제 필드로 변환되는지 한 자리에서 본다.
 
 import { test } from 'node:test';
@@ -58,7 +58,7 @@ async function setupWithSchemaFill(cwd, blockIds, language) {
   await runSet({ cwd });
 }
 
-test('forge가 adapter로 contracts.yml의 schema를 채운다', async () => {
+test('forge가 adapter로 forge-contracts.yml의 schema를 채운다', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     await runProspect({
@@ -237,7 +237,7 @@ test('internal 블럭은 schema 채움이 안 된다(공개 API 없음)', async 
   await withTempCwd(async (cwd) => {
     await setupWithSchemaFill(cwd, ['payment'], 'node'); // pg-integration이 internal로 따라옴
     const contracts = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'forge-contracts.yml'), 'utf8'),
     );
     const pg = contracts.contracts.find((c) => c.block_id === 'pg-integration');
     assert.equal(pg.internal, true);

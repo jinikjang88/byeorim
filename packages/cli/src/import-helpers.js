@@ -26,7 +26,7 @@ export function readResponseFile(responsePath) {
 // 입력:
 //   log         - 콘솔 출력 함수
 //   parseResult - parseReviewResponse 또는 parseFindingsResponse의 결과 (parseError 필드 사용)
-//   ymlName     - 사용자가 손으로 다듬을 yml 또는 md 파일 이름(예: 'contracts.yml')
+//   ymlName     - 사용자가 손으로 다듬을 yml 또는 md 파일 이름(예: 'forge-contracts.yml')
 //   sectionName - 응답에서 찾던 섹션 이름(기본: '## 제안된 변경 사항')
 export function logGracefulDegrade({
   log,

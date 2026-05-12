@@ -51,7 +51,7 @@ test('init 직후 prospect를 돌리면 ADR 0007의 자리가 모두 채워진�
       now: fixedNow,
       log: silentLog,
     });
-    // Then: 카탈로그, intent.yml, reality-check.md placeholder가 모두 자리잡았다
+    // Then: 카탈로그, prospect-intent.yml, prospect-reality-check.md placeholder가 모두 자리잡았다
     assert.equal(existsSync(result.catalogFile), true);
     assert.equal(existsSync(result.intentFile), true);
     assert.equal(existsSync(result.realityCheckFile), true);
@@ -60,7 +60,7 @@ test('init 직후 prospect를 돌리면 ADR 0007의 자리가 모두 채워진�
   });
 });
 
-test('intent.yml 형식이 ADR 0026 7항목 결정을 따른다', async () => {
+test('prospect-intent.yml 형식이 ADR 0026 7항목 결정을 따른다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: init 후 prospect 7항목 모두 채움
     runInit({ cwd });
@@ -73,8 +73,10 @@ test('intent.yml 형식이 ADR 0026 7항목 결정을 따른다', async () => {
       now: fixedNow,
       log: silentLog,
     });
-    // When: intent.yml을 읽어 파싱한다
-    const intent = yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'intent.yml'), 'utf8'));
+    // When: prospect-intent.yml을 읽어 파싱한다
+    const intent = yaml.load(
+      readFileSync(join(cwd, '.byeorim', 'project', 'prospect-intent.yml'), 'utf8'),
+    );
     // Then: schema_version 2, 7항목, unanswered, source, reality_check_status가 모두 자리한다
     assert.equal(intent.schema_version, 2);
     assert.equal(intent.created_at, '2026-05-03T12:00:00.000Z');
@@ -454,7 +456,7 @@ test('interactiveProspect: askCatalogSource에 suggested가 전달되고 결과�
 
 // ── ADR 0003 Reality Check 6영역 통합 ─────────────────
 
-test('Reality Check가 reality-check.md에 6영역 머리로 합성된다', async () => {
+test('Reality Check가 prospect-reality-check.md에 6영역 머리로 합성된다', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     const result = await runProspect({
@@ -475,7 +477,7 @@ test('Reality Check가 reality-check.md에 6영역 머리로 합성된다', asyn
     assert.match(md, /생각해볼 질문/);
     // 빈 legal_warnings는 절을 출력하지 않는다
     assert.equal(md.includes('## 법적 메모'), false);
-    // intent.yml의 reality_check_status가 completed
+    // prospect-intent.yml의 reality_check_status가 completed
     const intent = yaml.load(readFileSync(result.intentFile, 'utf8'));
     assert.equal(intent.reality_check_status, 'completed');
     assert.equal(result.realityCheckStatus, 'completed');
@@ -503,7 +505,7 @@ test('Reality Check 질문이 다이어리에 RC 머리로 분리되어 추가�
   });
 });
 
-test('legal_warnings가 있으면 reality-check.md에 법적 메모 절이 자리한다', async () => {
+test('legal_warnings가 있으면 prospect-reality-check.md에 법적 메모 절이 자리한다', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     // Given: legal_warnings를 채워 돌려주는 어댑터

@@ -40,17 +40,17 @@ function checkStageReady({ cwd }) {
   ];
 }
 
-// architecture.yml이 박혀있고 language가 정해졌는지. 운영 영역.
+// shape-architecture.yml이 박혀있고 language가 정해졌는지. 운영 영역.
 function checkArchitectureSet({ architecture }) {
   if (!architecture || !architecture.language) {
     return [
       {
         area: '운영',
         severity: 'warning',
-        title: 'architecture.yml의 language가 비어있습니다',
+        title: 'shape-architecture.yml의 language가 비어있습니다',
         detail:
           'shape 단계에서 backend 언어를 정해야 set이 코드를 생성할 수 있습니다. 비춤이 의지할 결을 잃습니다.',
-        file: '.byeorim/project/architecture.yml',
+        file: '.byeorim/project/shape-architecture.yml',
       },
     ];
   }
@@ -625,7 +625,7 @@ function checkFrontend({ cwd }) {
 //
 // 입력:
 //   cwd            - 프로젝트 루트
-//   architecture   - architecture.yml (또는 null)
+//   architecture   - shape-architecture.yml (또는 null)
 //
 // 반환: finding 배열 (모두 source='static')
 export function runAllRules({ cwd, architecture }) {

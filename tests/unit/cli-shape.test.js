@@ -1,4 +1,4 @@
-// interactiveShape 단위 테스트. ADR 0012(architecture.yml 형식과 4개 결정),
+// interactiveShape 단위 테스트. ADR 0012(shape-architecture.yml 형식과 4개 결정),
 // ADR 0011(askArchitecture 의존성 주입), ADR 0032(아키텍처 추천과 검토 흐름),
 // ADR 0033(외부 검토 프롬프트 부산물).
 
@@ -52,7 +52,7 @@ const FIXED_CHOICES = {
 // 검토 단계를 자동으로 'proceed'로 통과시키는 confirm. 대부분의 테스트가 그대로 진행하는 자리.
 const ALWAYS_PROCEED = async () => 'proceed';
 
-test('정상 흐름: shape이 architecture.yml을 만들고 단계가 forge로 넘어간다', async () => {
+test('정상 흐름: shape이 shape-architecture.yml을 만들고 단계가 forge로 넘어간다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: smelt까지 끝낸 자리
     await setupReadyForShape(cwd);
@@ -66,7 +66,7 @@ test('정상 흐름: shape이 architecture.yml을 만들고 단계가 forge로 �
       now: fixedNow,
       log: () => {},
     });
-    // Then: architecture.yml이 자리잡고 다음 단계는 forge
+    // Then: shape-architecture.yml이 자리잡고 다음 단계는 forge
     assert.equal(result.nextStage, 'forge');
     const doc = yaml.load(readFileSync(result.architectureFile, 'utf8'));
     assert.equal(doc.schema_version, 1);
@@ -183,7 +183,7 @@ test('단계 검증이 askArchitecture 호출 전에 일어난다', async () => 
   });
 });
 
-test('selected-blocks.yml이 누락되면 smelt 안내 메시지로 거부한다', async () => {
+test('smelt-selected-blocks.yml이 누락되면 smelt 안내 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: init만 하고 state.yml을 강제로 shape로 옮긴 자리
     runInit({ cwd });

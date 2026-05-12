@@ -43,15 +43,15 @@ test('정상 흐름: init → prospect → smelt가 두 산출물을 만들고 �
   });
 });
 
-test('selected-blocks.yml 형식이 ADR 0010 결정 1을 따른다(다섯 필드)', async () => {
+test('smelt-selected-blocks.yml 형식이 ADR 0010 결정 1을 따른다(다섯 필드)', async () => {
   await withTempCwd(async (cwd) => {
     // Given: prospect까지 완료
     await setupReadyForSmelt(cwd);
     const fixedNow = new Date('2026-04-28T12:00:00.000Z');
     // When: smelt
     await runSmelt({ cwd, blockIds: ['order'], now: fixedNow });
-    // Then: selected-blocks.yml의 다섯 필드가 ADR 형식을 따른다
-    const file = join(cwd, '.byeorim', 'project', 'selected-blocks.yml');
+    // Then: smelt-selected-blocks.yml의 다섯 필드가 ADR 형식을 따른다
+    const file = join(cwd, '.byeorim', 'project', 'smelt-selected-blocks.yml');
     const doc = yaml.load(readFileSync(file, 'utf8'));
     assert.equal(doc.schema_version, 1);
     assert.equal(doc.created_at, '2026-04-28T12:00:00.000Z');
@@ -91,7 +91,7 @@ test('requires 의존성으로 끌려온 블럭이 auto_added에 들어간다', 
     await runSmelt({ cwd, blockIds: ['refund'] });
     // Then: auto_added에 끌려온 블럭이 보인다
     const doc = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'smelt-selected-blocks.yml'), 'utf8'),
     );
     assert.equal(doc.auto_added.includes('payment'), true);
     assert.equal(doc.auto_added.includes('cancel-return'), true);
@@ -107,7 +107,7 @@ test('prerequisites가 객체 전체로 직렬화된다(ADR 0010 결정 4)', asy
     await runSmelt({ cwd, blockIds: ['payment'] });
     // Then: prerequisites 항목이 ID뿐 아니라 name과 enables 등을 가진다
     const doc = yaml.load(
-      readFileSync(join(cwd, '.byeorim', 'project', 'selected-blocks.yml'), 'utf8'),
+      readFileSync(join(cwd, '.byeorim', 'project', 'smelt-selected-blocks.yml'), 'utf8'),
     );
     assert.ok(doc.prerequisites.length >= 1);
     for (const p of doc.prerequisites) {
@@ -152,11 +152,11 @@ test('현재 단계가 smelt가 아니면 한국어 메시지로 거부한다', 
   });
 });
 
-test('intent.yml이 누락되면 prospect 안내 메시지로 거부한다', async () => {
+test('prospect-intent.yml이 누락되면 prospect 안내 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: prospect까지 완료한 뒤 intent.yml만 삭제
+    // Given: prospect까지 완료한 뒤 prospect-intent.yml만 삭제
     await setupReadyForSmelt(cwd);
-    unlinkSync(join(cwd, '.byeorim', 'project', 'intent.yml'));
+    unlinkSync(join(cwd, '.byeorim', 'project', 'prospect-intent.yml'));
     // When/Then: 누락 메시지 + prospect 안내
     await assert.rejects(runSmelt({ cwd, blockIds: ['order'] }), /byeorim prospect를 실행해주세요/);
   });
@@ -369,11 +369,11 @@ test('interactiveSmelt: cwd 누락은 한국어로 거부한다', async () => {
   await assert.rejects(interactiveSmelt({}), /cwd.*필요합니다/);
 });
 
-test('interactiveSmelt: intent.yml schema_version 1 폴백(user_answers 없음)도 빈 답변으로 진행한다', async () => {
+test('interactiveSmelt: prospect-intent.yml schema_version 1 폴백(user_answers 없음)도 빈 답변으로 진행한다', async () => {
   await withTempCwd(async (cwd) => {
     await setupReadyForSmelt(cwd);
-    // intent.yml을 schema_version 1 결로 덮어쓴다(user_answers 없음)
-    const intentFile = join(cwd, '.byeorim', 'project', 'intent.yml');
+    // prospect-intent.yml을 schema_version 1 결로 덮어쓴다(user_answers 없음)
+    const intentFile = join(cwd, '.byeorim', 'project', 'prospect-intent.yml');
     const oldIntent = {
       schema_version: 1,
       created_at: '2025-12-01T00:00:00.000Z',

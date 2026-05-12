@@ -1,7 +1,7 @@
 // byeorim forge import-review. ADR 0039의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 제안된 변경 사항" 섹션의 ```yaml changes를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
-// state는 안 건드리고 contracts.yml만 다듬는다(ADR 0039 결정 7).
+// state는 안 건드리고 forge-contracts.yml만 다듬는다(ADR 0039 결정 7).
 // 응답 형식이 어긋날 때는 graceful degrade(ADR 0039 결정 6).
 // ADR 0054: import-helpers.js의 공통 결을 사용한다.
 
@@ -172,7 +172,7 @@ async function defaultConfirmChange({ change, index, total, log = console.log } 
 }
 
 // applyForgeReview는 forge import-review의 본체.
-// 외부 AI 응답 파일을 읽고 contracts.yml에 인터랙티브 picker로 변경을 반영한다.
+// 외부 AI 응답 파일을 읽고 forge-contracts.yml에 인터랙티브 picker로 변경을 반영한다.
 //
 // 입력:
 //   cwd            - 프로젝트 루트 절대 경로
@@ -186,7 +186,7 @@ async function defaultConfirmChange({ change, index, total, log = console.log } 
 //     hasStructuredSection: boolean,
 //     parseError: string | null,
 //     proposedCount, invalidCount, appliedCount, skippedCount, stopped: boolean,
-//     warnings: string[]   // 사용자에게 띄울 한국어 안내(예: 형식 어긋남, test-scenarios.yml 안내)
+//     warnings: string[]   // 사용자에게 띄울 한국어 안내(예: 형식 어긋남, temper-scenarios.yml 안내)
 //   }
 export async function applyForgeReview({
   cwd,
@@ -202,8 +202,8 @@ export async function applyForgeReview({
   }
 
   const byeorimDir = join(cwd, '.byeorim');
-  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
-  const scenariosFile = join(byeorimDir, 'project', 'test-scenarios.yml');
+  const contractsFile = join(byeorimDir, 'project', 'forge-contracts.yml');
+  const scenariosFile = join(byeorimDir, 'project', 'temper-scenarios.yml');
 
   ensureFile(contractsFile, '먼저 byeorim forge를 실행해주세요');
 
@@ -215,7 +215,7 @@ export async function applyForgeReview({
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    logGracefulDegrade({ log, parseResult, ymlName: 'contracts.yml' });
+    logGracefulDegrade({ log, parseResult, ymlName: 'forge-contracts.yml' });
     return {
       contractsFile,
       responseFile: responsePath,
@@ -230,7 +230,7 @@ export async function applyForgeReview({
     };
   }
 
-  // contracts.yml 로드.
+  // forge-contracts.yml 로드.
   const contractsDoc = yaml.load(readFileSync(contractsFile, 'utf8')) || {};
   const contracts = Array.isArray(contractsDoc.contracts) ? contractsDoc.contracts : [];
 
@@ -254,7 +254,7 @@ export async function applyForgeReview({
     }
   }
   if (validItems.length === 0) {
-    log('적용할 변경이 없어요. contracts.yml은 그대로 둡니다.');
+    log('적용할 변경이 없어요. forge-contracts.yml은 그대로 둡니다.');
     return {
       contractsFile,
       responseFile: responsePath,
@@ -278,7 +278,7 @@ export async function applyForgeReview({
     log,
   });
 
-  // 변경이 한 번이라도 적용됐으면 contracts.yml 갱신.
+  // 변경이 한 번이라도 적용됐으면 forge-contracts.yml 갱신.
   if (appliedCount > 0) {
     contractsDoc.contracts = contracts;
     writeFileSync(contractsFile, yaml.dump(contractsDoc, { sortKeys: false }), 'utf8');
@@ -286,15 +286,15 @@ export async function applyForgeReview({
 
   logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
-    log(`contracts.yml을 갱신했어요: ${contractsFile}`);
+    log(`forge-contracts.yml을 갱신했어요: ${contractsFile}`);
   } else {
-    log('적용된 변경이 없어 contracts.yml은 그대로 둡니다.');
+    log('적용된 변경이 없어 forge-contracts.yml은 그대로 둡니다.');
   }
 
-  // test-scenarios.yml이 있으면 안내(ADR 0039 결정 7).
+  // temper-scenarios.yml이 있으면 안내(ADR 0039 결정 7).
   if (appliedCount > 0 && existsSync(scenariosFile)) {
     const msg =
-      'test-scenarios.yml이 이미 있어요. contracts가 바뀌었으니 byeorim temper를 다시 돌리는 결을 검토해주세요.';
+      'temper-scenarios.yml이 이미 있어요. contracts가 바뀌었으니 byeorim temper를 다시 돌리는 결을 검토해주세요.';
     warnings.push(msg);
     log('');
     log(msg);

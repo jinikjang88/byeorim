@@ -60,7 +60,7 @@ async function setupReadyForImport(cwd, blockIds = ['order']) {
 }
 
 function readContracts(cwd) {
-  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'contracts.yml'), 'utf8'));
+  return yaml.load(readFileSync(join(cwd, '.byeorim', 'project', 'forge-contracts.yml'), 'utf8'));
 }
 
 function writeResponse(cwd, body) {
@@ -82,7 +82,7 @@ function buildResponse(changes) {
   ].join('\n');
 }
 
-test('contracts.yml이 없으면 한국어 메시지로 거부한다', async () => {
+test('forge-contracts.yml이 없으면 한국어 메시지로 거부한다', async () => {
   await withTempCwd(async (cwd) => {
     runInit({ cwd });
     const responsePath = writeResponse(cwd, buildResponse([]));
@@ -108,7 +108,7 @@ test('cwd 또는 responsePath 누락은 한국어로 거부한다', async () => 
   await assert.rejects(applyForgeReview({ cwd: '/tmp' }), /responsePath.*필요합니다/);
 });
 
-test('형식이 어긋나면 graceful: contracts.yml은 그대로, parseError 안내', async () => {
+test('형식이 어긋나면 graceful: forge-contracts.yml은 그대로, parseError 안내', async () => {
   await withTempCwd(async (cwd) => {
     // Given: 자유 형식 응답만(섹션 없음)
     await setupReadyForImport(cwd);
@@ -121,11 +121,11 @@ test('형식이 어긋나면 graceful: contracts.yml은 그대로, parseError �
     assert.ok(result.parseError);
     assert.equal(result.appliedCount, 0);
     const after = readContracts(cwd);
-    assert.deepEqual(after, before, 'contracts.yml이 그대로여야 한다');
+    assert.deepEqual(after, before, 'forge-contracts.yml이 그대로여야 한다');
   });
 });
 
-test('적용: endpoint_add가 적용되면 contracts.yml에 새 endpoint가 박힌다', async () => {
+test('적용: endpoint_add가 적용되면 forge-contracts.yml에 새 endpoint가 박힌다', async () => {
   await withTempCwd(async (cwd) => {
     // Given: order 블럭(resource → 5 endpoint)
     await setupReadyForImport(cwd);
@@ -171,7 +171,7 @@ test('적용: endpoint_add가 적용되면 contracts.yml에 새 endpoint가 박�
   });
 });
 
-test('적용: endpoint_remove가 적용되면 contracts.yml에서 endpoint가 빠진다', async () => {
+test('적용: endpoint_remove가 적용되면 forge-contracts.yml에서 endpoint가 빠진다', async () => {
   await withTempCwd(async (cwd) => {
     // Given
     await setupReadyForImport(cwd);
@@ -297,7 +297,7 @@ test('skip: confirmChange가 skip을 돌려주면 변경이 안 박힌다', asyn
     assert.equal(result.appliedCount, 0);
     assert.equal(result.skippedCount, 1);
     const after = readContracts(cwd);
-    assert.deepEqual(after, before, 'contracts.yml이 그대로여야 한다');
+    assert.deepEqual(after, before, 'forge-contracts.yml이 그대로여야 한다');
   });
 });
 
@@ -450,11 +450,11 @@ test('invalid: endpoint_add에서 (method, path) 중복이면 invalid', async ()
   });
 });
 
-test('test-scenarios.yml이 있으면 안내 한 줄이 warnings에 들어간다', async () => {
+test('temper-scenarios.yml이 있으면 안내 한 줄이 warnings에 들어간다', async () => {
   await withTempCwd(async (cwd) => {
-    // Given: forge까지 끝낸 자리 + test-scenarios.yml을 가짜로 박음
+    // Given: forge까지 끝낸 자리 + temper-scenarios.yml을 가짜로 박음
     await setupReadyForImport(cwd);
-    const scenariosFile = join(cwd, '.byeorim', 'project', 'test-scenarios.yml');
+    const scenariosFile = join(cwd, '.byeorim', 'project', 'temper-scenarios.yml');
     writeFileSync(scenariosFile, 'schema_version: 1\nscenarios: []\n', 'utf8');
     const responsePath = writeResponse(
       cwd,
@@ -477,12 +477,12 @@ test('test-scenarios.yml이 있으면 안내 한 줄이 warnings에 들어간다
     });
     // Then
     assert.equal(result.appliedCount, 1);
-    assert.ok(result.warnings.some((w) => /test-scenarios.yml/.test(w)));
+    assert.ok(result.warnings.some((w) => /temper-scenarios.yml/.test(w)));
     assert.ok(result.warnings.some((w) => /byeorim temper/.test(w)));
   });
 });
 
-test('appliedCount=0이면 contracts.yml은 안 쓴다(파일 mtime 보존)', async () => {
+test('appliedCount=0이면 forge-contracts.yml은 안 쓴다(파일 mtime 보존)', async () => {
   await withTempCwd(async (cwd) => {
     // Given: 모두 skip
     await setupReadyForImport(cwd);
@@ -672,7 +672,7 @@ test('skip_all_remaining: 첫 자리에서 누르면 나머지도 묻지 않고 
     assert.equal(calls, 1);
     assert.equal(result.appliedCount, 0);
     assert.equal(result.skippedCount, 2);
-    // contracts.yml은 그대로
+    // forge-contracts.yml은 그대로
     const after = readContracts(cwd);
     assert.deepEqual(after, before);
   });

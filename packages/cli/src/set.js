@@ -19,7 +19,7 @@ const BACKEND_GENERATORS = {
 };
 
 // frontend는 ADR 0021의 표준(React)으로 항상 생성. 다른 framework 추가는 미래 ADR에서
-// architecture.yml의 frontend_framework를 5번째 결정으로 amendment할 때 결정.
+// shape-architecture.yml의 frontend_framework를 5번째 결정으로 amendment할 때 결정.
 
 const STAGE = 'set';
 const NEXT_STAGE = 'inspect';
@@ -44,12 +44,12 @@ function ensureStage(state, expected) {
 }
 
 function loadInputs(byeorimDir) {
-  const intentFile = join(byeorimDir, 'project', 'intent.yml');
-  const selectedFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const intentFile = join(byeorimDir, 'project', 'prospect-intent.yml');
+  const selectedFile = join(byeorimDir, 'project', 'smelt-selected-blocks.yml');
   const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
-  const archFile = join(byeorimDir, 'project', 'architecture.yml');
-  const contractsFile = join(byeorimDir, 'project', 'contracts.yml');
-  const scenariosFile = join(byeorimDir, 'project', 'test-scenarios.yml');
+  const archFile = join(byeorimDir, 'project', 'shape-architecture.yml');
+  const contractsFile = join(byeorimDir, 'project', 'forge-contracts.yml');
+  const scenariosFile = join(byeorimDir, 'project', 'temper-scenarios.yml');
 
   ensureFile(intentFile, '먼저 byeorim prospect를 실행해주세요');
   ensureFile(selectedFile, '먼저 byeorim smelt를 실행해주세요');

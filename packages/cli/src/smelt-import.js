@@ -1,7 +1,7 @@
 // byeorim smelt import-review. ADR 0052의 외부 검토 응답 import 자리.
 // 사용자가 외부 AI(Claude.ai/ChatGPT/Gemini)에서 받은 응답 마크다운 파일을 읽어
 // "## 제안된 변경 사항" 섹션의 ```yaml changes를 파싱하고 인터랙티브 picker로 자리마다 적용한다.
-// state는 안 건드리고 selected-blocks.yml과 decisions.yml만 다듬는다(ADR 0052 결정 3, 4).
+// state는 안 건드리고 smelt-selected-blocks.yml과 decisions.yml만 다듬는다(ADR 0052 결정 3, 4).
 // forge-import.js의 결을 따라간다(같은 picker 패턴, ADR 0045).
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -118,7 +118,7 @@ function mergeDecisions(oldDecisionsDoc, newDecisions) {
 }
 
 // applySmeltReview는 smelt import-review의 본체.
-// 외부 AI 응답 파일을 읽고 selected-blocks.yml과 decisions.yml을 갱신한다.
+// 외부 AI 응답 파일을 읽고 smelt-selected-blocks.yml과 decisions.yml을 갱신한다.
 // 모든 변경 적용 후 의존성 재해결을 한 번 호출(ADR 0052 결정 3).
 //
 // 입력:
@@ -149,7 +149,7 @@ export async function applySmeltReview({
   }
 
   const byeorimDir = join(cwd, '.byeorim');
-  const selectedBlocksFile = join(byeorimDir, 'project', 'selected-blocks.yml');
+  const selectedBlocksFile = join(byeorimDir, 'project', 'smelt-selected-blocks.yml');
   const decisionsFile = join(byeorimDir, 'project', 'decisions.yml');
   const catalogFile = join(byeorimDir, 'project', 'catalog', 'catalog.yml');
 
@@ -163,7 +163,7 @@ export async function applySmeltReview({
   const warnings = [];
 
   if (!parseResult.hasStructuredSection || parseResult.parseError) {
-    logGracefulDegrade({ log, parseResult, ymlName: 'selected-blocks.yml' });
+    logGracefulDegrade({ log, parseResult, ymlName: 'smelt-selected-blocks.yml' });
     return {
       selectedBlocksFile,
       decisionsFile,
@@ -179,7 +179,7 @@ export async function applySmeltReview({
     };
   }
 
-  // selected-blocks.yml과 catalog 로드.
+  // smelt-selected-blocks.yml과 catalog 로드.
   const selectedBlocksDoc = loadYaml(selectedBlocksFile);
   const selected = Array.isArray(selectedBlocksDoc.selected) ? [...selectedBlocksDoc.selected] : [];
   const catalog = loadYaml(catalogFile);
@@ -204,7 +204,7 @@ export async function applySmeltReview({
     }
   }
   if (validItems.length === 0) {
-    log('적용할 변경이 없어요. selected-blocks.yml과 decisions.yml은 그대로 둡니다.');
+    log('적용할 변경이 없어요. smelt-selected-blocks.yml과 decisions.yml은 그대로 둡니다.');
     return {
       selectedBlocksFile,
       decisionsFile,
@@ -252,7 +252,7 @@ export async function applySmeltReview({
 
   logSummary({ log, appliedCount, skippedCount, stopped, total: validItems.length });
   if (appliedCount > 0) {
-    log(`selected-blocks.yml과 decisions.yml이 갱신되었습니다(의존성 재해결 포함).`);
+    log(`smelt-selected-blocks.yml과 decisions.yml이 갱신되었습니다(의존성 재해결 포함).`);
   }
 
   return {
