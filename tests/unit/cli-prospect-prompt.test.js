@@ -94,3 +94,12 @@ test('buildCatalogPromptMarkdown은 비어있는 답변도 안전하게 다룬�
   assert.match(md, /비어있음/);
   assert.match(md, /시드 템플릿: 없음/);
 });
+
+test('출력 형식 안내 뒤에 예시 응답이 박혀 외부 AI가 결을 따라가게 한다', () => {
+  const md = buildCatalogPromptMarkdown({});
+  assert.match(md, /예시 응답/);
+  // ask_questions가 객체 결로 박힘(스키마 정합)
+  assert.match(md, /ask_questions:[\s\S]*- question:/);
+  // 채워진 dependencies와 prerequisites 결도 함께
+  assert.match(md, /dependencies:[\s\S]*type: requires[\s\S]*prerequisites:[\s\S]*enables:/);
+});
