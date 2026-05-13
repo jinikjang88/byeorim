@@ -73,6 +73,57 @@ dependencies:
     reason: 주문이 끝나려면 결제가 필요함
 cascades: []
 prerequisites: []
+
+## 예시 응답 (이 결을 참고해서 답해주세요)
+
+특히 cascades.ask_questions는 반드시 \`{question: "..."}\` 객체 결로 박아주세요. 문자열 결로 박으면 import에서 거부됩니다. dependencies와 prerequisites도 비어 있지 않다면 같은 결로 채웁니다.
+
+name: 동네 카페 주문 앱 카탈로그
+domain: cafe-order
+worlds:
+  - id: w-customer
+    title: 손님 세계
+    description: 메뉴를 보고 주문하는 사람
+  - id: w-operator
+    title: 운영자 세계
+    description: 메뉴와 주문을 관리하는 카페 사장님
+blocks:
+  - id: b-menu
+    name: 메뉴
+    user_desc: 카페의 메뉴 목록과 가격
+    tech_desc: 메뉴 항목과 가격 정보 CRUD
+  - id: b-order
+    name: 주문
+    user_desc: 손님이 메뉴를 골라 주문을 넣는 자리
+    tech_desc: 주문 데이터를 받아 결제와 묶는 자리
+  - id: b-payment
+    name: 결제
+    user_desc: 카드 또는 계좌이체로 값을 받는 자리
+    tech_desc: PG 결제대행사 호출
+dependencies:
+  - source: b-order
+    target: b-menu
+    type: requires
+    reason: 주문하려면 메뉴가 있어야 함
+  - source: b-order
+    target: b-payment
+    type: requires
+    reason: 주문이 끝나려면 결제가 필요함
+cascades:
+  - trigger: b-order
+    ask_questions:
+      - question: 주문 후 환불을 받을 수 있나요?
+        options:
+          - 가능
+          - 불가능
+          - 부분 환불만
+        cascade_effects:
+          - b-refund
+      - question: 주문에 메모(특이사항)를 받을까요?
+prerequisites:
+  - name: PG 결제대행사 계정(카카오페이/네이버페이/토스페이먼츠 등)
+    enables:
+      - b-payment
 `;
 
 function formatAnswers(answers) {
