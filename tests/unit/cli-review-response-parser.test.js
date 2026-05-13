@@ -115,6 +115,30 @@ test('graceful: 헤딩이 없으면 hasStructuredSection=false', () => {
   assert.match(result.parseError, /못 찾았어요/);
 });
 
+test('raw yaml: 마크다운 헤딩 없이 changes 키로 시작하는 YAML도 받는다', () => {
+  const md = `changes:
+  - kind: block_remove
+    block_id: b-foo
+    reason: 가벼운 시작 결을 위해
+  - kind: block_add
+    block_id: b-bar
+    reason: 도메인에 어울려요
+`;
+  const result = parseReviewResponse(md);
+  assert.equal(result.hasStructuredSection, true);
+  assert.equal(result.parseError, null);
+  assert.equal(result.changes.length, 2);
+  assert.equal(result.changes[0].kind, 'block_remove');
+});
+
+test('raw yaml: YAML이지만 changes 키가 없으면 안내로 폴백', () => {
+  const md = 'random_key: 1\nother: value\n';
+  const result = parseReviewResponse(md);
+  assert.equal(result.hasStructuredSection, false);
+  assert.match(result.parseError, /못 찾았어요/);
+  assert.match(result.parseError, /순수 YAML 결로 답하려면/);
+});
+
 test('graceful: 헤딩은 있는데 ```yaml 블록이 없으면 안내', () => {
   const md = '## 제안된 변경 사항\n\n자유 형식 결로만 답했어요.\n';
   const result = parseReviewResponse(md);
@@ -345,6 +369,24 @@ test('parseFindingsResponse: ## 검수 결과 섹션 없으면 hasStructuredSect
   const r = parseFindingsResponse('자유 형식뿐.');
   assert.equal(r.hasStructuredSection, false);
   assert.match(r.parseError, /못 찾았어요/);
+});
+
+test('parseFindingsResponse raw yaml: findings 키로 시작하는 YAML도 받는다', () => {
+  const md = `findings:
+  - area: 보안
+    severity: concern
+    title: 인증 미들웨어 누락
+    detail: 일부 endpoint가 외부에서 직접 호출 가능
+  - area: 성능
+    severity: warning
+    title: N+1 쿼리 결
+    detail: list endpoint가 자식 자원을 자식별로 조회
+`;
+  const r = parseFindingsResponse(md);
+  assert.equal(r.hasStructuredSection, true);
+  assert.equal(r.parseError, null);
+  assert.equal(r.findings.length, 2);
+  assert.equal(r.findings[0].area, '보안');
 });
 
 test('parseFindingsResponse: 빈 응답은 한국어 안내', () => {

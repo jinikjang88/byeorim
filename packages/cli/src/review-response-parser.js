@@ -29,6 +29,21 @@ function findLastSectionStart(markdown) {
   return lastMatch ? lastMatch.index : -1;
 }
 
+// 입력 본문 전체를 순수 YAML로 시도해 expectedKey 배열을 뽑는다.
+// 외부 AI가 마크다운 결을 건너뛰고 YAML 한 덩어리로 답한 결을 살린다.
+// 깨지면 null. 호출자가 마크다운 결 안내로 폴백한다.
+function tryParseRawYaml(markdown, expectedKey) {
+  try {
+    const parsed = yaml.load(markdown);
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed[expectedKey])) {
+      return parsed[expectedKey];
+    }
+  } catch {
+    // 결이 YAML로 안 풀리면 마크다운 결 안내로 폴백
+  }
+  return null;
+}
+
 // 마지막 "## 검수 결과" 섹션을 찾는다.
 function findLastFindingsSectionStart(markdown) {
   const re = /^##\s*검수\s*결과\s*$/gm;
@@ -62,10 +77,16 @@ export function parseReviewResponse(markdown) {
   const sectionStart = findLastSectionStart(markdown);
   if (sectionStart < 0) {
     if (!SECTION_HEADING_REGEX.test(markdown)) {
+      // raw YAML 결로 폴백: 외부 AI가 마크다운 건너뛰고 YAML 한 덩어리로 답한 결
+      const rawChanges = tryParseRawYaml(markdown, 'changes');
+      if (rawChanges !== null) {
+        return { hasStructuredSection: true, changes: rawChanges, parseError: null };
+      }
       return {
         hasStructuredSection: false,
         changes: [],
-        parseError: '"## 제안된 변경 사항" 섹션을 못 찾았어요',
+        parseError:
+          '"## 제안된 변경 사항" 섹션을 못 찾았어요. 순수 YAML 결로 답하려면 `changes:` 키로 시작하는 결로 박아주세요',
       };
     }
   }
@@ -139,10 +160,16 @@ export function parseFindingsResponse(markdown) {
   const sectionStart = findLastFindingsSectionStart(markdown);
   if (sectionStart < 0) {
     if (!FINDINGS_SECTION_HEADING_REGEX.test(markdown)) {
+      // raw YAML 결로 폴백: 외부 AI가 마크다운 건너뛰고 YAML 한 덩어리로 답한 결
+      const rawFindings = tryParseRawYaml(markdown, 'findings');
+      if (rawFindings !== null) {
+        return { hasStructuredSection: true, findings: rawFindings, parseError: null };
+      }
       return {
         hasStructuredSection: false,
         findings: [],
-        parseError: '"## 검수 결과" 섹션을 못 찾았어요',
+        parseError:
+          '"## 검수 결과" 섹션을 못 찾았어요. 순수 YAML 결로 답하려면 `findings:` 키로 시작하는 결로 박아주세요',
       };
     }
   }
