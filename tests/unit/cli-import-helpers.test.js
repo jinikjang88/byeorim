@@ -170,6 +170,27 @@ test('logGracefulDegrade: parseError 없어도 안전', () => {
   assert.ok(logs.length > 0);
 });
 
+test('logGracefulDegrade: yamlError가 있으면 라인 결로 풀어 안내한다', () => {
+  const logs = [];
+  logGracefulDegrade({
+    log: (line) => logs.push(line),
+    parseResult: {
+      parseError: '섹션 못 찾음',
+      yamlError:
+        'bad indentation of a mapping entry (77:26)\n\n  77 |     reason: 자리(예: POST)\n--------------^',
+    },
+    ymlName: 'forge-contracts.yml',
+  });
+  // yamlError 안내 한 줄과 상세 머리 한 줄
+  assert.ok(
+    logs.some((l) => l.includes('YAML이 깨졌어요')),
+    'yamlError 안내가 박혀야 함',
+  );
+  assert.ok(logs.some((l) => l.includes('YAML 파싱 에러 상세')));
+  // 라인 결 자체가 들여쓰기 결로 박힘
+  assert.ok(logs.some((l) => l.includes('bad indentation')));
+});
+
 // ── logSummary ────────────────────────────────────────────
 
 test('logSummary: 적용/건너뜀 수가 박힌다', () => {

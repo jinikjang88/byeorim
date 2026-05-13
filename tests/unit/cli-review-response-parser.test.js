@@ -139,6 +139,19 @@ test('raw yaml: YAML이지만 changes 키가 없으면 안내로 폴백', () => 
   assert.match(result.parseError, /순수 YAML 결로 답하려면/);
 });
 
+test('raw yaml: YAML 자체가 깨졌으면 yamlError 결로 라인/컬럼을 안내', () => {
+  // (예: ) 결의 콜론이 따옴표 없이 들어가 YAML이 새 키로 보는 자리
+  const md = `changes:
+  - kind: endpoint_remove
+    reason: 자리(예: POST /foo)로 다루는 결
+`;
+  const result = parseReviewResponse(md);
+  assert.equal(result.hasStructuredSection, false);
+  // yamlError가 채워졌고 라인/컬럼 결이 들어있다(js-yaml의 결)
+  assert.ok(result.yamlError, 'yamlError가 채워져야 함');
+  assert.match(result.yamlError, /\d+:\d+|line|indent|mapping/);
+});
+
 test('graceful: 헤딩은 있는데 ```yaml 블록이 없으면 안내', () => {
   const md = '## 제안된 변경 사항\n\n자유 형식 결로만 답했어요.\n';
   const result = parseReviewResponse(md);

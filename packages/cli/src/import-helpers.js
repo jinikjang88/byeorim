@@ -39,6 +39,17 @@ export function logGracefulDegrade({
   if (parseResult && parseResult.parseError) {
     log(`  사유: ${parseResult.parseError}`);
   }
+  // YAML 폴백을 시도했지만 yaml 자체가 깨진 결이면 라인/컬럼 상세를 함께 안내
+  if (parseResult && parseResult.yamlError) {
+    log('');
+    log(
+      '순수 YAML 결로도 시도했지만 YAML이 깨졌어요. `reason:` 같은 값에 콜론(`:`)이나 `#`이 있으면 큰따옴표로 감싸달라고 외부 AI에 부탁해주세요.',
+    );
+    log('YAML 파싱 에러 상세:');
+    for (const line of String(parseResult.yamlError).split('\n')) {
+      log(`  ${line}`);
+    }
+  }
   log('외부 AI가 자유 형식으로만 답했거나 형식이 어긋났을 수 있어요.');
   log(
     `응답을 직접 보시고 ${ymlName}을 손으로 다듬으시거나, 외부 AI에 형식대로 다시 답해달라고 부탁해주세요.`,

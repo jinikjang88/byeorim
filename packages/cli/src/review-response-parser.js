@@ -31,17 +31,22 @@ function findLastSectionStart(markdown) {
 
 // 입력 본문 전체를 순수 YAML로 시도해 expectedKey 배열을 뽑는다.
 // 외부 AI가 마크다운 결을 건너뛰고 YAML 한 덩어리로 답한 결을 살린다.
-// 깨지면 null. 호출자가 마크다운 결 안내로 폴백한다.
+//
+// 반환:
+//   { ok: true, value: <배열> }                — 결이 박힘
+//   { ok: false, yamlError: <js-yaml 메시지> }  — YAML 파싱 자체가 깨짐(라인/컬럼 결 포함)
+//   { ok: false }                              — YAML은 유효한데 expectedKey 배열 결이 없음
 function tryParseRawYaml(markdown, expectedKey) {
+  let parsed;
   try {
-    const parsed = yaml.load(markdown);
-    if (parsed && typeof parsed === 'object' && Array.isArray(parsed[expectedKey])) {
-      return parsed[expectedKey];
-    }
-  } catch {
-    // 결이 YAML로 안 풀리면 마크다운 결 안내로 폴백
+    parsed = yaml.load(markdown);
+  } catch (err) {
+    return { ok: false, yamlError: String(err.message || err) };
   }
-  return null;
+  if (parsed && typeof parsed === 'object' && Array.isArray(parsed[expectedKey])) {
+    return { ok: true, value: parsed[expectedKey] };
+  }
+  return { ok: false };
 }
 
 // 마지막 "## 검수 결과" 섹션을 찾는다.
@@ -78,15 +83,16 @@ export function parseReviewResponse(markdown) {
   if (sectionStart < 0) {
     if (!SECTION_HEADING_REGEX.test(markdown)) {
       // raw YAML 결로 폴백: 외부 AI가 마크다운 건너뛰고 YAML 한 덩어리로 답한 결
-      const rawChanges = tryParseRawYaml(markdown, 'changes');
-      if (rawChanges !== null) {
-        return { hasStructuredSection: true, changes: rawChanges, parseError: null };
+      const raw = tryParseRawYaml(markdown, 'changes');
+      if (raw.ok) {
+        return { hasStructuredSection: true, changes: raw.value, parseError: null };
       }
       return {
         hasStructuredSection: false,
         changes: [],
         parseError:
           '"## 제안된 변경 사항" 섹션을 못 찾았어요. 순수 YAML 결로 답하려면 `changes:` 키로 시작하는 결로 박아주세요',
+        yamlError: raw.yamlError || null,
       };
     }
   }
@@ -161,15 +167,16 @@ export function parseFindingsResponse(markdown) {
   if (sectionStart < 0) {
     if (!FINDINGS_SECTION_HEADING_REGEX.test(markdown)) {
       // raw YAML 결로 폴백: 외부 AI가 마크다운 건너뛰고 YAML 한 덩어리로 답한 결
-      const rawFindings = tryParseRawYaml(markdown, 'findings');
-      if (rawFindings !== null) {
-        return { hasStructuredSection: true, findings: rawFindings, parseError: null };
+      const raw = tryParseRawYaml(markdown, 'findings');
+      if (raw.ok) {
+        return { hasStructuredSection: true, findings: raw.value, parseError: null };
       }
       return {
         hasStructuredSection: false,
         findings: [],
         parseError:
           '"## 검수 결과" 섹션을 못 찾았어요. 순수 YAML 결로 답하려면 `findings:` 키로 시작하는 결로 박아주세요',
+        yamlError: raw.yamlError || null,
       };
     }
   }
