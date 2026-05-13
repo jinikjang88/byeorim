@@ -18,9 +18,12 @@ test_code가 도메인에 어울리는지, 누락된 시나리오 종류가 있�
 ## AI에게 보낼 자리 (아래 ─── 사이를 모두 복사하세요)
 
 ──────────────────────────────────────────
+
 `;
 
-const FOOTER = `──────────────────────────────────────────
+const FOOTER = `
+
+──────────────────────────────────────────
 `;
 
 const SYSTEM_TEXT = `너는 사용자가 만들고 싶은 서비스의 테스트 시나리오를 검토하는 도우미다.
@@ -375,6 +378,7 @@ export function buildScenariosReviewPromptMarkdown({
     '- block_id와 target_endpoint는 위 "테스트 시나리오" 섹션에서 보신 자리만 사용',
     '- target_scenario_kind는 같은 endpoint 안에서 unique한 자리(예: happy_path)',
     '- scenario_add의 new_scenario.kind는 같은 endpoint에서 unique해야 함(중복은 거부)',
+    '- YAML 따옴표 규칙: 값에 콜론(`:`), `#`, 따옴표 같은 결이 들어가면 작은따옴표로 감싸주세요. 예) `reason: \'"받침"처럼 어색한 결을 다듬어요\'`. 안 감싸면 YAML 파서가 결을 못 읽어 import가 깨집니다',
     '',
     '예시 응답 (이 결을 참고해서 답해주세요. 자유 형식 부분은 사용자 도메인에 맞게 다시 적으시면 됩니다).',
     '',
