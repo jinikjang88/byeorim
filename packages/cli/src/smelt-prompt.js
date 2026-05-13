@@ -17,9 +17,12 @@ byeorim smelt를 다시 돌려 다른 블럭으로 고를 수 있어요.
 ## AI에게 보낼 자리 (아래 ─── 사이를 모두 복사하세요)
 
 ──────────────────────────────────────────
+
 `;
 
-const FOOTER = `──────────────────────────────────────────
+const FOOTER = `
+
+──────────────────────────────────────────
 `;
 
 const SYSTEM_TEXT = `너는 사용자가 만들고 싶은 서비스의 블럭 선택을 검토하는 도우미다.
@@ -190,6 +193,7 @@ export function buildBlockReviewPromptMarkdown({
     '- block_id는 카탈로그(또는 selected)에 있는 자리만 사용',
     '- block_add는 카탈로그에 있고 아직 selected에 없는 블럭만',
     '- block_remove는 selected에 있는 블럭만(자동 추가된 블럭은 거부됨)',
+    "- YAML 따옴표 규칙: 값에 콜론(`:`), `#`, 따옴표 같은 결이 들어가면 작은따옴표로 감싸주세요. 예) `reason: '주문 자리(예: POST /orders)로 다루는 결'`. 안 감싸면 YAML 파서가 결을 못 읽어 import가 깨집니다",
   ].join('\n');
   return HEADER + body + '\n' + FOOTER;
 }

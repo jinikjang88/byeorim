@@ -22,9 +22,12 @@ const HEADER = `# 카탈로그 생성 프롬프트
 ## AI에게 보낼 자리 (아래 ─── 사이를 모두 복사하세요)
 
 ──────────────────────────────────────────
+
 `;
 
-const FOOTER = `──────────────────────────────────────────
+const FOOTER = `
+
+──────────────────────────────────────────
 `;
 
 // 외부 AI용 프롬프트 본문. structured output schema가 없으므로 YAML 형식과 예시를 자연어로 안내한다.
@@ -73,6 +76,12 @@ dependencies:
     reason: 주문이 끝나려면 결제가 필요함
 cascades: []
 prerequisites: []
+
+## YAML 따옴표 규칙 (중요)
+
+값에 콜론(\`:\`), \`#\`, 따옴표(\`"\` 또는 \`'\`), \`[\`, \`{\` 같은 결이 들어가면 작은따옴표로 감싸주세요.
+예) \`reason: '주문 자리(예: POST /orders)로 다루는 결'\`, \`description: '"받침"처럼 어색한 결을 다듬어요'\`.
+안 감싸면 YAML 파서가 결을 못 읽어 import 자체가 깨집니다.
 
 ## 예시 응답 (이 결을 참고해서 답해주세요)
 
@@ -123,8 +132,7 @@ cascades:
 prerequisites:
   - name: PG 결제대행사 계정(카카오페이/네이버페이/토스페이먼츠 등)
     enables:
-      - b-payment
-`;
+      - b-payment`;
 
 function formatAnswers(answers) {
   const lines = [];
